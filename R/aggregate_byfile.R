@@ -2,6 +2,7 @@
 library(terra)      # For raster manipulation functions like rast, xres, yres, aggregate, writeCDF
 library(stringr)    # For string manipulation functions like str_remove
 
+
 aggregate_byfile <- function(filename_vegheight, raster_target, outdir){
 
   # Load the two raster files
@@ -16,9 +17,12 @@ aggregate_byfile <- function(filename_vegheight, raster_target, outdir){
   r1_aggregated <- aggregate(r1, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
 
   # Create output file name and write to file
-  outfilnam <- paste0(outdir, str_remove(basename(filename_vegheight), ".tif"), "_15arcsec.nc")
+  outfilnam <- paste0(outdir, str_remove(basename(filename_vegheight), ".tif"), "_to450m.nc")
 
   # Write the aggregated raster to NetCDF format
   message(paste("Writing to file", outfilnam, "..."))
   writeCDF(r1_aggregated, outfilnam, overwrite = TRUE)
+
 }
+
+

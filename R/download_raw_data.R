@@ -13,7 +13,7 @@ library(readr)       # File reading/writing utilities
 # -------------------
 # Configuration
 # -------------------
-SAVE_DIR <- fs::path_expand("/data_2/vegheight_lang_2023")  # Target directory for downloads
+SAVE_DIR <- file.path(here::here("data-raw/vegh_10m/"))  # Target directory for downloads
 MAX_RETRIES <- 5                     # Maximum download attempts per file
 INITIAL_DELAY <- 0.5                 # Base delay between retries (seconds)
 JITTER <- 1.5                        # Exponential backoff factor
@@ -37,12 +37,9 @@ get_download_urls <- function() {
   geo_data <- jsonlite::fromJSON(json_str, simplifyVector = FALSE)
 
   # Extract canopy height URLs and select specific range for processing
-  purrr::map_chr(geo_data$features, ~.x$properties$href_canopy_height)[2001:2651]  # Process 651 URLs
+  purrr::map_chr(geo_data$features, ~.x$properties$href_canopy_height)[1:2]  # Process 651 URLs
 }
 
-# -------------------
-# Core Functions
-# -------------------
 
 #' Validate URL structure
 #' @param url Character string containing URL to validate
@@ -52,18 +49,20 @@ validate_url <- function(url) {
     !is.na(stringr::str_extract(url, "(?<=files=)[^&]+"))  # Verify filename parameter exists
 }
 
+# -------------------
+# Download Functions
+# -------------------
 #' File download handler with retry logic
 #' @param url Download URL
 #' @param pb Progress bar object reference
 #' @return List containing download result metadata
-download_file <- function(url, pb) {
+download_file <- function(url) {
   # Generate safe filename from URL parameters
   fname <- stringr::str_extract(url, "(?<=files=)[^&]+") |> fs::path_sanitize()
   dest <- fs::path(SAVE_DIR, fname)
 
   # Skip existing files and update progress
   if(fs::file_exists(dest)) {
-    pb$tick()
     return(list(success = TRUE, skipped = TRUE, file = fname))
   }
 
@@ -83,7 +82,6 @@ download_file <- function(url, pb) {
 
       # Validate HTTP response status
       if(httr::status_code(resp) == 200) {
-        pb$tick()
         return(list(success = TRUE, file = fname))
       }
 
@@ -118,15 +116,17 @@ pb <- progress::progress_bar$new(
 
 # Process downloads and handle errors
 results <- purrr::map(valid_urls, ~{
-  result <- download_file(.x, pb)
+  result <- download_file(.x)
   # Log failures with timestamp
   if(!result$success) {
     readr::write_lines(
-      sprintf("[%s] %s - %s", Sys.time(), result::file, result$error),
+      sprintf("[%s] %s - %s", Sys.time(), result$file, result$error),
       fs::path(SAVE_DIR, LOG_FILE),
       append = TRUE
     )
   }
+
+  pb$tick()
   result
 })
 
