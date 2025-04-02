@@ -1,0 +1,21 @@
+---
+title: "Split Window Correlation"
+author: "Ting Tan"
+date: "2025-04-02"
+output: html_document
+---
+
+# Introduction
+## Required Libraries and Dependencies
+To execute this script, several R libraries are loaded, including `terra`, `sf`, `dplyr`, and `ggplot2`. Additionally, a custom function from the `split_window_correlation.R` script is sourced.
+```{r setup, include=FALSE}
+library(terra)
+library(sf)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(ggplot2)
+library(ncdf4)
+library(cowplot)
+source(here::here("R/split_window_correlation.R"))
+```

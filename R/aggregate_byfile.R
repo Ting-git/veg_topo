@@ -2,27 +2,29 @@
 library(terra)      # For raster manipulation functions like rast, xres, yres, aggregate, writeCDF
 library(stringr)    # For string manipulation functions like str_remove
 
-
-aggregate_byfile <- function(filename_vegheight, raster_target, outdir){
+aggregate_byfile <- function(filename, rast_tar, outdir){
 
   # Load the two raster files
-  r1 <- rast(filename_vegheight)  # Load the raster file (obtained from a specified source)
+  rast_ob <- rast(filename)  # Load the raster file (obtained from a specified source)
 
   # Aggregate r1 to match r2's resolution
   # The factor is determined by the ratio of resolutions
-  fact_x <- (xres(raster_target) / xres(r1))  # Calculate aggregation factor along x-axis
-  fact_y <- (yres(raster_target) / yres(r1))  # Calculate aggregation factor along y-axis
+  fact_x <- (xres(rast_tar) / xres(rast_ob))  # Calculate aggregation factor along x-axis
+  fact_y <- (yres(rast_tar) / yres(rast_ob))  # Calculate aggregation factor along y-axis
 
   # Aggregate using mean (can be changed to other functions like max, min, sum)
-  r1_aggregated <- aggregate(r1, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
+  rast_agg <- aggregate(rast_ob, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
 
   # Create output file name and write to file
-  outfilnam <- paste0(outdir, str_remove(basename(filename_vegheight), ".tif"), "_to450m.nc")
+  outfilename<- paste0(outdir, str_remove(basename(filename), ".tif"), "_to450m.nc")
 
   # Write the aggregated raster to NetCDF format
-  message(paste("Writing to file", outfilnam, "..."))
-  writeCDF(r1_aggregated, outfilnam, overwrite = TRUE)
+  message(paste("Writing to file", outfilename, "..."))
+  writeCDF(rast_agg, outfilename, overwrite = TRUE)
 
+  # Clean up memory by removing large objects after writing the file
+  rm(rast_ob, rast_agg)  # Remove the raster objects to free memory
+  gc()  # Trigger garbage collection to release memory
 }
 
 

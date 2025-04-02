@@ -1,0 +1,137 @@
+---
+title: "Split Window Correlation"
+author: "Ting Tan"
+date: "2025-03-27"
+output: html_document
+---
+
+# Introduction
+This script tests the split-window correlation method without applying a land cover mask to exclude cropland and urban areas. Instead, a small random region in Africa (0, 1, 5.5, 6.5) is selected for analysis. The goal is to evaluate the correlation between the Topographic Wetness Index (TWI) and vegetation height (Vegh) within this region.
+
+## Required Libraries and Dependencies
+To execute this script, several R libraries are loaded, including `terra`, `sf`, `dplyr`, and `ggplot2`. Additionally, a custom function from the `split_window_correlation.R` script is sourced.
+
+```{r setup, include=FALSE}
+library(terra)
+library(sf)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(ggplot2)
+library(ncdf4)
+library(cowplot)
+source(here::here("R/split_window_correlation.R"))
+```
+
+## Configuration
+The paths to the necessary input raster files and the output correlation analysis file are defined.
+
+```{r Configuration, include=TRUE, eval=TRUE}
+file_vegh_450m_mosaic <- "/data_2/scratch/ting/data/vegh_450m/vegh_450m_2020_mosaic.nc"
+file_ga2 <- "/data/archive/gti_marthews_2015/data/ga2.nc"  # Target raster file path
+file_correlation_nc <- "/data_2/scratch/ting/data/correlation_analysis.nc"  # Output file
+```
+
+## Objective
+The objective of this analysis is to crop a specific area and test the split-window correlation method. The correlation between the TWI and vegetation height will be examined using spatial windows.
+
+## Splitting Window Analysis
+
+### Step 1: Load and Crop Raster Data
+The selected region is cropped from the input raster datasets.
+
+```{r splitting_window_analysis, include=TRUE, eval=TRUE}
+twi_raster <- crop_raster_to_extent(file_ga2, 0, 1, 5.5, 6.5)
+vegh_raster <- crop_raster_to_extent(file_vegh_450m_mosaic, 0, 1, 5.5, 6.5)
+```
+
+### Step 2: Process and Merge Rasters
+The cropped rasters are resampled and merged to ensure consistency in resolution and spatial alignment.
+
+```{r}
+merged_raster <- resample_and_merge_rasters(twi_raster, vegh_raster)
+```
+
+### Step 3: Create Spatial Windows
+Spatial windows are generated for the merged raster dataset, allowing for localized correlation analysis. The dataset is checked for missing values.
+
+```{r}
+windowed_data <- create_spatial_windows(merged_raster, 15)
+colSums(is.na(windowed_data))
+str(windowed_data)
+colnames(windowed_data)
+```
+
+### Step 4: Visualization of Data
+Plots are generated to visualize the distribution of TWI and vegetation height.
+
+#### Topographic Wetness Index (TWI) Map
+```{r}
+plot1 <- ggplot(windowed_data, aes(x = lon, y = lat, fill = twi)) +
+  geom_raster() +
+  scale_fill_gradient(low = "blue", high = "green") +
+  labs(title = "Topographic Wetness Index (TWI)", fill = "TWI") +
+  theme_minimal()
+```
+
+#### Vegetation Height Map
+```{r}
+plot2 <- ggplot(windowed_data, aes(x = lon, y = lat, fill = vegh)) +
+  geom_raster() +
+  scale_fill_gradient(low = "yellow", high = "green") +
+  labs(title = "Vegetation Height (m)", fill = "Vegetation Height") +
+  theme_minimal()
+```
+
+#### Window Distribution and Pixel Counts
+```{r}
+plot3 <- plot_window_distribution(windowed_data)
+plot4 <- plot_window_pixel_counts(windowed_data)
+```
+
+### Step 5: Correlation Calculation
+Correlations between TWI and vegetation height are computed for each spatial window.
+
+```{r}
+correlation_results <- calculate_window_correlations(windowed_data) |>
+  select(lon, lat, correlation)
+```
+
+### Step 6: Create and Plot Correlation Raster
+The correlation values are converted into a raster format for visualization.
+
+```{r}
+correlation_raster <- rast(
+  correlation_results,
+  type = "xyz",
+  crs = "EPSG:4326"
+)
+
+correlation_raster_df <- as.data.frame(correlation_raster, xy = TRUE)
+summary(correlation_raster_df)
+```
+
+#### Correlation Raster Plot
+```{r}
+plot5 <- ggplot(correlation_raster_df, aes(x = x, y = y, fill = correlation)) +
+  geom_raster() +
+  scale_fill_gradient2(
+    low = "red", mid = "white", high = "blue", midpoint = 0,
+    name = "Correlation"
+  ) +
+  labs(title = "TWI-Vegetation Height Correlation") +
+  theme_minimal()
+```
+
+### Final Visualization
+The generated plots are arranged and displayed for comparative analysis.
+
+```{r, fig.width=10, fig.height=8}
+cowplot::plot_grid(plot1, plot2, plot3, plot5, ncol = 2, align = "v")
+plot4
+```
+
+## Conclusion
+This analysis successfully demonstrates the split-window correlation approach for a small test region in Africa. The results help understand the spatial relationship between TWI and vegetation height, providing valuable insights for further research and broader-scale applications.
+
+
