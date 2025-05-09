@@ -15,12 +15,13 @@ library(knitr)
 library(ggmap)
 library(here)
 library(segmented)
+
 source(here::here("R/split_window_correlation.R"))
 
 file_vegh_450m_mosaic <- "/data_2/scratch/ting/data/vegh_450m/vegh_450m_2020_mosaic.nc"
 file_ga2 <- "/data/archive/gti_marthews_2015/data/ga2.nc"  # Target raster file path
 file_correlation_nc <- "/data_2/scratch/ting/data/correlation_analysis.nc"  # Output file
-output_dir <- "/data_2/scratch/ting/data"
+output_dir <- "/data_2/scratch/ting/data_temp"
 file_modis_landcover <- "/data/scratch/bstocker/landcover/modis_landcover__LPDAAC__v5.1__0.05deg__2010.nc"
 
 ext_valids <- list(
@@ -32,14 +33,14 @@ ext_valids <- list(
 )
 region_names <- names(ext_valids)
 
-merged_raster_files <- imap(ext_valids, ~ {
-  save_path <- file.path(output_dir, "processed_rasters")
-  output_file <- ext_to_merge2(.x, .y, save_path, file_ga2, file_vegh_450m_mosaic)
-  return(output_file)
-})
-
-# ------------------------------------------
-raster_file = merged_raster_files[[1]]
+merged_files <- preprocess_all_regions(
+  ext_list = ext_valids,
+  twi_file = file_ga2,
+  vegh_file = file_vegh_450m_mosaic,
+  output_dir = output_dir
+)
+# ------------------------------------------------------------------------------
+raster_file = merged_files[[1]]
 region_ext = ext_valids[[1]]
 region_name = region_names[1]
 
@@ -49,11 +50,14 @@ res(merged_raster)
 
 # Process and analyze
 windowed_data <- create_spatial_windows(merged_raster, 12)
-correlation_df <- calculate_window_correlations1(windowed_data)
+correlation_df <- calculate_window_correlations(windowed_data)
 
-source(here::here("R/split_window_correlation.R"))
+summary(windowed_data)
+
+
 correlation_df_peak <- calculate_window_correlations2(windowed_data)
-plots <- plot_random_windows(correlation_df, seed = 123)
+correlation_df_peak %>%
+  count(peak)
 
 # Debug output: NA count
 message(region_name, " NA count:")
@@ -62,37 +66,30 @@ print(colSums(is.na(correlation_df)))
 # Generate plots
 plot1 <- plot_twi(windowed_data)
 plot2 <- plot_vegh(windowed_data)
-plot3 <- plot_corr(correlation_df)
-plot4 <- plot_correlation_vs_pixel_count(correlation_df)
-plot5 <- plot_img(region_ext)
-plot6 <- plot_landcover(file_modis_landcover, region_ext)
 
-print(plot1)
-print(plot2)
-print(plot3)       # 💥 很可能是这里
-print(plot4)
-print(plot5)
-print(plot6)
-print(plots[[1]])  # 💥 也很可能是这里
+plot3 <- plot_corr(correlation_df)
+plot3
+
+plot4 <- plot_correlation_vs_pixel_count(correlation_df)
+# plot5 <- plot_img(region_ext)
+plot5 <- plot_peak(correlation_df_peak)
+plot6 <- plot_landcover(file_modis_landcover, region_ext)
+plots <- plot_random_windows(correlation_df, seed = 123)
+plot9 <- plot_overview(windowed_data)
+
+
+all_plots <- c(list(plot1, plot2, plot3, plot4, plot5, plot6), plots, list(plot9))
 
 combined_plot <- plot_grid(
-  plot1,
-  plot2,
-  plot3,
-  plot4,
-  plot5,
-  plot6,
-  plotlist = plots,
+  plotlist = all_plots,
   ncol = 3,
-  align = "v"
+  align = "hv"
 ) + theme(plot.background = element_rect(fill = "white", color = "white"))
 
 # Save output plot
-output_file <- file.path(here(
-  "data",
-  "figures",
-  paste0("02_2_combined_plot_", region_name, ".png")
-))
+output_file <- here("data",
+                    "figures",
+                    paste0("02_2_combined_plot_", region_name, ".png"))
 
 ggsave(
   output_file,

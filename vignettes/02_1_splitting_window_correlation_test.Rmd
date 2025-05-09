@@ -32,6 +32,7 @@ The paths to the necessary input raster files and the output correlation analysi
 ```{r Configuration, include=TRUE, eval=TRUE}
 file_vegh_450m_mosaic <- "/data_2/scratch/ting/data/vegh_450m/vegh_450m_2020_mosaic.nc"
 file_ga2 <- "/data/archive/gti_marthews_2015/data/ga2.nc"  # Target raster file path
+output_dir <- "/data_2/scratch/ting/data_temp"
 file_correlation_nc <- "/data_2/scratch/ting/data/correlation_analysis.nc"  # Output file
 ```
 
@@ -44,10 +45,21 @@ The objective of this analysis is to crop a specific area and test the split-win
 The selected region is cropped from the input raster datasets.
 
 ```{r splitting_window_analysis, include=TRUE, eval=TRUE}
-ext_test <- ext(0, 1, 5.5, 6.5)
-twi_raster <- crop_byextent(file_ga2, ext_test)
-vegh_raster <- crop_byextent(file_vegh_450m_mosaic, ext_test)
-merged_raster <- resample_and_merge_rasters(twi_raster, vegh_raster)
+
+ext_test <- list("test_region_af" = ext(0, 1, 5.5, 6.5))
+region_name <- names(ext_test)[1]
+  
+merged_file <- preprocess_all_regions(
+  ext_list = ext_test,
+  twi_file = file_ga2,
+  vegh_file = file_vegh_450m_mosaic,
+  output_dir = output_dir
+)
+
+rm_test <- rast(merged_file[[1]])
+names(rm_test) <- c("twi", "vegh")
+
+plot(rm_test)
 ```
 
 ### Step 2: data analysis
@@ -56,7 +68,8 @@ merged_raster <- resample_and_merge_rasters(twi_raster, vegh_raster)
 * Correlations between TWI and vegetation height are computed for each spatial window.
 
 ```{r}
-windowed_data <- create_spatial_windows(merged_raster, 12)
+windowed_data <- create_spatial_windows(rm_test, 12)
+
 colSums(is.na(windowed_data))
 str(windowed_data)
 colnames(windowed_data)
@@ -74,20 +87,44 @@ plot4 <- plot_correlation_vs_pixel_count(correlation_df)
 plot5 <- plot_corr(correlation_df)
 
 # plot6 <- ggplot() + theme_void()
-plot6 <- plot_img(ext_test)
+plot6 <- plot_img(ext_test[[1]])
+
 ```
 
 ### Final Visualization
 The generated plots are arranged and displayed for comparative analysis.
 ```{r, fig.width=12, fig.height=8}
-combined_plot <- plot_grid(plot1, plot2, plot5, plot3, plot4, plot6, 
-                           ncol = 3, align = "v", axis = "tblr")
-combined_plot
+all_plots <- list(plot1, plot2, plot3, plot4, plot5, plot6)
 
-ggsave("/data_2/scratch/ting/data/figures/combined_plot_test.png", combined_plot, width = 10, height = 12, dpi = 300)
+combined_plot <- plot_grid(
+  plotlist = all_plots,
+  ncol = 3,
+  align = "hv"
+) + theme(plot.background = element_rect(fill = "white", color = "white"))
+
+# Save output plot
+output_file <- here(
+  "data",
+  "figures",
+  paste0("02_2_combined_plot_", region_name, ".png")
+)
+
+ggsave(
+  output_file,
+  combined_plot,
+  width = 20,
+  height = 10,
+  dpi = 300,
+  bg = "white"
+)
+
+knitr::include_graphics(output_file)
 ```
 
 ## Conclusion
 This analysis successfully demonstrates the split-window correlation approach for a small test region in Africa. The results help understand the spatial relationship between TWI and vegetation height, providing valuable insights for further research and broader-scale applications.
 
-
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here("vignettes/02_1_splitting_window_correlation_test.Rmd"))
+```

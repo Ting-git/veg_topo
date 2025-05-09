@@ -1,72 +1,11 @@
-crop_byextent <- function(nc_file, extent_raster) {
-  # Check if file exists
-  if (!file.exists(nc_file)) {
-    stop("The NetCDF file does not exist: ", nc_file)
-  }
-
-  r <- rast(nc_file)
-
-  cropped_raster <- crop(r, extent_raster)
-
-  rm(r, nc_file)
-  gc()
-
-  return(cropped_raster)
-}
-
-resample_and_merge_rasters <- function(reference_raster, raster_to_resample) {
-  # Check if both rasters are valid SpatRaster objects
-  if (!inherits(reference_raster, "SpatRaster") | !inherits(raster_to_resample, "SpatRaster")) {
-    stop("Both inputs must be SpatRaster objects.")
-  }
-
-  # Resample to match reference resolution
-  resampled_raster <- resample(raster_to_resample, reference_raster, method = "bilinear")
-  # Mask based on the reference raster's extent and resolution
-  resampled_raster <- mask(resampled_raster, reference_raster)
-
-  # Merge rasters
-  merged_raster <- c(reference_raster, resampled_raster)
-
-  return(merged_raster)
-}
-
-ext_to_merge <- function(region_ext, file_ga2, file_vegh, output_path) {
-  # 加载 raster 数据
-  twi_r <- crop(rast(file_ga2), region_ext)
-  vegh_r <- crop(rast(file_vegh), region_ext)
-
-  # 合并 raster 数据
-  merged_r <- c(twi_r, vegh_r)
-
-  # 将合并后的结果保存为临时文件
-  writeRaster(merged_r, output_path, overwrite = TRUE)
-}
-
-
-ext_to_merge2 <- function(ext, region_name, output_dir, twi_file, vegh_file){
-
-  twi_raster <- crop_byextent(twi_file, ext)
-  vegh_raster <- crop_byextent(vegh_file, ext)
-  merged_raster <- resample_and_merge_rasters(twi_raster, vegh_raster)
-
-  output_file <- file.path(output_dir, paste0("twi_vegh_", region_name, ".nc"))
-
-  suppressWarnings({
-    writeCDF(merged_raster, output_file, overwrite = TRUE)
-  })
-
-  rm(twi_raster, vegh_raster)
-  gc()
-
-
-  return(output_file)
-}
+# ------------------------------------------------------------------------------
+# Main Functions
+# ------------------------------------------------------------------------------
 
 create_spatial_windows <- function(raster_data, window_size = 12) {
+
   # Convert raster to dataframe
   suppressWarnings({df <- as.data.frame(raster_data, xy = TRUE, na.rm = TRUE)})
-
   colnames(df) <- c("lon", "lat", "twi", "vegh")
 
   # Ensure window size is positive
@@ -95,95 +34,124 @@ create_spatial_windows <- function(raster_data, window_size = 12) {
   # Assign each point to a window
   df <- df |>
     mutate(
-      lon_window = cut(lon, breaks = lon_breaks, include.lowest = TRUE),
-      lat_window = cut(lat, breaks = lat_breaks, include.lowest = TRUE),
-      window_id = as.integer(interaction(lon_window, lat_window))
+      lon_win = cut(lon, breaks = lon_breaks, include.lowest = TRUE),
+      lat_win = cut(lat, breaks = lat_breaks, include.lowest = TRUE),
+      window_id = as.integer(interaction(lon_win, lat_win)),
+
+      # calculate xy of center point
+      lon_cen = sapply(as.character(lon_win), function(w) {
+        bounds <- as.numeric(gsub("\\[|\\]|\\(|\\)", "", strsplit(w, ",")[[1]]))
+        mean(bounds)
+      }),
+      lat_cen = sapply(as.character(lat_win), function(w) {
+        bounds <- as.numeric(gsub("\\[|\\]|\\(|\\)", "", strsplit(w, ",")[[1]]))
+        mean(bounds)
+      })
     ) |>
-    select(lon, lat, twi, vegh, window_id)
+    dplyr::select(lon, lat, twi, vegh, window_id, lon_cen, lat_cen)
 
   return(df)
 }
 
+
+# Function to calculate Pearson correlation and p-value for each window of data
+# Return only windowed data with coarser resolution
 calculate_window_correlations <- function(windowed_data) {
   correlation_results <- windowed_data |>
-    group_by(window_id) |>
-    group_nest() |>
+    group_by(window_id, lon_cen, lat_cen) |>  # Group data by window ID and location
+    group_nest() |>  # Nest the grouped data into list-columns
     mutate(
-      correlation = purrr::map_dbl(data, ~{
-        if (nrow(.x) < 2) return(NA)
-
-        twi_sd <- sd(.x$twi, na.rm = TRUE)
-        vegh_sd <- sd(.x$vegh, na.rm = TRUE)
-
-        if (is.na(twi_sd) || is.na(vegh_sd) || twi_sd == 0 || vegh_sd == 0) {
-          return(NA)
-        } else {
-          return(cor(.x$twi, .x$vegh, use = "complete.obs"))
-        }
-      }),
-    ) |>
-    unnest(cols = c(data)) |> # unnest to expand the grouped data
-    ungroup() |>
-    select(lon, lat, window_id, correlation)
-}
-
-calculate_window_correlations1 <- function(windowed_data) {
-  correlation_results <- windowed_data |>
-    group_by(window_id) |>
-    group_nest() |>
-    mutate(
-      # 回归和统计计算
+      # Perform statistical computations
       stats = purrr::map(data, ~{
         df <- .x
-        df <- df[complete.cases(df$twi, df$vegh), ]
-        n_obs <- nrow(df)
+        # df <- df[complete.cases(df$twi, df$vegh), ]  # Remove rows with missing twi or vegh
+        n_obs <- nrow(df)  # Count the number of valid observations
 
-        # 默认返回 NA 值
+        # Default result with NA values
         result <- list(
           correlation = NA_real_,
           cor_pval = NA_real_,
           n_obs = n_obs
         )
 
-        # 如果观测数足够
+        # Only calculate correlation if there are enough valid observations with variation
         if (n_obs >= 3 && sd(df$twi) > 0 && sd(df$vegh) > 0) {
-          # Pearson correlation and p-value
-          test <- cor.test(df$twi, df$vegh)
-          result$correlation <- test$estimate
-          result$cor_pval <- test$p.value
+          test <- cor.test(df$twi, df$vegh)  # Pearson correlation test
+          result$correlation <- test$estimate  # Extract correlation coefficient
+          result$cor_pval <- test$p.value  # Extract p-value
         }
 
         return(result)
       }),
 
-      # 提取窗口中心坐标
-      lon_win = purrr::map_dbl(data, ~mean(.x$lon, na.rm = TRUE)),
-      lat_win = purrr::map_dbl(data, ~mean(.x$lat, na.rm = TRUE)),
-
-      # 拆分 stats 列为单独列
+      # Extract individual fields from the stats list-column
       correlation = purrr::map_dbl(stats, "correlation"),
       cor_pval = purrr::map_dbl(stats, "cor_pval"),
       n_obs = purrr::map_int(stats, "n_obs")
     ) |>
-    select(window_id, data, lon_win, lat_win, n_obs, correlation, cor_pval) |>
+    dplyr::select(window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval) |>  # Keep relevant columns
     ungroup()
 
-  return(correlation_results)
+  return(correlation_results)  # Return final result
 }
 
-
-calculate_window_correlations2 <- function(windowed_data) {
+# Function to calculate Pearson correlation and p-value for each window of data
+# Return unnested original data with original resolution as well
+calculate_window_correlations1 <- function(windowed_data) {
   correlation_results <- windowed_data |>
-    group_by(window_id) |>
-    group_nest() |>
+    group_by(window_id, lon_cen, lat_cen) |>  # Group data by window ID and location
+    group_nest() |>  # Nest the grouped data into list-columns
     mutate(
-      # 回归和统计计算
+      # Perform statistical computations
       stats = purrr::map(data, ~{
         df <- .x
-        df <- df[complete.cases(df$twi, df$vegh), ]
+        # df <- df[complete.cases(df$twi, df$vegh), ]  # Remove rows with missing twi or vegh
+        n_obs <- nrow(df)  # Count the number of valid observations
+
+        # Default result with NA values
+        result <- list(
+          correlation = NA_real_,
+          cor_pval = NA_real_,
+          n_obs = n_obs
+        )
+
+        # Only calculate correlation if there are enough valid observations with variation
+        if (n_obs >= 3 && sd(df$twi) > 0 && sd(df$vegh) > 0) {
+          test <- cor.test(df$twi, df$vegh)  # Pearson correlation test
+          result$correlation <- test$estimate  # Extract correlation coefficient
+          result$cor_pval <- test$p.value  # Extract p-value
+        }
+
+        return(result)
+      }),
+
+      # Extract individual fields from the stats list-column
+      correlation = purrr::map_dbl(stats, "correlation"),
+      cor_pval = purrr::map_dbl(stats, "cor_pval"),
+      n_obs = purrr::map_int(stats, "n_obs")
+    ) |>
+    # unnest(cols = c(data)) |> # unnest to expand the grouped data
+    ungroup() |>
+    dplyr::select(data, window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval) |>  # Keep relevant columns
+    ungroup()
+
+  return(correlation_results)  # Return final result
+}
+
+# Function to calculate Pearson correlation, p-value and ifpeak for each window of data
+# Return only windowed data with coarser resolution
+calculate_window_correlations2 <- function(windowed_data) {
+  correlation_results <- windowed_data |>
+    group_by(window_id, lon_cen, lat_cen) |>
+    group_nest() |>
+    mutate(
+      # Perform statistical computations
+      stats = purrr::map(data, ~{
+        df <- .x
+        # df <- df[complete.cases(df$twi, df$vegh), ]
         n_obs <- nrow(df)
 
-        # 默认返回 NA 值
+        # Default result with NA values
         result <- list(
           correlation = NA_real_,
           cor_pval = NA_real_,
@@ -191,7 +159,7 @@ calculate_window_correlations2 <- function(windowed_data) {
           n_obs = n_obs
         )
 
-        # 如果观测数足够
+        # Only calculate correlation if there are enough valid observations with variation
         if (n_obs >= 3 && sd(df$twi) > 0 && sd(df$vegh) > 0) {
           # Pearson correlation and p-value
           test <- cor.test(df$twi, df$vegh)
@@ -202,194 +170,321 @@ calculate_window_correlations2 <- function(windowed_data) {
         return(result)
       }),
 
-      # 提取窗口中心坐标
-      lon_win = purrr::map_dbl(data, ~mean(.x$lon, na.rm = TRUE)),
-      lat_win = purrr::map_dbl(data, ~mean(.x$lat, na.rm = TRUE)),
-
-      # 拆分 stats 列为单独列
+      # Extract individual fields from the stats list-column
       correlation = purrr::map_dbl(stats, "correlation"),
       cor_pval = purrr::map_dbl(stats, "cor_pval"),
       n_obs = purrr::map_int(stats, "n_obs"),
       peak = purrr::map_dbl(stats, "peak")  # Adding the peak column
     ) |>
-    select(window_id, data, lon_win, lat_win, n_obs, correlation, cor_pval, peak) |>
+    dplyr::select(data, window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval, peak) |>
     ungroup()
 
   return(correlation_results)
 }
 
-identify_peak <- function(df) {
-  linmod <- lm(twi ~ vegh, data = df)
 
-  # 安全地尝试拟合 segmented 模型
-  segmod <- tryCatch(
-    segmented::segmented(linmod, seg.Z = ~ twi, npsi = 1, silent = TRUE),
-    error = function(e) return(NULL)
-  )
+# use extent of tiles to crop, merge, and save the twi and vegh into one NetCDF document
+# return a list of file path
+pre_merge_tile_rasters <- function(tile_extents, twi_file, vegh_file, processed_dir) {
+  # Load rasters
+  twi_raster_full <- terra::rast(twi_file)
+  vegh_raster_full <- terra::rast(vegh_file)
+  mosaic_extent <- terra::ext(twi_raster_full)
 
-  # 如果拟合失败，则返回 FALSE（或 NA）
-  if (is.null(segmod)) return(NA)
+  # Progress bar
+  p <- progressr::progressor(along = tile_extents)
 
-  # 确保系数存在
-  coefs <- coef(segmod)
-  if (!all(c("twi", "U1.twi") %in% names(coefs))) return(NA)
+  # Process each tile
+  processed_tile_files <- purrr::imap(tile_extents, function(tile_extent, tile_name) {
+    p(message = paste("Processing", tile_name))
+    output_file <- file.path(processed_dir, paste0(tile_name, "_twi_vegh_rm.nc"))
 
-  slope1 <- coefs[["twi"]]
-  slope2 <- coefs[["twi"]] + coefs[["U1.twi"]]
+    # Skip if there is no overlap
+    if (is.null(terra::intersect(mosaic_extent, tile_extent))) {
+      message(glue::glue("⚠ Skipping {tile_name}: no intersection"))
+      return(NA)
+    }
 
-  return(slope1 > 0 && slope2 < 0)
-}
+    # Try processing the tile
+    tryCatch({
+      # Crop the TWI and vegetation rasters
+      twi_crop <- terra::crop(twi_raster_full, tile_extent)
+      vegh_crop <- terra::crop(vegh_raster_full, tile_extent)
 
+      # Check if either of the cropped rasters is entirely NA
+      if (terra::ncell(twi_crop) == 0 || all(is.na(twi_crop[])) || terra::ncell(vegh_crop) == 0 || all(is.na(vegh_crop[]))) {
+        message(glue::glue("⚠ Skipping {tile_name}: no valid data in TWI or vegetation"))
+        return(NA)
+      }
 
+      # Resample vegetation raster to match TWI raster's resolution
+      vegh_resampled <- terra::resample(vegh_crop, twi_crop, method = "bilinear")
 
-plot_random_windows <- function(correlation_results, seed = 123) {
-  set.seed(seed)
+      # Mask the resampled vegetation raster with the TWI raster
+      vegh_masked <- terra::mask(vegh_resampled, twi_crop)
 
-  valid_windows <- correlation_results |>
-    filter(!is.na(correlation), n_obs >= 100)
+      # Merge the TWI and masked vegetation rasters
+      merged <- c(twi_crop, vegh_masked)
+      names(merged) <- c("twi", "vegh")
 
-  if (nrow(valid_windows) < 3) {
-    stop("The number of available windows is less than 3, please check the data.")
-  }
-
-  selected_windows <- sample(valid_windows$window_id, 3)
-
-  plots <- purrr::map(selected_windows, function(wid) {
-    row <- valid_windows |> filter(window_id == wid)
-
-    df <- row$data[[1]] |> filter(complete.cases(twi, vegh))
-
-    corr <- round(row$correlation, 3)
-    pval <- signif(row$cor_pval, 3)
-    lon <- round(row$lon_win, 4)
-    lat <- round(row$lat_win, 4)
-
-    ggplot(df, aes(x = twi, y = vegh)) +
-      geom_point(alpha = 0.6) +
-      geom_smooth(method = "lm", color = "blue", linewidth = 1) +
-      ggtitle(
-        paste0("Window ", wid,
-               "\nLon: ", lon, ", Lat: ", lat,
-               "\nR = ", corr, ", p = ", pval)
-      ) +
-      theme_classic()
-
-
+      # Write the merged raster to the output file
+      terra::writeCDF(merged, output_file, overwrite = TRUE)
+      message(glue::glue("✓ Saved: {output_file}"))
+      output_file
+    }, error = function(e) {
+      message(glue::glue("❌ Failed {tile_name}: {e$message}"))
+      NA
+    })
   })
 
-  return(plots)
+  # Clean up
+  rm(twi_raster_full, vegh_raster_full); gc()
+  return(processed_tile_files)
 }
 
 
-spit_window_analysis_parallel_byext <- function(output_dir, region_names, merged_raster_files){
-  # Clear memory
-  gc()
+# Main function to process and all tiles information
+# return name, file path, extent
+generate_prep_tiles_info <- function(twi_file, vegh_file, temp_dir) {
+  # Create output subfolder
+  processed_dir <- file.path(temp_dir, "pre_merged_rasters")
+  dir.create(processed_dir, showWarnings = FALSE, recursive = TRUE)
 
-  # 设置并行
-  plan(multisession, workers = 2)
-  handlers("cli")
+  # Generate extents for 72 tiles
+  tile_extents <- generate_global_extents()
 
-  log_file <- file.path(output_dir, "processing_log.txt")
-  writeLines("=== Region Processing Log ===\n", log_file)
-
-  with_progress({
-    pb <- progressor(along = merged_raster_files)
-
-    results <- future_map2(
-      merged_raster_files,
-      region_names,
-      function(raster_file, region_name) {
-        pb(sprintf("Processing %s", region_name))
-
-        # 定义安全运行函数
-        safe_run <- safely(function(raster_file, region_name) {
-          message(sprintf("Processing region: %s", region_name))
-
-          # get raster using file path
-          suppressWarnings({ merged_raster <- rast(raster_file) })
-
-          region_ext <- ext(merged_raster)
-
-          windowed_data <- create_spatial_windows(merged_raster, 12)
-          correlation_df <- calculate_window_correlations(windowed_data)
-
-          # 打印 NA 信息（调试用）
-          cat(region_name, " NA count:\n")
-          print(colSums(is.na(correlation_df)))
-
-          # 绘图
-          plot1 <- plot_twi(windowed_data)
-          plot2 <- plot_vegh(windowed_data)
-          plot4 <- plot_correlation_vs_pixel_count(correlation_df)
-          plot5 <- plot_corr(correlation_df)
-          plot6 <- plot_img(region_ext)
-          plot7 <- plot_landcover(file_modis_landcover, region_ext)
-
-          combined_plot <- plot_grid(plot1, plot2, plot5, plot4, plot6, plot7,
-                                     ncol = 3, align = "v") +
-            theme(plot.background = element_rect(
-              fill = "white", color = "white"))
-
-          output_file <- file.path(output_dir, paste0("figures/combined_plot_",
-                                                      region_name,
-                                                      ".png"))
-          ggsave(output_file, combined_plot, width = 20, height = 10, dpi = 300, bg = "white")
-          return(output_file)
-        })
-
-
-        result <- safe_run(raster_file, region_name)
-
-        # 写日志
-        log_msg <- if (is.null(result$error)) {
-          sprintf("[SUCCESS] %s -> %s", region_name, basename(result$result))
-        } else {
-          sprintf("[ERROR] %s -> %s", region_name, result$error$message)
-        }
-        write(log_msg, file = log_file, append = TRUE)
-
-        return(result)
-      }
+  # Run processing
+  prep_tile_files <- with_progress({
+    pre_merge_tile_rasters(
+      tile_extents = tile_extents,
+      twi_file = twi_file,
+      vegh_file = vegh_file,
+      processed_dir = processed_dir
     )
   })
 
-  # 恢复单线程
-  plan(sequential)
-  gc()
+  # Merge name, extent, and file path
+  all_tile_names <- names(tile_extents)
+
+  prep_tiles_info <- map2_dfr(
+    all_tile_names, seq_along(all_tile_names),
+    function(name, idx) {
+      ext <- tile_extents[[idx]]
+      file <- prep_tile_files[[idx]]
+
+      if (!is.na(file)) {
+        tibble(
+          name = name,
+          xmin = terra::xmin(ext),
+          xmax = terra::xmax(ext),
+          ymin = terra::ymin(ext),
+          ymax = terra::ymax(ext),
+          file = file
+        )
+      } else {
+        NULL
+      }
+    }
+  )
+
+  # Save as CSV
+  csv_file <- file.path("./data", "preprocessed_tiles_info.csv")
+  readr::write_csv(prep_tiles_info, csv_file)
+
+  return(prep_tiles_info)
 }
 
 
-# -----------------------------------
+mosaic_and_save_rasters <- function(input_dir, output_file, pattern = "*.nc", verbose = FALSE) {
+  if (verbose) message("Reading raster files...")
+  files <- dir_ls(path = input_dir, glob = pattern)
+  if (length(files) == 0) stop("No matching raster files found.")
+
+  rasters <- lapply(files, rast)
+  rasters <- unname(rasters)
+
+  mosaic <- do.call(merge, rasters)
+
+  rm(rasters)
+  gc()
+
+  writeCDF(mosaic, filename = output_file, overwrite = TRUE)
+
+  rm(mosaic)
+  gc()
+
+  if (verbose) message("Done: Mosaic saved to ", output_file)
+}
+# ------------------------------------------------------------------------------
+# Additional Functions
+# ------------------------------------------------------------------------------
+
+# Divide the globe into multipal tiles and
+# name the west_south_cor(i.e. lat_min, lon_min)
+generate_global_extents <- function(
+    lon_step = 30,
+    lat_step = 30
+) {
+  ext_valids <- list()
+
+  # Define longitude and latitude edges
+  lon_edges <- seq(-180, 180, by = lon_step)
+  lat_edges <- seq(-90, 90, by = lat_step)
+
+  # Label formatting functions for longitude and latitude
+  make_lon_label <- function(lon) {
+    if (lon < 0) paste0("W", abs(lon)) else paste0("E", lon)
+  }
+
+  make_lat_label <- function(lat) {
+    if (lat < 0) paste0("S", abs(lat)) else paste0("N", lat)
+  }
+
+  # Iterate from south to north, and west to east
+  for (lat_i in 1:(length(lat_edges) - 1)) {
+    for (lon_j in 1:(length(lon_edges) - 1)) {
+      lat_min <- lat_edges[lat_i]
+      lat_max <- lat_edges[lat_i + 1]
+      lon_min <- lon_edges[lon_j]
+      lon_max <- lon_edges[lon_j + 1]
+
+      # Use northwest (upper-left) corner for naming
+      name <- paste0(
+        make_lat_label(lat_min), "_",
+        make_lon_label(lon_min)
+      )
+
+      ext_valids[[name]] <- ext(lon_min, lon_max, lat_min, lat_max)
+    }
+  }
+
+  return(ext_valids)
+}
+
+# Function to identify a peak (breakpoint) in non-monotonic relationship
+identify_peak <- function(df) {
+  # Fit a linear model: vegh as a function of twi
+  linmod <- lm(vegh ~ twi, data = df)
+
+  # Safely try to fit a segmented (piecewise) regression model
+  segmod <- tryCatch(
+    segmented::segmented(linmod, seg.Z = ~ twi, npsi = 1, silent = TRUE),
+    error = function(e) return(NULL)  # Return NULL if model fitting fails
+  )
+
+  # If the segmented model fitting fails, return NA
+  if (is.null(segmod)) return(NA)
+
+  # Extract coefficients from the segmented model
+  coefs <- coef(segmod)
+
+  # Ensure the necessary coefficients exist
+  if (!all(c("twi", "U1.twi") %in% names(coefs))) return(NA)
+
+  # Calculate slope before and after the breakpoint
+  slope1 <- coefs[["twi"]]                     # Slope before breakpoint
+  slope2 <- coefs[["twi"]] + coefs[["U1.twi"]] # Slope after breakpoint
+
+  # Return TRUE if peak exists (slope changes from positive to negative)
+  return(slope1 > 0 && slope2 < 0)
+}
+
+normalize_string <- function(x) {
+  x <- tolower(x)
+  x <- gsub(" ", "_", x)
+  return(x)
+}
+
+save_combined_plot <- function(
+    plots,
+    region_name,
+    title_text,
+    ncol = 3,
+    output_dir = here::here("data", "figures"),
+    width = 20,
+    height = 13,
+    dpi = 300,
+    file_index = ""
+) {
+
+  valid_plots <- keep(plots, ~ inherits(.x, "ggplot"))
+
+  # Create the full title by combining region name and title text
+  title_text_full <- paste0(region_name, " ", title_text)
+
+  # Combine the plots with the title on top
+  combined_plot <- cowplot::plot_grid(
+    cowplot::ggdraw() + cowplot::draw_label(title_text_full, fontface = "bold", size = 20, x = 0, hjust = 0),
+    cowplot::plot_grid(plotlist = valid_plots, ncol = ncol, align = "hv", axis = "tblr"),
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  ) +
+    theme(plot.background = element_rect(fill = "white", color = "white"))
+
+  # Construct the output file path
+  output_file <- file.path(
+    output_dir,
+    paste0(
+      file_index,
+      "_",
+      normalize_string(region_name),
+      "_",
+      normalize_string(title_text),
+      ".png"
+    )
+  )
+
+  # Save the combined plot to a file
+  ggplot2::ggsave(
+    filename = output_file,
+    plot = combined_plot,
+    width = width,
+    height = height,
+    dpi = dpi,
+    bg = "white"
+  )
+
+  message("✅ Plot saved to: ", output_file)
+  return(output_file)
+}
+
+# ------------------------------------------------------------------------------
 # Visualization
-# -----------------------------------
-plot_twi <- function(windowed_data) {
-  p <- ggplot(windowed_data, aes(x = lon, y = lat, fill = twi)) +
-    geom_raster() +
+# ------------------------------------------------------------------------------
+
+# plot topographic wetness index (TWI or CTI) map by dataset
+plot_twi <- function(dataframe) {
+  p <- ggplot(dataframe, aes(x = lon, y = lat, fill = twi)) +
+    geom_tile() +
     scale_fill_scico(palette = "oslo", direction = -1) +
     labs(title = "Topographic Wetness Index (TWI)",
-         fill = "TWI",
-         x = "Lontitude",
-         y = "Latitude") +
-    theme_classic() +
-    theme(legend.position = "right")
+         fill = "TWI") +
+    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = "right",
+          legend.text = element_text(size = 6),
+          legend.title = element_blank())
 
   return(p)
 }
 
-plot_vegh <- function(windowed_data) {
-  p <- ggplot(windowed_data, aes(x = lon, y = lat, fill = vegh)) +
-    geom_raster() +
+# plot vegetation height map by dataset
+plot_vegh <- function(dataframe) {
+  p <- ggplot(dataframe, aes(x = lon, y = lat, fill = vegh)) +
+    geom_tile() +
     scale_fill_scico(palette = "batlow", direction = -1) +
     labs(title = "Vegetation Height (m)",
-         fill = "VEGH",
-         x = "Lontitude",
-         y = "Latitude") +
-    theme_classic() +
-    theme(legend.position = "right")
+         fill = "VEGH") +
+    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = "right",
+          legend.text = element_text(size = 6),
+          legend.title = element_blank())
 
   return(p)
 }
 
+# plot MODIS land cover map by ext
 plot_landcover <- function(file_modis_landcover, ext){
 
   modis <- terra::rast(file_modis_landcover)
@@ -399,59 +494,61 @@ plot_landcover <- function(file_modis_landcover, ext){
   modis_df <- as.data.frame(landcover_crop, xy = TRUE, na.rm = TRUE)
   colnames(modis_df) <- c("lon", "lat", "landcover")
 
-  modis_colors <- c(
-    "#0000FF", # 水域 (Water)
-    "#006400", # 常绿针叶林 (Evergreen Needleleaf Forest)
-    "#228B22", # 常绿阔叶林 (Evergreen Broadleaf Forest)
-    "#ADFF2F", # 落叶针叶林 (Deciduous Needleleaf Forest)
-    "#7CFC00", # 落叶阔叶林 (Deciduous Broadleaf Forest)
-    "#32CD32", # 混合林 (Mixed Forest)
-    "#8B4513", # 封闭灌木丛 (Closed Shrublands)
-    "#DEB887", # 开放灌木丛 (Open Shrublands)
-    "#BDB76B", # 林地稀树草原 (Woody Savannas)
-    "#EEE8AA", # 草原 (Savannas)
-    "#FFFF00", # 湿地 (Grasslands)
-    "#00CED1", # 农田 (Permanent Wetlands)
-    "#FFA500", # 农田 (Croplands)
-    "#FF0000", # 城市和建成区 (Urban and Built-Up)
-    "#DAA520", # 农业与自然植被混合 (Cropland/Natural Vegetation Mosaic)
-    "#FFFFFF", # 冰雪覆盖区 (Snow and Ice)
-    "#D3D3D3"  # 贫瘠或稀疏植被区 (Barren or Sparsely Vegetated)
-  )
-
-  modis_labels <- c(
-    "Water",
-    "Evergreen Needleleaf Forest",
-    "Evergreen Broadleaf Forest",
-    "Deciduous Needleleaf Forest",
-    "Deciduous Broadleaf Forest",
-    "Mixed Forest",
-    "Closed Shrublands",
-    "Open Shrublands",
-    "Woody Savannas",
-    "Savannas",
-    "Grasslands",
-    "Permanent Wetlands",
-    "Croplands",
-    "Urban and Built-Up",
-    "Cropland/Natural Mosaic",
-    "Snow and Ice",
-    "Barren or Sparsely Vegetated"
-  )
-
   p <- ggplot(modis_df) +
     geom_raster(aes(x = lon, y = lat, fill = factor(landcover))) +
-    scale_fill_manual(values = modis_colors, labels = modis_labels, name = "Land Cover") +
+    scale_fill_manual(values = c(
+      "#0000FF", # 水域 (Water)
+      "#006400", # 常绿针叶林 (Evergreen Needleleaf Forest)
+      "#228B22", # 常绿阔叶林 (Evergreen Broadleaf Forest)
+      "#ADFF2F", # 落叶针叶林 (Deciduous Needleleaf Forest)
+      "#7CFC00", # 落叶阔叶林 (Deciduous Broadleaf Forest)
+      "#32CD32", # 混合林 (Mixed Forest)
+      "#8B4513", # 封闭灌木丛 (Closed Shrublands)
+      "#DEB887", # 开放灌木丛 (Open Shrublands)
+      "#BDB76B", # 林地稀树草原 (Woody Savannas)
+      "#EEE8AA", # 草原 (Savannas)
+      "#FFFF00", # 湿地 (Grasslands)
+      "#00CED1", # 农田 (Permanent Wetlands)
+      "#FFA500", # 农田 (Croplands)
+      "#FF0000", # 城市和建成区 (Urban and Built-Up)
+      "#DAA520", # 农业与自然植被混合 (Cropland/Natural Vegetation Mosaic)
+      "#FFFFFF", # 冰雪覆盖区 (Snow and Ice)
+      "#D3D3D3"  # 贫瘠或稀疏植被区 (Barren or Sparsely Vegetated)
+    ),
+    labels = c(
+      "Water",
+      "Evergreen Needleleaf Forest",
+      "Evergreen Broadleaf Forest",
+      "Deciduous Needleleaf Forest",
+      "Deciduous Broadleaf Forest",
+      "Mixed Forest",
+      "Closed Shrublands",
+      "Open Shrublands",
+      "Woody Savannas",
+      "Savannas",
+      "Grasslands",
+      "Permanent Wetlands",
+      "Croplands",
+      "Urban and Built-Up",
+      "Cropland/Natural Mosaic",
+      "Snow and Ice",
+      "Barren or Sparsely Vegetated",
+      name = "Land Cover"
+    ))+
     coord_equal() +
-    labs(title = "MODIS Land Cover (2010)", x = "Longitude", y = "Latitude") +
-    theme_classic()
+    labs(title = "MODIS Land Cover (2010)") +
+    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = "right",
+          legend.text = element_text(size = 6),
+          legend.title = element_blank())
 
   rm(modis, landcover, landcover_crop, modis_df)
   gc()
   return(p)
 }
 
-
+# plot Google satellite imagine by ext
 plot_img <- function(ext_test) {
   api_key <- Sys.getenv("GOOGLE_API_KEY")
   register_google(key = api_key)
@@ -475,14 +572,27 @@ plot_img <- function(ext_test) {
   return(p)
 }
 
+# plot Pearson correlation (between VEGH and TWI) for by dataset
 plot_corr <- function(correlation_df) {
-
+  # Select relevant columns and drop rows with NA values
   df <- correlation_df |>
-    unnest(data)|>
-    select(lon, lat, correlation) |>
-    drop_na()  # Remove rows with missing values
+    dplyr::select(lon_cen, lat_cen, correlation) |>
+    drop_na()  # Remove rows with missing correlation values
 
-  p <- ggplot(df, aes(x = lon, y = lat, fill = correlation)) +
+  # Compute summary statistics
+  corr_mean <- round(mean(df$correlation, na.rm = TRUE), 3)
+  corr_q25 <- round(quantile(df$correlation, 0.25, na.rm = TRUE), 3)
+  corr_q75 <- round(quantile(df$correlation, 0.75, na.rm = TRUE), 3)
+
+  # Build subtitle text
+  subtitle_text <- paste0(
+    "Mean = ", corr_mean,
+    ";  Q25 = ", corr_q25,
+    ";  Q75 = ", corr_q75
+  )
+
+  # Create plot
+  p <- ggplot(df, aes(x = lon_cen, y = lat_cen, fill = correlation)) +
     geom_tile() +
     scale_fill_scico(
       palette = "bam",
@@ -491,35 +601,35 @@ plot_corr <- function(correlation_df) {
                  max(df$correlation, na.rm = TRUE)),
       name = expression(r[TWI,VEGH])
     ) +
-    labs(
-      title = "TWI-VEGH Correlation Analysis",
-      fill = "Correlation",
-      x = "Longitude",
-      y = "Latitude"
-    ) +
-    theme_classic() +
-    theme(legend.position = "right")
-
+    labs(title = "TWI–VEGH Correlation Analysis",
+         subtitle = subtitle_text,
+         fill = "Correlation") +
+    theme(
+      legend.position = "right",
+      legend.text = element_text(size = 6),
+      legend.title = element_blank()
+    )
   return(p)
 }
 
 
-
+# plot correlation (mark NA) with window size (how many pixels in it)
 plot_correlation_vs_pixel_count <- function(correlation_df) {
-  # 原数据分成两类
-  df <- correlation_df |>
-    select(n_obs, correlation)
 
-  # 拆出 correlation 为 NA 的部分
+  # data clean
+  df <- correlation_df |>
+    dplyr::select(n_obs, correlation)
+
+  # Separate the rows where the correlation is NA
   na_data <- df |> filter(is.na(correlation))
   data_valid <- df |> filter(!is.na(correlation))
 
   ggplot() +
-    # 非 NA 值的点密度图
+    # none NA point density
     geom_pointdensity(data = data_valid, aes(x = n_obs, y = correlation), adjust = 1.5) +
     scale_color_viridis_c() +
 
-    # NA 的点，用红色叉号显示
+    # Red Cross NA Point
     geom_point(data = na_data, aes(x = n_obs, y = 0),
                shape = 4, color = "red", size = 3, stroke = 1.2) +
 
@@ -535,13 +645,12 @@ plot_correlation_vs_pixel_count <- function(correlation_df) {
           plot.title = element_text(size = 14, face = "bold"))
 }
 
-
-
+# 02_2 plot3 --> can delete
 plot_window_distribution <- function(windowed_data) {
   n_windows <- length(unique(windowed_data$window_id))
 
-  set.seed(33)  # For reproducibility of the random colors
   # Generate a random color palette
+  set.seed(33)  # For reproducibility of the random colors
   window_colors <- sample(colors(), n_windows)
 
   # 确保数据框传递给 ggplot2 是正确的
@@ -567,7 +676,7 @@ plot_window_pixel_counts <- function(windowed_data) {
     group_by(window_id) |>
     summarise(pixel_count = n(), .groups = "drop")
 
-  # 计算 225 的比例
+  # 计算 144 的比例
   pct_144 <- mean(window_counts$pixel_count == 144) * 100
 
   # 绘图
@@ -580,7 +689,7 @@ plot_window_pixel_counts <- function(windowed_data) {
     ) +
     theme_classic()
 
-  # 标注 225 处的占比
+  # 标注 144 处的占比
   if (pct_144 > 80) {
     p <- p + annotate("text", x = 144, y = max(table(window_counts$pixel_count)),
                       label = paste0(round(pct_144, 1), "% at 144"),
@@ -588,4 +697,82 @@ plot_window_pixel_counts <- function(windowed_data) {
   }
 
   return(p)
+}
+
+
+plot_random_windows <- function(correlation_results, seed = 123) {
+  set.seed(seed)
+
+  valid_windows <- correlation_results |>
+    filter(!is.na(correlation), n_obs >= 100)
+
+  if (nrow(valid_windows) < 3) {
+    stop("The number of available windows is less than 3, please check the data.")
+  }
+
+  selected_windows <- sample(valid_windows$window_id, 2)
+
+  plots <- purrr::map(selected_windows, function(wid) {
+    row <- valid_windows |> filter(window_id == wid)
+
+    df <- row$data[[1]] |> filter(complete.cases(twi, vegh))
+
+    corr <- round(row$correlation, 3)
+    pval <- signif(row$cor_pval, 3)
+    lon <- round(row$lon_cen, 4)
+    lat <- round(row$lat_cen, 4)
+
+    ggplot(df, aes(x = twi, y = vegh)) +
+      geom_point(alpha = 0.6) +
+      geom_smooth(method = "lm", color = "blue", linewidth = 1) +
+      ggtitle(
+        paste0("Window ", wid,
+               "\nLon: ", lon, ", Lat: ", lat,
+               "\nR = ", corr, ", p = ", pval)
+      ) +
+      labs(
+        x = "Topographic Wetness Index (TWI)",
+        y = "Vegetation Height (VEGH)"
+      ) +
+      theme_classic()
+
+
+  })
+
+  return(plots)
+}
+
+plot_overview <- function(windowed_data) {
+
+  p <- ggplot(windowed_data, aes(x = twi, y = vegh)) +
+    geom_hex(bins = 50) +  # 调整 bins 以控制六边形大小
+    scale_fill_scico(palette = "batlow", name = "Pixel Count") +
+    geom_smooth(method = "lm", color = "blue", linewidth = 1) +
+    labs(
+      title = "Regional Map of the Relationship\nBetween TWI and VEGH",
+      x = "Topographic Wetness Index (TWI)",
+      y = "Vegetation Height (VEGH)"
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = "right",
+      axis.title = element_text(size = 12),
+      plot.title = element_text(size = 14, face = "bold")
+    )
+
+  return(p)
+}
+
+
+plot_peak <- function(correlation_df_peak) {
+  ggplot(correlation_df_peak, aes(x = lon_cen, y = lat_cen, fill = factor(peak))) +
+    geom_tile() +
+    scale_fill_manual(
+      values = c("0" = "lightblue", "1" = "darkred", "NA" = "grey"),
+      na.translate = TRUE,
+      name = "Peak"
+    ) +
+    coord_equal() +
+    theme_classic() +
+    labs(title = "Peak Distribution", x = "Lontitude", y = "Latitut")
 }

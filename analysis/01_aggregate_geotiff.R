@@ -1,6 +1,6 @@
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 # Set up
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 library(terra)
 library(stringr)
 library(here)
@@ -13,24 +13,29 @@ library(cli)
 
 source(here::here("R/aggregate_byfile.R"))
 
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 # Define file paths
-dir_vegh_450m <- "/data_2/scratch/ting/vegh_450m/3_3_deg/"  # Path for saving modified data
-dir_vegh_10m <- "/data_2/archive/vegheight_lang_2023/data/3deg_cogs/"  # Path for higher resolution data
-file_ga2 <- "/data/archive/gti_marthews_2015/data/ga2.nc"  # Target raster file path
+dir_vegh_450m <- file.path("/data_2/scratch/ting/data/vegh_450m/3_3_deg")  # Path for saving modified data
+dir_vegh_10m <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
+file_ga2 <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
 file_vegh_mosaic <- file.path(dirname(dir_vegh_450m), "vegh_450m_2020_mosaic2.nc")
 
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 # Aggregation (vegh 10m --> vegh 450m)
-# ---------------------------------------
+# ------------------------------------------------------------------------------
 
 # Get .tif files from source directory
 files_vegh_10m_all <- fs::dir_ls(path = dir_vegh_10m, glob = "*_Map.tif")
-files_vegh_10m <- files_vegh_10m_all[2300:2651]  # Process a subset of files (for manual work division)
+files_vegh_10m <- files_vegh_10m_all[1001:1500]  # Process a subset of files (for manual work division)
 
+# get the resolution information of target raster(ga2 TWI)
+rast_tar <- rast(file_ga2)
+xres_tar <- xres(rast_tar)
+yres_tar <- yres(rast_tar)
 
+rm(rast_tar)
 gc()
 # Set up parallel processing (adjust based on available CPU cores)
 plan(multisession, workers = 4)
@@ -43,12 +48,10 @@ with_progress({
   pb <- progressor(along = files_vegh_10m)  # Create progress bar
 
   results <- future_map(files_vegh_10m, safely(~{
-
     # future_map() 使用 furrr 进行 并行计算，默认情况下，
     # 每个 worker 进程都是独立的 R 进程，不会自动继承主进程的环境变量
-    rast_tar <- terra::rast(file_ga2)
     # Aggregate raster files
-    result <- aggregate_byfile(.x, rast_tar, dir_vegh_450m)
+    result <- aggregate_byfile(.x, xres_tar, yres_tar, dir_vegh_450m)
     # Update progress bar at each step
     pb()
     return(result)  # Return result for each processed file
@@ -57,13 +60,11 @@ with_progress({
 
 # Switch back to single-threaded execution after completion
 plan(sequential)
-
-rm(rast_tar)  # Remove the list of rasters to free memory
 gc()  # Trigger garbage collection to release memory
 
-# ---------------------------------------------------
+# ------------------------------------------------------------------------------
 # Combination (Merge netCDF files into a mosaic)
-# ---------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Load processed rasters
 files_vegh_450m <- fs::dir_ls(path = dir_vegh_450m, glob = "*_to450m.nc")
