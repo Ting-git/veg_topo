@@ -18,7 +18,15 @@ knitr::opts_chunk$set(
 
 library(terra)
 library(future)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpointdensity)
+library(ncdf4)
+library(knitr)
+# library(ggmap)
+# library(segmented)
+library(cowplot)
 library(furrr)
 library(scico)
 library(viridis)
@@ -38,6 +46,7 @@ cor_mosaic_file <- file.path("/data_2/scratch/ting/data/corr_map/corr_twi_vegh_5
 temp_dir <- file.path("/data_2/scratch/ting/data_temp")
 cor_tiles_dir <- file.path("/data_2/scratch/ting/data/corr_map/30_30_deg")
 ecoregions_path <- file.path("/data_2/scratch/ting/data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
+cci_landcover_path <- file.path("/data_2/scratch/ting/data_raw/CCI_landcover_2020/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 ```
 
 ---
@@ -83,105 +92,71 @@ To explore the global pattern of vegetation structure in relation to hillslope h
 
 ---
 
-## Visualization and Interpretation
-
-* Global maps of **TWI**, **VEGH**, **Pearson correlation coefficients**, and **associated p-values** are visualized using `ggplot2` and `tidyterra`.
-* Color scales are carefully selected (e.g., `scico`, `batlow`) to emphasize meaningful spatial variation.
-* For interpretability:
-
-  * Correlation maps use diverging color palettes centered at zero.
-  * P-value maps use stepped thresholds to highlight significance levels (e.g., *p* < 0.05).
-* In addition, combined diagnostic figures for each tile (from Step 2) are reviewed to identify local patterns and biome-specific interactions between vegetation structure and wetness conditions.
-
----
-
 ```{r Preprocess, eval=FALSE}
-# once finished, no need for reprocessing (30 mins)
+# this chunk need 30 mins
+ext_list <- generate_global_extents()
 prep_tiles_info <- generate_prep_tiles_info(
-  file_ga2, file_vegh_450m_mosaic, temp_dir)
+  ext_list, file_ga2, file_vegh_450m_mosaic, temp_dir)
 
 str(prep_tiles_info, max.level = 2)
 ```
 
 
 ```{r Implementation, eval=FALSE}
-# this process need more than 3h
-prep_tiles_info <- readr::read_csv(here::here("data/preprocessed_tiles_info.csv"))
+prep_tiles_info_all <- readr::read_csv(here::here("data/preprocessed_tiles_info.csv"))
+prep_tiles_info <- prep_tiles_info_all[35, ] # for testing
 
 gc()
 plan(multisession, workers = 6)
 
-# Create a list to collect failed tiles
+# List to collect failed tiles info
 error_log <- list()
 
 with_progress({
-  pb <- progressor(along = prep_tiles_info)
-
+  pb <- progressor(along = prep_tiles_info$name)  # progress based on tile names
+  
   results <- future_pmap(
     prep_tiles_info,
     function(name, xmin, xmax, ymin, ymax, file) {
+      # library(ggplot2)
+      # library(tidyr)
+      # library(dplyr)
+      # library(terra)
+      # library(sf)
+      # library(viridis)
+      # library(scico)
       tryCatch({
-        
         pb(sprintf("Processing tile: %s", name))
         
         # Load pre-processed raster
         merged_raster <- terra::rast(file)
         
-        # Generate windows and correlation dataframes
-        windowed_data <- create_spatial_windows(merged_raster, 12)
+        # Generate spatial windows and correlation data frames
+        windowed_data <- create_spatial_windows(merged_raster)
         correlation_df <- calculate_window_correlations(windowed_data)
         
-        # Convert to raster and Save the outcome
+        # Convert to raster and save output
         correlation_raster <- terra::rast(
-          correlation_df[, c("lon_cen", "lat_cen", "correlation", "cor_pval")], 
-          type = "xyz", crs = "EPSG:4326")
+          correlation_df[, c("lon_mid", "lat_mid", "correlation", "cor_pval")],
+          type = "xyz",
+          crs = "EPSG:4326"
+        )
         names(correlation_raster) <- c("correlation", "cor_pval")
         nc_path <- file.path(cor_tiles_dir, paste0(name, "_corr_twi_vegh_5km.nc"))
-        terra::writeCDF(correlation_raster, cor_tiles_dir, overwrite = TRUE)
-        
-        # # Load processed raster
-        # merged_raster <- terra::rast(file)
-        # suppressWarnings({
-        #   windowed_data <- as.data.frame(merged_raster, xy = TRUE, na.rm = TRUE)
-        # })
-        # colnames(windowed_data) <- c("lon", "lat", "twi", "vegh")
-        # 
-        # nc_path <- file.path(cor_tiles_dir, paste0("corr_twi_vegh_5km_", name, ".nc"))
-        # corr_raster <- terra::rast(nc_path)
-        # suppressWarnings({
-        #   correlation_df <- as.data.frame(corr_raster, xy = TRUE, na.rm = TRUE)
-        # })
-        # colnames(correlation_df) <- c("lon_cen", "lat_cen", "correlation", "pval")
-        
-        # Generate plots
-        plot1 <- plot_twi(windowed_data)
-        plot2 <- plot_vegh(windowed_data)
-        plot3 <- plot_corr(correlation_df)
-        # plot4 <- plot_correlation_vs_pixel_count(correlation_df)
-        plot5 <- plot_overview(windowed_data)
-        
-        sapply(list(plot1, plot2, plot3, plot5), class)
-        
-        source(here::here("R/split_window_correlation.R"))
-        png_path <- save_combined_plot(
-          plots = list(plot1, plot2, plot3, plot5),
-          region_name = name,
-          title_text = "VEGH and TWI Correlation Analysis",
-          ncol = 2,
-          width = 18,
-          height = 16,
-          file_index = "02_3"
+        terra::writeCDF(correlation_raster, nc_path, overwrite = TRUE)
+ 
+        # Clear memory for large objects including plots
+        rm(
+          merged_raster,
+          windowed_data,
+          correlation_df,
+          correlation_raster
         )
-        
-        # Clean memory
-        rm(merged_raster,
-           windowed_data,
-           correlation_df,
-           correlation_raster)
         gc()
         
-        list(png_path)
-      }, error = function(e) {
+        list(nc_path)
+      },
+      error = function(e) {
         msg <- sprintf("Tile %s failed: %s", name, e$message)
         message("❌ ", msg)
         error_log[[length(error_log) + 1]] <<- list(
@@ -197,11 +172,12 @@ with_progress({
       })
     }
   )
-  # Update progress bar in the main thread after all tasks are completed
-  future_walk(results, ~pb()) 
+  
+  # Update progress bar in main thread after all futures finish
+  future_walk(results, ~pb())
 })
 
-# Restore single-threaded processing
+# Restore sequential (single-threaded) plan and run garbage collection
 plan(sequential)
 gc()
 
@@ -209,10 +185,114 @@ gc()
 cat("✅ Completed tiles:", sum(!is.na(results)), "\n")
 cat("❌ Failed tiles:", sum(is.na(results)), "\n")
 
-# Save failed tiles log to CSV
+# Save error log to CSV if any errors occurred
 if (length(error_log) > 0) {
   error_df <- bind_rows(error_log)
-  log_file <- file.path(output_dir, "failed_tiles_log.csv")
+  log_file <- file.path(output_dir, "failed_nc_tiles_log.csv")
+  write_csv(error_df, log_file)
+  message("📄 Error log saved to: ", log_file)
+}
+
+```
+
+```{r TilePlot, eval=FALSE}
+
+prep_tiles_info_all <- readr::read_csv(here::here("data/preprocessed_tiles_info.csv"))
+prep_tiles_info <- prep_tiles_info_all[35:37, ] # for testing
+
+gc()
+plan(multisession, workers = 6)
+
+# List to collect failed tiles info
+error_log <- list()
+
+with_progress({
+  pb <- progressor(along = prep_tiles_info$name)  # progress based on tile names
+  
+  results <- future_pmap(
+    prep_tiles_info,
+    function(name, xmin, xmax, ymin, ymax, file) {
+      tryCatch({
+        pb(sprintf("Processing tile: %s", name))
+        
+        # Load processed raster
+        merged_raster <- terra::rast(file)
+        suppressWarnings({
+          windowed_data <- as.data.frame(merged_raster, xy = TRUE, na.rm = TRUE)
+        })
+        colnames(windowed_data) <- c("lon", "lat", "twi", "vegh")
+
+        nc_path <- file.path(cor_tiles_dir, paste0(name,"_corr_twi_vegh_5km", ".nc"))
+        correlation_raster <- terra::rast(nc_path)
+        suppressWarnings({
+          correlation_df <- as.data.frame(correlation_raster, xy = TRUE, na.rm = TRUE)
+        })
+        colnames(correlation_df) <- c("lon_mid", "lat_mid", "correlation", "pval")
+        
+        
+        # Generate plots
+        plot1 <- plot_twi(windowed_data, xmin, xmax, ymin, ymax)
+        plot2 <- plot_vegh(windowed_data, xmin, xmax, ymin, ymax)
+        plot3 <- plot_corr(correlation_df, xmin, xmax, ymin, ymax)
+        plot4 <- plot_overview(windowed_data)
+        plot5 <- plot_landcover2(cci_landcover_path, xmin, xmax, ymin, ymax)
+        plot6 <- plot_biomes_by_extent(ecoregions_path, xmin, xmax, ymin, ymax)
+        
+        png_path <- save_combined_plot(
+          plots = list(plot1, plot2, plot3, plot4, plot5, plot6),
+          region_name = name,
+          title_text = "VEGH and TWI Correlation Analysis",
+          ncol = 2,
+          width = 12,
+          height = 18,
+          file_index = "02_3"
+        )
+        
+        # Clear memory for large objects including plots
+        rm(
+          merged_raster,
+          windowed_data,
+          correlation_df,
+          correlation_raster,
+          plot1, plot2, plot3, plot4, plot5, plot6
+        )
+        gc()
+        
+        list(png_path)
+      },
+      error = function(e) {
+        msg <- sprintf("Tile %s failed: %s", name, e$message)
+        message("❌ ", msg)
+        error_log[[length(error_log) + 1]] <<- list(
+          name = name,
+          xmin = xmin,
+          xmax = xmax,
+          ymin = ymin,
+          ymax = ymax,
+          file = file,
+          error = e$message
+        )
+        return(NA)
+      })
+    }
+  )
+  
+  # Update progress bar in main thread after all futures finish
+  future_walk(results, ~pb())
+})
+
+# Restore sequential (single-threaded) plan and run garbage collection
+plan(sequential)
+gc()
+
+# Summary
+cat("✅ Completed tiles:", sum(!is.na(results)), "\n")
+cat("❌ Failed tiles:", sum(is.na(results)), "\n")
+
+# Save error log to CSV if any errors occurred
+if (length(error_log) > 0) {
+  error_df <- bind_rows(error_log)
+  log_file <- file.path(output_dir, "failed_png_tiles_log.csv")
   write_csv(error_df, log_file)
   message("📄 Error log saved to: ", log_file)
 }
@@ -225,6 +305,23 @@ if (length(error_log) > 0) {
 mosaic_and_save_rasters(cor_tiles_dir, cor_mosaic_file, verbose = TRUE)
 ```
 
+---
+
+## Visualization and Interpretation
+
+* Global maps of **TWI**, **VEGH**, **Pearson correlation coefficients**, and **associated p-values** are visualized using `ggplot2` and `tidyterra`.
+* Color scales are carefully selected (e.g., `scico`, `batlow`) to emphasize meaningful spatial variation.
+* For interpretability:
+
+  * Correlation maps use diverging color palettes centered at zero.
+  * P-value maps use stepped thresholds to highlight significance levels (e.g., *p* < 0.05).
+* In addition, combined diagnostic figures for each tile (from Step 2) are reviewed to identify local patterns and biome-specific interactions between vegetation structure and wetness conditions.
+
+```{r landcover, fig.width=12, fig.height=6}
+plot_biomes_by_extent(ecoregions_path, -180, 180, -60, 85)
+```
+Figure 1. Land cover classification gridded map 2020 derived from satellite observations, data from \cite{copernicus2019landcover}.
+
 ```{r biomes, fig.width=12, fig.height=6}
 
 suppressMessages(ecoregions <- st_read(ecoregions_path))
@@ -235,12 +332,12 @@ ggplot(data = ecoregions) +
   labs(title = "Biomes", fill = "Biome") +
   scale_x_continuous(
     expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)  # 每 30 度标注经度
+    breaks = seq(-180, 180, by = 30)  
   ) +
   scale_y_continuous(
     expand = c(0, 0),
     limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)   # 每 30 度标注纬度
+    breaks = seq(-60, 90, by = 30)   
   ) +
   theme(
     legend.position = "bottom",
@@ -248,10 +345,10 @@ ggplot(data = ecoregions) +
     legend.title = element_text(size = 8)
   )
 
-rm(ecoregions)
-gc()
+# rm(ecoregions)
+# gc()
 ```
-Figure 1. Biome distribution based on WWF ecoregions dataset, data from \citeauthor{dinersteinEcoregionBasedApproachProtecting2017} (\citeyear{dinersteinEcoregionBasedApproachProtecting2017}).
+Figure 2. Biome distribution based on WWF ecoregions dataset, data from \citeauthor{dinersteinEcoregionBasedApproachProtecting2017} (\citeyear{dinersteinEcoregionBasedApproachProtecting2017}).
 
 ```{r twi, fig.width=12, fig.height=6}
 
@@ -277,10 +374,10 @@ ggplot() +
         legend.text = element_text(size = 6),
         legend.title = element_blank())
 
-rm(twi_raster)
-gc()
+# rm(twi_raster)
+# gc()
 ```
-Figure 2. TWI indicates water accumulation tendency based on topography, data from \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
+Figure 3. TWI indicates water accumulation tendency based on topography, data from \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
 
 ```{r vegh, fig.width=12, fig.height=6}
 
@@ -307,38 +404,51 @@ ggplot() +
         legend.text = element_text(size = 6),
         legend.title = element_blank())
 
-rm(vegh_raster)
-gc()
+# rm(vegh_raster)
+# gc()
 ```
-Figure 3. Vegetation Height (VEGH) data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}).
+Figure 4. Vegetation Height (VEGH) data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}).
 
 
-```{r cor, fig.width=12, fig.height=6}
-
+```{r cor, fig.width=12, fig.height=6, dpi = 800}
 correlation_raster <- rast(cor_mosaic_file)
+cor_r <- correlation_raster[[1]]
+
+plot(cor_r,
+     main = "VEGH-TWI Pearson Correlation",
+     col = scico(100, palette = "bam", direction = 1),
+     axes = TRUE,
+     xlim = c(-180, 180),
+     ylim = c(-60, 85),
+     colNA = "grey",  
+     legend = TRUE)   
+
+res(correlation_raster)
+
+plot(correlation_raster[[1]], xlim = c(30, 31), ylim = c(60, 61))
 
 # plot pearson correlation
 ggplot() +
-  tidyterra::geom_spatraster(data = correlation_raster[[1]]) +
-  scale_fill_scico(palette = "bam", direction = 1, na.value = "white") +
+  tidyterra::geom_spatraster(data = correlation_raster[[1]], maxcell = Inf) +
+  scale_fill_scico(palette = "bam", direction = 1, na.value = "grey") +
   labs(
     title = "VEGH-TWI Pearson Correlation",
     fill = "r") +
   scale_x_continuous(
     expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)  # 每 30 度标注经度
+    breaks = seq(-180, 180, by = 30) 
   ) +
   scale_y_continuous(
     expand = c(0, 0),
     limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)   # 每 30 度标注纬度
+    breaks = seq(-60, 90, by = 30)  
   ) +
   theme(legend.position = "right",
         legend.text = element_text(size = 6),
         legend.title = element_blank())
 
 ```
-Figure 4. VEGH–TWI Pearson correlation map. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
+Figure 5. VEGH–TWI Pearson correlation map. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
 
   
 ```{r p_val, fig.width=12, fig.height=6}
@@ -370,10 +480,46 @@ ggplot() +
     legend.text = element_text(size = 6),
     legend.title = element_text(size = 8)
   )
-rm(correlation_raster)
-gc()
+
+# rm(correlation_raster)
+# gc()
 ```
-Figure 5. The P-value of the Pearson correlation analysis between TWI and VEGH. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
+Figure 6. The P-value of the Pearson correlation analysis between TWI and VEGH. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
+
+
+```{r InteractiveZoom, eval=FALSE}
+# this interactive zomming is not working now
+# due unsucceful installation of packadge "raster" and "leaflet" which depend on 
+# 
+pal <- colorNumeric(
+  "magma",
+  values(correlation_raster),
+  na.color = "transparent"
+)
+
+leaflet() |>
+  # Add Base Maps
+  addProviderTiles(providers$Esri.WorldImagery, group = "World Imagery") |>
+  addProviderTiles(providers$Esri.WorldTopoMap, group = "World Topo") |>
+  
+  addV
+  
+  addRasterImage(twi_raster,
+                 colors = pal,
+                 opacity = 0.8,
+                 group = "TWI-VEGH correlation") |>
+  
+  addRasterImage(vegh_raster,
+                 colors = pal,
+                 opacity = 0.8,
+                 group = "TWI-VEGH correlation") |>
+
+  addRasterImage(correlation_raster,
+                 colors = pal,
+                 opacity = 0.8,
+                 group = "TWI-VEGH correlation") |>
+
+```
 
 
 ```{r Visulization2}

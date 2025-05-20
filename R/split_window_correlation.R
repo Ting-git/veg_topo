@@ -2,53 +2,38 @@
 # Main Functions
 # ------------------------------------------------------------------------------
 
-create_spatial_windows <- function(raster_data, window_size = 12) {
+create_spatial_windows <- function(raster_data) {
 
   # Convert raster to dataframe
   suppressWarnings({df <- as.data.frame(raster_data, xy = TRUE, na.rm = TRUE)})
   colnames(df) <- c("lon", "lat", "twi", "vegh")
 
-  # Ensure window size is positive
-  if (window_size <= 0) {
-    stop("Window size must be a positive integer.")
-  }
-
-  # Calculate window dimensions based on raster resolution
-  resolution <- res(raster_data)
-  lon_window_size <- round(resolution[1] * window_size, 3)
-  lat_window_size <- round(resolution[2] * window_size, 3)
+  dlon <- 0.05 # corrected here
+  dlat <- 0.05 # corrected here
 
   # Create window boundaries
   lon_breaks <- seq(
-    from = floor(min(df$lon)),
-    to = ceiling(max(df$lon)),
-    by = lon_window_size
-  )
+    from = floor(min(df$lon)), to = ceiling(max(df$lon)), by = dlon)
 
   lat_breaks <- seq(
-    from = floor(min(df$lat)),
-    to = ceiling(max(df$lat)),
-    by = lat_window_size
-  )
+    from = floor(min(df$lat)), to = ceiling(max(df$lat)),  by = dlat)
 
-  # Assign each point to a window
   df <- df |>
-    mutate(
-      lon_win = cut(lon, breaks = lon_breaks, include.lowest = TRUE),
-      lat_win = cut(lat, breaks = lat_breaks, include.lowest = TRUE),
-      window_id = as.integer(interaction(lon_win, lat_win)),
-
-      # calculate xy of center point
-      lon_cen = sapply(as.character(lon_win), function(w) {
-        bounds <- as.numeric(gsub("\\[|\\]|\\(|\\)", "", strsplit(w, ",")[[1]]))
-        mean(bounds)
-      }),
-      lat_cen = sapply(as.character(lat_win), function(w) {
-        bounds <- as.numeric(gsub("\\[|\\]|\\(|\\)", "", strsplit(w, ",")[[1]]))
-        mean(bounds)
-      })
+    ungroup() |>
+    mutate(ilon = cut(lon, breaks = lon_breaks),
+           ilat = cut(lat, breaks = lat_breaks)
     ) |>
-    dplyr::select(lon, lat, twi, vegh, window_id, lon_cen, lat_cen)
+    mutate(lon_lower = as.numeric( sub("\\((.+),.*", "\\1", ilon)),
+           lon_upper = as.numeric( sub("[^,]*,([^]]*)\\]", "\\1", ilon) ),
+           lat_lower = as.numeric( sub("\\((.+),.*", "\\1", ilat) ),
+           lat_upper = as.numeric( sub("[^,]*,([^]]*)\\]", "\\1", ilat) ),
+           window_id = as.integer(interaction(ilon, ilat))
+    ) |>
+    mutate(lon_mid = (lon_lower + lon_upper)/2,
+           lat_mid = (lat_lower + lat_upper)/2) |>
+
+    ## create cell name to associate with climate input
+    dplyr::select(-ilon, -ilat, -lon_lower, -lon_upper, -lat_lower, -lat_upper)
 
   return(df)
 }
@@ -58,8 +43,8 @@ create_spatial_windows <- function(raster_data, window_size = 12) {
 # Return only windowed data with coarser resolution
 calculate_window_correlations <- function(windowed_data) {
   correlation_results <- windowed_data |>
-    group_by(window_id, lon_cen, lat_cen) |>  # Group data by window ID and location
-    group_nest() |>  # Nest the grouped data into list-columns
+    group_by(window_id, lon_mid, lat_mid) |>  # Group data by window ID and location
+    tidyr::nest() |>  # Nest the grouped data into list-columns
     mutate(
       # Perform statistical computations
       stats = purrr::map(data, ~{
@@ -89,7 +74,7 @@ calculate_window_correlations <- function(windowed_data) {
       cor_pval = purrr::map_dbl(stats, "cor_pval"),
       n_obs = purrr::map_int(stats, "n_obs")
     ) |>
-    dplyr::select(window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval) |>  # Keep relevant columns
+    dplyr::select(window_id, lon_mid, lat_mid, n_obs, correlation, cor_pval) |>  # Keep relevant columns
     ungroup()
 
   return(correlation_results)  # Return final result
@@ -99,8 +84,8 @@ calculate_window_correlations <- function(windowed_data) {
 # Return unnested original data with original resolution as well
 calculate_window_correlations1 <- function(windowed_data) {
   correlation_results <- windowed_data |>
-    group_by(window_id, lon_cen, lat_cen) |>  # Group data by window ID and location
-    group_nest() |>  # Nest the grouped data into list-columns
+    group_by(window_id, lon_mid, lat_mid) |>  # Group data by window ID and location
+    tidyr::nest() |>  # Nest the grouped data into list-columns
     mutate(
       # Perform statistical computations
       stats = purrr::map(data, ~{
@@ -132,7 +117,7 @@ calculate_window_correlations1 <- function(windowed_data) {
     ) |>
     # unnest(cols = c(data)) |> # unnest to expand the grouped data
     ungroup() |>
-    dplyr::select(data, window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval) |>  # Keep relevant columns
+    dplyr::select(data, window_id, lon_mid, lat_mid, n_obs, correlation, cor_pval) |>  # Keep relevant columns
     ungroup()
 
   return(correlation_results)  # Return final result
@@ -142,8 +127,8 @@ calculate_window_correlations1 <- function(windowed_data) {
 # Return only windowed data with coarser resolution
 calculate_window_correlations2 <- function(windowed_data) {
   correlation_results <- windowed_data |>
-    group_by(window_id, lon_cen, lat_cen) |>
-    group_nest() |>
+    group_by(window_id, lon_mid, lat_mid) |>
+    tidyr::nest() |>
     mutate(
       # Perform statistical computations
       stats = purrr::map(data, ~{
@@ -176,15 +161,14 @@ calculate_window_correlations2 <- function(windowed_data) {
       n_obs = purrr::map_int(stats, "n_obs"),
       peak = purrr::map_dbl(stats, "peak")  # Adding the peak column
     ) |>
-    dplyr::select(data, window_id, lon_cen, lat_cen, n_obs, correlation, cor_pval, peak) |>
+    dplyr::select(data, window_id, lon_mid, lat_mid, n_obs, correlation, cor_pval, peak) |>
     ungroup()
 
   return(correlation_results)
 }
 
 
-# use extent of tiles to crop, merge, and save the twi and vegh into one NetCDF document
-# return a list of file path
+# Internal processing function
 pre_merge_tile_rasters <- function(tile_extents, twi_file, vegh_file, processed_dir) {
   # Load rasters
   twi_raster_full <- terra::rast(twi_file)
@@ -242,16 +226,15 @@ pre_merge_tile_rasters <- function(tile_extents, twi_file, vegh_file, processed_
   return(processed_tile_files)
 }
 
-
-# Main function to process and all tiles information
-# return name, file path, extent
-generate_prep_tiles_info <- function(twi_file, vegh_file, temp_dir) {
+# Main function to process all tiles and merge results
+generate_prep_tiles_info <- function(ext_list, twi_file, vegh_file, temp_dir,
+                                     output_file = here::here("data/preprocessed_tiles_info.csv")) {
   # Create output subfolder
   processed_dir <- file.path(temp_dir, "pre_merged_rasters")
   dir.create(processed_dir, showWarnings = FALSE, recursive = TRUE)
 
   # Generate extents for 72 tiles
-  tile_extents <- generate_global_extents()
+  tile_extents <- ext_list
 
   # Run processing
   prep_tile_files <- with_progress({
@@ -288,8 +271,7 @@ generate_prep_tiles_info <- function(twi_file, vegh_file, temp_dir) {
   )
 
   # Save as CSV
-  csv_file <- file.path("./data", "preprocessed_tiles_info.csv")
-  readr::write_csv(prep_tiles_info, csv_file)
+  readr::write_csv(prep_tiles_info, info_file)
 
   return(prep_tiles_info)
 }
@@ -318,6 +300,9 @@ mosaic_and_save_rasters <- function(input_dir, output_file, pattern = "*.nc", ve
 # ------------------------------------------------------------------------------
 # Additional Functions
 # ------------------------------------------------------------------------------
+
+# Divide the globe into multipal tiles and
+# name the west_south_cor(i.e. lat_min, lon_min)
 
 # Divide the globe into multipal tiles and
 # name the west_south_cor(i.e. lat_min, lon_min)
@@ -395,94 +380,68 @@ normalize_string <- function(x) {
   return(x)
 }
 
-save_combined_plot <- function(
-    plots,
-    region_name,
-    title_text,
-    ncol = 3,
-    output_dir = here::here("data", "figures"),
-    width = 20,
-    height = 13,
-    dpi = 300,
-    file_index = ""
-) {
-
-  valid_plots <- keep(plots, ~ inherits(.x, "ggplot"))
-
-  # Create the full title by combining region name and title text
-  title_text_full <- paste0(region_name, " ", title_text)
-
-  # Combine the plots with the title on top
-  combined_plot <- cowplot::plot_grid(
-    cowplot::ggdraw() + cowplot::draw_label(title_text_full, fontface = "bold", size = 20, x = 0, hjust = 0),
-    cowplot::plot_grid(plotlist = valid_plots, ncol = ncol, align = "hv", axis = "tblr"),
-    ncol = 1,
-    rel_heights = c(0.05, 1)
-  ) +
-    theme(plot.background = element_rect(fill = "white", color = "white"))
-
-  # Construct the output file path
-  output_file <- file.path(
-    output_dir,
-    paste0(
-      file_index,
-      "_",
-      normalize_string(region_name),
-      "_",
-      normalize_string(title_text),
-      ".png"
-    )
-  )
-
-  # Save the combined plot to a file
-  ggplot2::ggsave(
-    filename = output_file,
-    plot = combined_plot,
-    width = width,
-    height = height,
-    dpi = dpi,
-    bg = "white"
-  )
-
-  message("✅ Plot saved to: ", output_file)
-  return(output_file)
-}
-
 # ------------------------------------------------------------------------------
 # Visualization
 # ------------------------------------------------------------------------------
 
 # plot topographic wetness index (TWI or CTI) map by dataset
-plot_twi <- function(dataframe) {
+plot_twi <- function(dataframe, xmin, xmax, ymin, ymax) {
   p <- ggplot(dataframe, aes(x = lon, y = lat, fill = twi)) +
     geom_tile() +
     scale_fill_scico(palette = "oslo", direction = -1) +
     labs(title = "Topographic Wetness Index (TWI)",
          fill = "TWI") +
-    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
-    scale_y_continuous(expand = c(0, 0)) +
-    theme(legend.position = "right",
-          legend.text = element_text(size = 6),
-          legend.title = element_blank())
+    scale_x_continuous(
+      name = "Longitude",  # 横坐标标题
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = 5)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",   # 纵坐标标题
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = 5)
+    ) +
+    theme(
+      legend.position = "right",
+      legend.text = element_text(size = 6),
+      legend.title = element_blank(),
+      plot.title = element_text(face = "bold")
+    )
 
   return(p)
 }
 
 # plot vegetation height map by dataset
-plot_vegh <- function(dataframe) {
-  p <- ggplot(dataframe, aes(x = lon, y = lat, fill = vegh)) +
+plot_vegh <- function(dataframe, xmin, xmax, ymin, ymax) {
+  ggplot(dataframe, aes(x = lon, y = lat, fill = vegh)) +
     geom_tile() +
     scale_fill_scico(palette = "batlow", direction = -1) +
-    labs(title = "Vegetation Height (m)",
-         fill = "VEGH") +
-    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
-    scale_y_continuous(expand = c(0, 0)) +
-    theme(legend.position = "right",
-          legend.text = element_text(size = 6),
-          legend.title = element_blank())
-
-  return(p)
+    labs(
+      title = "Vegetation Height 2020 (m)",
+      fill = "VEGH"
+    ) +
+    scale_x_continuous(
+      name = "Longitude",  # 横坐标标题
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = 5)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",   # 纵坐标标题
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = 5)
+    ) +
+    theme(
+      legend.position = "right",
+      legend.text = element_text(size = 6),
+      legend.title = element_blank(),
+      plot.title = element_text(face = "bold")
+    )
 }
+
 
 # plot MODIS land cover map by ext
 plot_landcover <- function(file_modis_landcover, ext){
@@ -535,10 +494,19 @@ plot_landcover <- function(file_modis_landcover, ext){
       "Barren or Sparsely Vegetated",
       name = "Land Cover"
     ))+
-    coord_equal() +
     labs(title = "MODIS Land Cover (2010)") +
-    scale_x_continuous(expand = c(0, 0)) +  # avoid gap between plotting area and axis
-    scale_y_continuous(expand = c(0, 0)) +
+    scale_x_continuous(
+      name = "Longitude",  # 横坐标标题
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = 5)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",   # 纵坐标标题
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = 5)
+    ) +
     theme(legend.position = "right",
           legend.text = element_text(size = 6),
           legend.title = element_blank())
@@ -547,6 +515,129 @@ plot_landcover <- function(file_modis_landcover, ext){
   gc()
   return(p)
 }
+
+plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax) {
+  library(terra)
+  library(ggplot2)
+  library(dplyr)
+
+  # Load and crop raster
+  lc <- terra::rast(cci_landcover_path)
+  lccs_class <- lc[["lccs_class"]]
+  landcover_crop <- terra::crop(lccs_class, terra::ext(xmin, xmax, ymin, ymax))
+
+  # Convert to data frame (no resampling)
+  lc_df <- as.data.frame(landcover_crop, xy = TRUE, na.rm = FALSE)
+  colnames(lc_df) <- c("x", "y", "class")
+
+  # Define legend info
+  lccs_labels <- data.frame(
+    class = c(0, 10, 11, 12, 20, 30, 40, 50, 60, 61, 62,
+              70, 71, 72, 80, 81, 82, 90, 100, 110, 120,
+              121, 122, 130, 140, 150, 151, 152, 153, 160,
+              170, 180, 190, 200, 201, 202, 210, 220),
+    label = c("No Data", "Cropland, rainfed", "Herbaceous cover", "Tree or shrub cover",
+              "Cropland, irrigated or post-flooding",
+              "Mosaic cropland (>50%) / natural vegetation (<50%)",
+              "Mosaic natural vegetation (>50%) / cropland (<50%)",
+              "Tree cover, broadleaved, evergreen, closed to open (>15%)",
+              "Tree cover, broadleaved, deciduous, closed to open (>15%)",
+              "Tree cover, broadleaved, deciduous, closed (>40%)",
+              "Tree cover, broadleaved, deciduous, open (15–40%)",
+              "Tree cover, needleleaved, evergreen, closed to open (>15%)",
+              "Tree cover, needleleaved, evergreen, closed (>40%)",
+              "Tree cover, needleleaved, evergreen, open (15–40%)",
+              "Tree cover, needleleaved, deciduous, closed to open (>15%)",
+              "Tree cover, needleleaved, deciduous, closed (>40%)",
+              "Tree cover, needleleaved, deciduous, open (15–40%)",
+              "Tree cover, mixed leaf type (broadleaved and needleleaved)",
+              "Mosaic tree and shrub (>50%) / herbaceous cover (<50%)",
+              "Mosaic herbaceous cover (>50%) / tree and shrub (<50%)",
+              "Shrubland", "Evergreen shrubland", "Deciduous shrubland",
+              "Grassland", "Lichens and mosses", "Sparse vegetation (<15%)",
+              "Sparse tree (<15%)", "Sparse shrub (<15%)", "Sparse herbaceous cover (<15%)",
+              "Tree cover, flooded, fresh or brackish water",
+              "Tree cover, flooded, saline water",
+              "Shrub or herbaceous cover, flooded, fresh/saline/brackish water",
+              "Urban areas", "Bare areas", "Consolidated bare areas",
+              "Unconsolidated bare areas", "Water bodies", "Permanent snow and ice"),
+    color = c("#000000", "#FFFF64", "#FFFF64", "#FFFF00", "#AAF0F0", "#DCF064", "#C8C864",
+              "#006400", "#00A000", "#00A000", "#AAC800", "#003C00", "#003C00", "#005000",
+              "#285000", "#285000", "#326400", "#788000", "#8CA000", "#BE9600", "#966400",
+              "#966400", "#966400", "#FFB432", "#FFDCD6", "#FFEBAF", "#FFC864", "#FFD278",
+              "#FFEBAF", "#00785A", "#009678", "#00DC82", "#C31400", "#FFF5D7", "#DCDCDC",
+              "#FFF5D7", "#0046C8", "#FFFFFF")
+  )
+
+  # Merge labels for plotting
+  lc_df <- lc_df %>%
+    left_join(lccs_labels, by = "class")
+
+  # Plot with ggplot (no tidyterra)
+  p <- ggplot(lc_df, aes(x = x, y = y, fill = factor(class))) +
+    geom_raster() +
+    scale_fill_manual(values = setNames(lccs_labels$color, lccs_labels$class),
+                      labels = lccs_labels$label,
+                      name = "Land cover class") +
+    scale_x_continuous(
+      name = "Longitude",  # 横坐标标题
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = 5)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",   # 纵坐标标题
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = 5)
+    ) +
+    labs(title = "CCI Land Cover Class 2020") +
+    theme_classic() +
+    theme(legend.position = "none",
+          plot.title = element_text(face = "bold"))
+
+  return(p)
+}
+
+
+plot_biomes_by_extent <- function(ecoregions_path, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
+  # Load the ecoregions shapefile
+  suppressMessages(ecoregions <- sf::st_read(ecoregions_path, quiet = TRUE))
+
+  # Fix invalid geometries
+  ecoregions <- sf::st_make_valid(ecoregions)
+
+  # Build the plot (no cropping, just setting visible extent)
+  p <- ggplot(data = ecoregions) +
+    geom_sf(aes(fill = BIOME_NAME), color = NA) +
+    scale_fill_manual(
+      values = setNames(ecoregions$COLOR_BIO, ecoregions$BIOME_NAME)
+    ) +
+    scale_x_continuous(
+      name = "Longitude",
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = x_breaks)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = y_breaks)
+    ) +
+    labs(title = "Biomes", fill = "Biome") +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold"),
+      aspect.ratio = (ymax - ymin) / (xmax - xmin)
+    )
+
+
+  return(p)
+}
+
+
 
 # plot Google satellite imagine by ext
 plot_img <- function(ext_test) {
@@ -573,10 +664,10 @@ plot_img <- function(ext_test) {
 }
 
 # plot Pearson correlation (between VEGH and TWI) for by dataset
-plot_corr <- function(correlation_df) {
+plot_corr <- function(correlation_df, xmin, xmax, ymin, ymax) {
   # Select relevant columns and drop rows with NA values
   df <- correlation_df |>
-    dplyr::select(lon_cen, lat_cen, correlation) |>
+    dplyr::select(lon_mid, lat_mid, correlation) |>
     drop_na()  # Remove rows with missing correlation values
 
   # Compute summary statistics
@@ -592,8 +683,8 @@ plot_corr <- function(correlation_df) {
   )
 
   # Create plot
-  p <- ggplot(df, aes(x = lon_cen, y = lat_cen, fill = correlation)) +
-    geom_tile() +
+  p <- ggplot(df, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
+    geom_raster() +
     scale_fill_scico(
       palette = "bam",
       midpoint = 0,
@@ -604,10 +695,23 @@ plot_corr <- function(correlation_df) {
     labs(title = "TWI–VEGH Correlation Analysis",
          subtitle = subtitle_text,
          fill = "Correlation") +
+    scale_x_continuous(
+      name = "Longitude",
+      expand = c(0, 0),
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = 5)
+    ) +
+    scale_y_continuous(
+      name = "Latitude",
+      expand = c(0, 0),
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = 5)
+    ) +
     theme(
       legend.position = "right",
       legend.text = element_text(size = 6),
-      legend.title = element_blank()
+      legend.title = element_blank(),
+      plot.title = element_text(face = "bold")
     )
   return(p)
 }
@@ -719,8 +823,8 @@ plot_random_windows <- function(correlation_results, seed = 123) {
 
     corr <- round(row$correlation, 3)
     pval <- signif(row$cor_pval, 3)
-    lon <- round(row$lon_cen, 4)
-    lat <- round(row$lat_cen, 4)
+    lon <- round(row$lon_mid, 4)
+    lat <- round(row$lat_mid, 4)
 
     ggplot(df, aes(x = twi, y = vegh)) +
       geom_point(alpha = 0.6) +
@@ -765,7 +869,7 @@ plot_overview <- function(windowed_data) {
 
 
 plot_peak <- function(correlation_df_peak) {
-  ggplot(correlation_df_peak, aes(x = lon_cen, y = lat_cen, fill = factor(peak))) +
+  ggplot(correlation_df_peak, aes(x = lon_mid, y = lat_mid, fill = factor(peak))) +
     geom_tile() +
     scale_fill_manual(
       values = c("0" = "lightblue", "1" = "darkred", "NA" = "grey"),
@@ -775,4 +879,59 @@ plot_peak <- function(correlation_df_peak) {
     coord_equal() +
     theme_classic() +
     labs(title = "Peak Distribution", x = "Lontitude", y = "Latitut")
+}
+
+
+
+save_combined_plot <- function(
+    plots,
+    region_name,
+    title_text,
+    ncol = 3,
+    output_dir = here::here("data", "figures"),
+    width = 20,
+    height = 13,
+    dpi = 300,
+    file_index = ""
+) {
+
+  valid_plots <- keep(plots, ~ inherits(.x, "ggplot"))
+
+  # Create the full title by combining region name and title text
+  title_text_full <- paste0(region_name, " ", title_text)
+
+  # Combine the plots with the title on top
+  combined_plot <- cowplot::plot_grid(
+    cowplot::ggdraw() + cowplot::draw_label(title_text_full, fontface = "bold", size = 20, x = 0, hjust = 0),
+    cowplot::plot_grid(plotlist = valid_plots, ncol = ncol, align = "hv"),
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  ) +
+    theme(plot.background = element_rect(fill = "white", color = "white"))
+
+  # Construct the output file path
+  output_file <- file.path(
+    output_dir,
+    paste0(
+      file_index,
+      "_",
+      normalize_string(region_name),
+      "_",
+      normalize_string(title_text),
+      ".png"
+    )
+  )
+
+  # Save the combined plot to a file
+  ggplot2::ggsave(
+    filename = output_file,
+    plot = combined_plot,
+    width = width,
+    height = height,
+    dpi = dpi,
+    bg = "white"
+  )
+
+  message("✅ Plot saved to: ", output_file)
+  return(output_file)
 }

@@ -68,7 +68,7 @@ plot(rm_test)
 * Correlations between TWI and vegetation height are computed for each spatial window.
 
 ```{r}
-windowed_data <- create_spatial_windows(rm_test, 12)
+windowed_data <- create_spatial_windows(rm_test)
 
 colSums(is.na(windowed_data))
 str(windowed_data)

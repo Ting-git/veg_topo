@@ -27,6 +27,8 @@ data/figures/processing_log.txt
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
+vignettes/*_files
+vignettes/*.log
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
