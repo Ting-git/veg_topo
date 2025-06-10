@@ -520,6 +520,7 @@ plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax, x_breaks
 
   # Load and crop the raster
   lc <- rast(cci_landcover_path)
+  print(names(lc))
   lccs_class <- lc[["lccs_class"]]
   extent_crop <- ext(xmin, xmax, ymin, ymax)
   landcover_crop <- crop(lccs_class, extent_crop)
@@ -556,6 +557,8 @@ plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax, x_breaks
               "#FFEBAF", "#00785A", "#009678", "#00DC82", "#C31400", "#FFF5D7", "#DCDCDC",
               "#FFF5D7", "#0046C8", "#FFFFFF")
   )
+
+  print(levels(landcover_crop))
 
   # Plot with tidyterra and ggplot2
   p <- ggplot() +

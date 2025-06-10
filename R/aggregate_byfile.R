@@ -1,30 +1,69 @@
-# Declare necessary libraries
-library(terra)      # For raster manipulation functions like rast, xres, yres, aggregate, writeCDF
-library(stringr)    # For string manipulation functions like str_remove
 
-aggregate_byfile <- function(filename, xres_tar, yres_tar, outdir){
+#' Aggregate raster to target resolution with optional resampling and masking
+#'
+#' Aggregate an input raster to a specified resolution or match a target raster's resolution.
+#' You must provide either xres_tar and yres_tar **or** a target_path raster (not both).
+#' If you want to resample or mask the raster, you **must** provide target_path.
+#'
+#' @param input_path  Path to the input raster file.
+#' @param output_path Path where the output raster will be saved.
+#' @param xres_tar    Target resolution in x-direction (numeric), required if target_path is NULL.
+#' @param yres_tar    Target resolution in y-direction (numeric), required if target_path is NULL.
+#' @param target_path Path to target raster file, required if resampling or masking.
+#' @param if_resample Logical, whether to resample input raster to target grid (requires target_path).
+#' @param if_mask     Logical, whether to mask output raster by target extent (requires target_path).
+#'
+#' @return The output file path (character).
+aggregate_byfile <- function(input_path, output_path,
+                             xres_tar = NULL,
+                             yres_tar = NULL,
+                             target_path = NULL,
+                             if_resample = FALSE,
+                             if_mask = FALSE) {
 
-  # Load the two raster files
-  rast_ob <- rast(filename)  # Load the raster file (obtained from a specified source)
+  # Check that target_path is provided if resample or mask is requested
+  if (if_resample && is.null(target_path)) {
+    stop("Error: if_resample = TRUE requires a non-NULL target_path.")
+  }
+  if (if_mask && is.null(target_path)) {
+    stop("Error: if_mask = TRUE requires a non-NULL target_path.")
+  }
 
-  # Aggregate r1 to match r2's resolution
-  # The factor is determined by the ratio of resolutions
-  fact_x <- (xres_tar / xres(rast_ob))  # Calculate aggregation factor along x-axis
-  fact_y <- (yres_tar / yres(rast_ob))  # Calculate aggregation factor along y-axis
+  # Load the input raster
+  r_in <- terra::rast(input_path)
 
-  # Aggregate using mean (can be changed to other functions like max, min, sum)
-  rast_agg <- aggregate(rast_ob, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
+  # Load target raster and extract resolution if target_path is provided
+  if (!is.null(target_path)) {
+    r_tar <- terra::rast(target_path)
+    xres_tar <- terra::xres(r_tar)
+    yres_tar <- terra::yres(r_tar)
+  }
 
-  # Create output file name and write to file
-  outfilename<- paste0(outdir, "/", str_remove(basename(filename), ".tif"), "_to450m.nc")
+  # Calculate aggregation factors based on resolution ratios
+  fact_x <- (xres_tar / terra::xres(r_in))
+  fact_y <- (yres_tar / terra::yres(r_in))
 
-  # Write the aggregated raster to NetCDF format
-  message(paste("Writing to file", outfilename, "..."))
-  writeCDF(rast_agg, outfilename, overwrite = TRUE)
+  # Aggregate input raster to match target resolution using mean function
+  r_out <- terra::aggregate(r_in, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
 
-  # Clean up memory by removing large objects after writing the file
-  rm(rast_ob, rast_agg)  # Remove the raster objects to free memory
-  gc()  # Trigger garbage collection to release memory
+  # Optionally resample raster to target grid using bilinear interpolation
+  if (if_resample) {
+    r_out <- terra::resample(r_in, r_tar, method = "bilinear")
+  }
+
+  # Optionally mask raster to target raster extent
+  if (if_mask) {
+    r_out <- terra::mask(r_out, r_tar)
+  }
+
+  # Write the output raster to the specified file path (NetCDF format)
+  message(paste("Writing output raster to:", output_path))
+  writeCDF(r_out, output_path, overwrite = TRUE)
+
+  # Clean up memory
+  rm(r_in, r_out)
+  if (exists("r_tar")) rm(r_tar)
+  gc()
+
+  return(output_path)
 }
-
-
