@@ -118,13 +118,7 @@ with_progress({
   results <- future_pmap(
     prep_tiles_info,
     function(name, xmin, xmax, ymin, ymax, file) {
-      # library(ggplot2)
-      # library(tidyr)
-      # library(dplyr)
-      # library(terra)
-      # library(sf)
-      # library(viridis)
-      # library(scico)
+
       tryCatch({
         pb(sprintf("Processing tile: %s", name))
         
@@ -309,44 +303,24 @@ mosaic_and_save_rasters(cor_tiles_dir, cor_mosaic_file, verbose = TRUE)
 
 ## Visualization and Interpretation
 
-* Global maps of **TWI**, **VEGH**, **Pearson correlation coefficients**, and **associated p-values** are visualized using `ggplot2` and `tidyterra`.
-* Color scales are carefully selected (e.g., `scico`, `batlow`) to emphasize meaningful spatial variation.
-* For interpretability:
-
-  * Correlation maps use diverging color palettes centered at zero.
-  * P-value maps use stepped thresholds to highlight significance levels (e.g., *p* < 0.05).
-* In addition, combined diagnostic figures for each tile (from Step 2) are reviewed to identify local patterns and biome-specific interactions between vegetation structure and wetness conditions.
+* negative relationship dominate the global patterns in a wider extent, and the streghth is much higher than positive effect.
+* negetive region: coastal area, Broadleaf Forest and mixed forest, Flooded area
+* positive region: grassland, open shrubland, Tundra
+* crop area has a apparent offset effect, deliminate the original trend into neutral stand.
+* wet condition clearly restrict the tree height development
+* the most very high vegetation preference low TWIcondition (0-5)
 
 ```{r landcover, fig.width=12, fig.height=6}
-plot_biomes_by_extent(ecoregions_path, -180, 180, -60, 85)
+
+plot_landcover2(cci_landcover_path, -180, 180, -60, 85, x_breaks = 30, y_breaks = 30)
+
 ```
 Figure 1. Land cover classification gridded map 2020 derived from satellite observations, data from \cite{copernicus2019landcover}.
 
 ```{r biomes, fig.width=12, fig.height=6}
 
-suppressMessages(ecoregions <- st_read(ecoregions_path))
+plot_biomes_by_extent(ecoregions_path, -180, 180, -60, 85, x_breaks = 30, y_breaks = 30)
 
-ggplot(data = ecoregions) +
-  geom_sf(aes(fill = BIOME_NAME), color = NA) +
-  scale_fill_manual(values = setNames(ecoregions$COLOR_BIO, ecoregions$BIOME_NAME)) +
-  labs(title = "Biomes", fill = "Biome") +
-  scale_x_continuous(
-    expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)  
-  ) +
-  scale_y_continuous(
-    expand = c(0, 0),
-    limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)   
-  ) +
-  theme(
-    legend.position = "bottom",
-    legend.text = element_text(size = 6),
-    legend.title = element_text(size = 8)
-  )
-
-# rm(ecoregions)
-# gc()
 ```
 Figure 2. Biome distribution based on WWF ecoregions dataset, data from \citeauthor{dinersteinEcoregionBasedApproachProtecting2017} (\citeyear{dinersteinEcoregionBasedApproachProtecting2017}).
 
@@ -354,7 +328,6 @@ Figure 2. Biome distribution based on WWF ecoregions dataset, data from \citeaut
 
 twi_raster <- rast(file_ga2)
 
-# plot TWI
 ggplot() +
   tidyterra::geom_spatraster(data = twi_raster) +
   scale_fill_scico(palette = "oslo", direction = -1, na.value = "white") +
@@ -363,27 +336,25 @@ ggplot() +
     fill = "TWI" ) +
   scale_x_continuous(
     expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)  # 每 30 度标注经度
+    breaks = seq(-180, 180, by = 30)
   ) +
   scale_y_continuous(
     expand = c(0, 0),
     limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)   # 每 30 度标注纬度
+    breaks = seq(-60, 90, by = 30)
   ) +
   theme(legend.position = "right",
         legend.text = element_text(size = 6),
         legend.title = element_blank())
 
-# rm(twi_raster)
-# gc()
+rm(twi_raster)
+gc()
 ```
 Figure 3. TWI indicates water accumulation tendency based on topography, data from \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
 
 ```{r vegh, fig.width=12, fig.height=6}
 
 vegh_raster <- rast(file_vegh_450m_mosaic)
-
-# plot vegetation height
 ggplot() +
   tidyterra::geom_spatraster(data = vegh_raster) +
   scale_fill_scico(palette = "batlow", direction = -1, na.value = "white") +
@@ -393,7 +364,7 @@ ggplot() +
   ) +
   scale_x_continuous(
     expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)  # 每 30 度标注经度
+    breaks = seq(-180, 180, by = 30)
   ) +
   scale_y_continuous(
     expand = c(0, 0),
@@ -404,48 +375,33 @@ ggplot() +
         legend.text = element_text(size = 6),
         legend.title = element_blank())
 
-# rm(vegh_raster)
-# gc()
+rm(vegh_raster)
+gc()
 ```
 Figure 4. Vegetation Height (VEGH) data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}).
 
 
 ```{r cor, fig.width=12, fig.height=6, dpi = 800}
 correlation_raster <- rast(cor_mosaic_file)
-cor_r <- correlation_raster[[1]]
 
-plot(cor_r,
-     main = "VEGH-TWI Pearson Correlation",
-     col = scico(100, palette = "bam", direction = 1),
-     axes = TRUE,
-     xlim = c(-180, 180),
-     ylim = c(-60, 85),
-     colNA = "grey",  
-     legend = TRUE)   
-
-res(correlation_raster)
-
-plot(correlation_raster[[1]], xlim = c(30, 31), ylim = c(60, 61))
-
-# plot pearson correlation
 ggplot() +
-  tidyterra::geom_spatraster(data = correlation_raster[[1]], maxcell = Inf) +
-  scale_fill_scico(palette = "bam", direction = 1, na.value = "grey") +
-  labs(
-    title = "VEGH-TWI Pearson Correlation",
-    fill = "r") +
-  scale_x_continuous(
-    expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30) 
-  ) +
-  scale_y_continuous(
-    expand = c(0, 0),
-    limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)  
-  ) +
-  theme(legend.position = "right",
-        legend.text = element_text(size = 6),
-        legend.title = element_blank())
+tidyterra::geom_spatraster(data = correlation_raster[[1]], maxcell = Inf) +
+scale_fill_scico(palette = "bam", direction = 1, na.value = "grey") +
+labs(
+  title = "VEGH-TWI Pearson Correlation",
+  fill = "r") +
+scale_x_continuous(
+  expand = c(0, 0),
+  breaks = seq(-180, 180, by = 30)
+) +
+scale_y_continuous(
+  expand = c(0, 0),
+  limits = c(-60, 85),
+  breaks = seq(-60, 90, by = 30)
+) +
+theme(legend.position = "right",
+      legend.text = element_text(size = 6),
+      legend.title = element_blank())
 
 ```
 Figure 5. VEGH–TWI Pearson correlation map. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
@@ -454,7 +410,7 @@ Figure 5. VEGH–TWI Pearson correlation map. Input data from \citeauthor{langHi
 ```{r p_val, fig.width=12, fig.height=6}
 # plot p-value of the correlation analysis
 ggplot() +
-  tidyterra::geom_spatraster(data = correlation_raster[[2]]) +
+  tidyterra::geom_spatraster(data = correlation_raster[[2]], maxcell = Inf) +
   scale_fill_stepsn(
     colours = c("#2166AC", "#67A9CF", "#D1E5F0", "#FDDBC7", "#EF8A62", "#B2182B"),
     values = scales::rescale(c(0, 0.01, 0.05, 0.1, 0.5, 1)),  # 分段值（rescaled to 0–1）
@@ -481,9 +437,11 @@ ggplot() +
     legend.title = element_text(size = 8)
   )
 
-# rm(correlation_raster)
-# gc()
+rm(correlation_raster)
+gc()
+
 ```
+
 Figure 6. The P-value of the Pearson correlation analysis between TWI and VEGH. Input data from \citeauthor{langHighresolutionCanopyHeight2023} (\citeyear{langHighresolutionCanopyHeight2023}) and \citeauthor{marthewsHighresolutionGlobalTopographic2015} (\citeyear{marthewsHighresolutionGlobalTopographic2015}).
 
 

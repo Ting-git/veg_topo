@@ -385,7 +385,7 @@ normalize_string <- function(x) {
 # ------------------------------------------------------------------------------
 
 # plot topographic wetness index (TWI or CTI) map by dataset
-plot_twi <- function(dataframe, xmin, xmax, ymin, ymax) {
+plot_twi <- function(dataframe, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
   p <- ggplot(dataframe, aes(x = lon, y = lat, fill = twi)) +
     geom_tile() +
     scale_fill_scico(palette = "oslo", direction = -1) +
@@ -395,13 +395,13 @@ plot_twi <- function(dataframe, xmin, xmax, ymin, ymax) {
       name = "Longitude",  # 横坐标标题
       expand = c(0, 0),
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = 5)
+      breaks = seq(xmin, xmax, by = x_breaks)
     ) +
     scale_y_continuous(
       name = "Latitude",   # 纵坐标标题
       expand = c(0, 0),
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = 5)
+      breaks = seq(ymin, ymax, by = y_breaks)
     ) +
     theme(
       legend.position = "right",
@@ -414,7 +414,7 @@ plot_twi <- function(dataframe, xmin, xmax, ymin, ymax) {
 }
 
 # plot vegetation height map by dataset
-plot_vegh <- function(dataframe, xmin, xmax, ymin, ymax) {
+plot_vegh <- function(dataframe, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
   ggplot(dataframe, aes(x = lon, y = lat, fill = vegh)) +
     geom_tile() +
     scale_fill_scico(palette = "batlow", direction = -1) +
@@ -426,13 +426,13 @@ plot_vegh <- function(dataframe, xmin, xmax, ymin, ymax) {
       name = "Longitude",  # 横坐标标题
       expand = c(0, 0),
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = 5)
+      breaks = seq(xmin, xmax, by = x_breaks)
     ) +
     scale_y_continuous(
       name = "Latitude",   # 纵坐标标题
       expand = c(0, 0),
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = 5)
+      breaks = seq(ymin, ymax, by = y_breaks)
     ) +
     theme(
       legend.position = "right",
@@ -516,51 +516,39 @@ plot_landcover <- function(file_modis_landcover, ext){
   return(p)
 }
 
-plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax) {
-  library(terra)
-  library(ggplot2)
-  library(dplyr)
+plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
 
-  # Load and crop raster
-  lc <- terra::rast(cci_landcover_path)
+  # Load and crop the raster
+  lc <- rast(cci_landcover_path)
   lccs_class <- lc[["lccs_class"]]
-  landcover_crop <- terra::crop(lccs_class, terra::ext(xmin, xmax, ymin, ymax))
+  extent_crop <- ext(xmin, xmax, ymin, ymax)
+  landcover_crop <- crop(lccs_class, extent_crop)
 
-  # Convert to data frame (no resampling)
-  lc_df <- as.data.frame(landcover_crop, xy = TRUE, na.rm = FALSE)
-  colnames(lc_df) <- c("x", "y", "class")
-
-  # Define legend info
-  lccs_labels <- data.frame(
-    class = c(0, 10, 11, 12, 20, 30, 40, 50, 60, 61, 62,
+  # Convert to categorical raster and assign labels/colors
+  landcover_crop <- as.factor(landcover_crop)
+  levels(landcover_crop)[[1]] <- data.frame(
+    value = c(0, 10, 11, 12, 20, 30, 40, 50, 60, 61, 62,
               70, 71, 72, 80, 81, 82, 90, 100, 110, 120,
               121, 122, 130, 140, 150, 151, 152, 153, 160,
               170, 180, 190, 200, 201, 202, 210, 220),
     label = c("No Data", "Cropland, rainfed", "Herbaceous cover", "Tree or shrub cover",
               "Cropland, irrigated or post-flooding",
-              "Mosaic cropland (>50%) / natural vegetation (<50%)",
-              "Mosaic natural vegetation (>50%) / cropland (<50%)",
-              "Tree cover, broadleaved, evergreen, closed to open (>15%)",
-              "Tree cover, broadleaved, deciduous, closed to open (>15%)",
-              "Tree cover, broadleaved, deciduous, closed (>40%)",
-              "Tree cover, broadleaved, deciduous, open (15–40%)",
-              "Tree cover, needleleaved, evergreen, closed to open (>15%)",
-              "Tree cover, needleleaved, evergreen, closed (>40%)",
-              "Tree cover, needleleaved, evergreen, open (15–40%)",
-              "Tree cover, needleleaved, deciduous, closed to open (>15%)",
-              "Tree cover, needleleaved, deciduous, closed (>40%)",
-              "Tree cover, needleleaved, deciduous, open (15–40%)",
-              "Tree cover, mixed leaf type (broadleaved and needleleaved)",
-              "Mosaic tree and shrub (>50%) / herbaceous cover (<50%)",
-              "Mosaic herbaceous cover (>50%) / tree and shrub (<50%)",
-              "Shrubland", "Evergreen shrubland", "Deciduous shrubland",
-              "Grassland", "Lichens and mosses", "Sparse vegetation (<15%)",
-              "Sparse tree (<15%)", "Sparse shrub (<15%)", "Sparse herbaceous cover (<15%)",
-              "Tree cover, flooded, fresh or brackish water",
-              "Tree cover, flooded, saline water",
-              "Shrub or herbaceous cover, flooded, fresh/saline/brackish water",
-              "Urban areas", "Bare areas", "Consolidated bare areas",
-              "Unconsolidated bare areas", "Water bodies", "Permanent snow and ice"),
+              "Mosaic cropland >50% / natural vegetation <50%",
+              "Mosaic natural vegetation >50% / cropland <50%",
+              "Tree broadleaf evergreen", "Tree broadleaf deciduous",
+              "Tree broadleaf deciduous closed", "Tree broadleaf deciduous open",
+              "Tree needleleaf evergreen", "Tree needleleaf evergreen closed",
+              "Tree needleleaf evergreen open", "Tree needleleaf deciduous",
+              "Tree needleleaf deciduous closed", "Tree needleleaf deciduous open",
+              "Tree mixed leaf type", "Mosaic tree/shrub >50%",
+              "Mosaic herbaceous >50%", "Shrubland",
+              "Evergreen shrubland", "Deciduous shrubland", "Grassland",
+              "Lichens and mosses", "Sparse vegetation <15%", "Sparse tree <15%",
+              "Sparse shrub <15%", "Sparse herbaceous <15%",
+              "Tree flooded fresh/brackish", "Tree flooded saline",
+              "Shrub/herb flooded", "Urban areas", "Bare areas",
+              "Consolidated bare", "Unconsolidated bare",
+              "Water bodies", "Snow and ice"),
     color = c("#000000", "#FFFF64", "#FFFF64", "#FFFF00", "#AAF0F0", "#DCF064", "#C8C864",
               "#006400", "#00A000", "#00A000", "#AAC800", "#003C00", "#003C00", "#005000",
               "#285000", "#285000", "#326400", "#788000", "#8CA000", "#BE9600", "#966400",
@@ -569,35 +557,41 @@ plot_landcover2 <- function(cci_landcover_path, xmin, xmax, ymin, ymax) {
               "#FFF5D7", "#0046C8", "#FFFFFF")
   )
 
-  # Merge labels for plotting
-  lc_df <- lc_df %>%
-    left_join(lccs_labels, by = "class")
-
-  # Plot with ggplot (no tidyterra)
-  p <- ggplot(lc_df, aes(x = x, y = y, fill = factor(class))) +
-    geom_raster() +
-    scale_fill_manual(values = setNames(lccs_labels$color, lccs_labels$class),
-                      labels = lccs_labels$label,
-                      name = "Land cover class") +
+  # Plot with tidyterra and ggplot2
+  p <- ggplot() +
+    geom_spatraster(data = landcover_crop) +
+    scale_fill_manual(
+      values = setNames(levels(landcover_crop)[[1]]$color,
+                        levels(landcover_crop)[[1]]$value),
+      labels = levels(landcover_crop)[[1]]$label,
+      name = "Land Cover Class"
+    ) +
     scale_x_continuous(
-      name = "Longitude",  # 横坐标标题
+      name = "Longitude",
       expand = c(0, 0),
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = 5)
+      breaks = seq(xmin, xmax, length.out = x_breaks)
     ) +
     scale_y_continuous(
-      name = "Latitude",   # 纵坐标标题
+      name = "Latitude",
       expand = c(0, 0),
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = 5)
+      breaks = seq(ymin, ymax, length.out = y_breaks)
     ) +
-    labs(title = "CCI Land Cover Class 2020") +
+    labs(title = "CCI Land Cover Classification (2020)") +
     theme_classic() +
-    theme(legend.position = "none",
-          plot.title = element_text(face = "bold"))
+    theme(
+      plot.title = element_text(face = "bold"),
+      legend.position = "none"  # Set to "right" to enable legend
+    )
+
+  # Clean memory
+  rm(lc, lccs_class, extent_crop)
+  gc(verbose = FALSE)
 
   return(p)
 }
+
 
 
 plot_biomes_by_extent <- function(ecoregions_path, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
@@ -633,11 +627,8 @@ plot_biomes_by_extent <- function(ecoregions_path, xmin, xmax, ymin, ymax, x_bre
       aspect.ratio = (ymax - ymin) / (xmax - xmin)
     )
 
-
   return(p)
 }
-
-
 
 # plot Google satellite imagine by ext
 plot_img <- function(ext_test) {
@@ -664,7 +655,7 @@ plot_img <- function(ext_test) {
 }
 
 # plot Pearson correlation (between VEGH and TWI) for by dataset
-plot_corr <- function(correlation_df, xmin, xmax, ymin, ymax) {
+plot_corr <- function(correlation_df, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
   # Select relevant columns and drop rows with NA values
   df <- correlation_df |>
     dplyr::select(lon_mid, lat_mid, correlation) |>
@@ -699,13 +690,13 @@ plot_corr <- function(correlation_df, xmin, xmax, ymin, ymax) {
       name = "Longitude",
       expand = c(0, 0),
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = 5)
+      breaks = seq(xmin, xmax, by = x_breaks)
     ) +
     scale_y_continuous(
       name = "Latitude",
       expand = c(0, 0),
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = 5)
+      breaks = seq(ymin, ymax, by = y_breaks)
     ) +
     theme(
       legend.position = "right",
