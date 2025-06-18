@@ -51,8 +51,11 @@ results <- future_pmap(
       #        y = "Density") +
       #   theme_classic()
 
-      # calculate the fractino of used, bared, urban and water areas
-      df_flc <- calculate_fraction_land_use(df_win)
+      # calculate the fractino of used, bared, water areas and save output
+      output_file <- file.path(win_flc_5km_tiles_dir, paste0("win_flc_5km_", tile_id, ".nc"))
+      df_flc <- calculate_fraction_land_use(
+        df_win,
+        output_file = output_file)
 
       # ---------- ploting the fraction of used land ----------
       # plot_his <- ggplot(
@@ -93,18 +96,6 @@ results <- future_pmap(
       #   labs(title = "Spatial Fractions", fill = "Value") +
       #   theme_minimal()
       #
-
-      # ------ save 5km flc output -------
-      flc_r <- terra::rast(
-        df_flc[, c("lon_mid", "lat_mid", "f_used", "f_ur", "f_ba", "f_wa")],
-        type = "xyz",
-        crs = "EPSG:4326"
-      )
-
-      names(flc_r) <- c("f_used", "f_ur", "f_ba", "f_wa")
-
-      nc_path <- file.path(win_flc_5km_tiles_dir, paste0("win_flc_5km_", tile_id, ".nc"))
-      terra::writeCDF(flc_r, nc_path, overwrite = TRUE)
 
       message(sprintf("tile %s done [%.1f mins]", tile_id, difftime(Sys.time(), t0, units = "mins")))
 
