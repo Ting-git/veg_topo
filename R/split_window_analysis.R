@@ -40,10 +40,7 @@ create_spatial_windows <- function(raster,
            lat_mid = (lat_lower + lat_upper)/2) |>
 
     ## create cell name to associate with climate input
-    dplyr::select(-ilon, -ilat, -lon_lower, -lon_upper, -lat_lower, -lat_upper) |>
-
-    group_by(lon_mid, lat_mid) |>
-    tidyr::nest()
+    dplyr::select(-ilon, -ilat, -lon_lower, -lon_upper, -lat_lower, -lat_upper)
 
   return(df_win)
 }
@@ -72,6 +69,10 @@ calculate_window_correlations <- function(df_win,
                                           if_peak = FALSE) {
 
   df_cor <- df_win |>
+
+    group_by(lon_mid, lat_mid) |>
+    tidyr::nest() |>
+
     mutate(
       # Perform statistical computations
       stats = purrr::map(data, ~{
@@ -128,23 +129,41 @@ windows_cor_analysis <- function(raster, ...) {
 
 
 # ------calculate_land_use_fraction---------------
-calculate_fraction_land_use <- function(df_win){
-  df_flc <- df_win |>
-    mutate(
-      flc = map_dbl(data, ~ {
-        # Count total number of observations in this group
-        n_obs <- nrow(.x)
-        if (n_obs == 0) return(NA_real_)
+calculate_fraction_land_use <- function(df_win, output_file = NULL){
 
-        # Count observations matching our target classes
-        target_classes <- c(10, 11, 12, 20, 30, 190)
-        matched <- sum(.x$lccs_class %in% target_classes, na.rm = TRUE)
+  # set reference land cover classes
+  ref_classes <- c(10, 11, 12, 20, 30, 40, 190, 200, 201, 202, 210)
 
-        # Calculate fraction
-        matched / n_obs
-      })
-    ) |>
-    ungroup()
+  # calculation
+  df_flc <- df_win  |>
+
+    mutate(lccs_class = factor(lccs_class, levels = ref_classes)) |>
+    count(lon_mid, lat_mid, lccs_class, .drop = FALSE) |>
+
+    group_by(lon_mid, lat_mid) |>
+    mutate(prop = n / sum(n)) |>
+
+    summarise(
+      fused = sum(prop[lccs_class %in% c(10, 11, 12, 20, 190)], na.rm = TRUE) +
+        0.75 * sum(prop[lccs_class == 30], na.rm = TRUE) +
+        0.25 * sum(prop[lccs_class == 40], na.rm = TRUE),
+      fbare   = sum(prop[lccs_class %in% c(200, 201, 202)], na.rm = TRUE),
+      fwater   = sum(prop[lccs_class == 210], na.rm = TRUE),
+      .groups = "drop"
+    )
+
+   # ------ save 5km flc output -------
+  if (!is.null(output_file)) {
+    flc_r <- terra::rast(
+      df_flc[, c("lon_mid", "lat_mid", "fused", "fbare", "fwater")],
+      type = "xyz",
+      crs = "EPSG:4326"
+    )
+
+    names(flc_r) <- c("fused", "fbare", "fwater")
+
+    terra::writeCDF(flc_r, output_file, overwrite = TRUE)
+  }
 
   return(df_flc)
 }
