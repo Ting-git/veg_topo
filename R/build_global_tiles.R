@@ -158,8 +158,8 @@ preprocess_single_tile <- function(
 
   # Remove failed crops and validate output
   cropped_rasters <- Filter(Negate(is.null), cropped_rasters)
-  if (length(cropped_rasters) == 0) {
-    warning("No valid rasters for tile: ", tile_id)
+  if (length(cropped_rasters) != length(raster_list)) {
+    warning("Lack valid rasters for tile: ", tile_id)
     return(NULL)
   }
 
