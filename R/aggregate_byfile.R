@@ -34,7 +34,7 @@ aggregate_byfile <- function(input_path, output_path,
 
   # Load target raster and extract resolution if target_path is provided
   if (!is.null(target_path)) {
-    r_tar <- terra::rast(target_path)
+    r_tar <- terra::rast(target_path)[[1]]
     xres_tar <- terra::xres(r_tar)
     yres_tar <- terra::yres(r_tar)
   }
