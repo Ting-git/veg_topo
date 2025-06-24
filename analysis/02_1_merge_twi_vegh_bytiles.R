@@ -3,6 +3,7 @@
 # ------Load required libraries-------------------------------------------------------------
 library(terra)     # For handling raster data
 library(purrr)     # For functional programming tools like pmap_dfr
+library(sf)
 
 # ------Load configuration and helper functions---------------------------------------------
 source(here::here("config.R"))
@@ -30,13 +31,23 @@ safe_preprocess <- purrr::safely(
 # Process all tiles, storing both results and errors
 all_results <- purrr::pmap(
   list(
-    tile_grid$tile_id,
-    tile_grid$xmin, tile_grid$xmax,
-    tile_grid$ymin, tile_grid$ymax
+    tile_id = tile_grid$tile_id,
+    xmin = tile_grid$xmin,
+    xmax = tile_grid$xmax,
+    ymin = tile_grid$ymin,
+    ymax = tile_grid$ymax
   ),
-  .f = safe_preprocess,
-  raster_list = list("twi" = twi_r, "vegh" = vegh_r),
-  output_dir = twi_vegh_merg_450m_tiles_dir
+  function(tile_id, xmin, xmax, ymin, ymax) {
+    safe_preprocess(
+      tile_id = tile_id,
+      xmin = xmin,
+      xmax = xmax,
+      ymin = ymin,
+      ymax = ymax,
+      raster_list = list("twi" = twi_r, "vegh" = vegh_r),
+      output_dir = twi_vegh_merg_450m_tiles_dir
+    )
+  }
 )
 
 # Extract and print results
@@ -55,6 +66,31 @@ rm(twi_r, vegh_r, raster_list)
 gc()
 
 # ------Report processing time and save results---------------------------------------------
-message(sprintf("done [%.1fs]", difftime(Sys.time(), t0, units = "secs")))  #
-saveRDS(successful_results, file = here::here("data/predata_info.rds"))
+message(sprintf("done [%.1f min]", difftime(Sys.time(), t0, units = "mins")))
+saveRDS(successful_results, file = here::here("data/valid_tiles_info.rds"))
 
+# --------Save as GeoPackage -----------------------------------------------------
+
+# Load tile boundary info (xmin, xmax, ymin, ymax, tile_id, etc.)
+valid_tiles_info <- readRDS(valid_tiles_info_path)
+
+# Create list of rectangle polygons with tile_id as attribute
+rects_list <- lapply(1:nrow(valid_tiles_info), function(i) {
+  # Define polygon geometry using corner coordinates
+  geom <- st_sfc(st_polygon(list(rbind(
+    c(valid_tiles_info$xmin[i], valid_tiles_info$ymin[i]),
+    c(valid_tiles_info$xmin[i], valid_tiles_info$ymax[i]),
+    c(valid_tiles_info$xmax[i], valid_tiles_info$ymax[i]),
+    c(valid_tiles_info$xmax[i], valid_tiles_info$ymin[i]),
+    c(valid_tiles_info$xmin[i], valid_tiles_info$ymin[i])
+  ))), crs = 4326)  # Set CRS to WGS84 (EPSG:4326)
+
+  # Create a single-feature sf object with tile_id as a field
+  st_sf(name = valid_tiles_info$tile_id[i], geometry = geom)
+})
+
+# Combine all individual polygons into a single sf object
+rects_sf <- do.call(rbind, rects_list)
+
+# Save the resulting sf object to disk (GeoPackage, Shapefile, etc.)
+st_write(rects_sf, valid_geotiles_path, layer = "valid_tile", delete_layer = TRUE)
