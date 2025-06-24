@@ -14,15 +14,20 @@ vegh_450m_mosaic_path <- file.path(dirname(vegh_450m_tiles_dir), "vegh_450m_2020
 twi_450m_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
 twi_450m_mosaic_clean_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
 
+twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")
 # -----------------------Data Pre--------------------------------------------------
 
 twi_vegh_merg_450m_tiles_dir <- file.path(temp_dir, "twi_vegh_450m_merg_30_30_deg")
-tiles_info_path <- here::here("data/tiles_info.rds")
+valid_tiles_info_path <- here::here("data/valid_tiles_info.rds")
+valid_geotiles_path <- here::here("data/valid_tiles.gpkg")
 
 # fraction of used land
 win_flc_5km_tiles_dir <- file.path(temp_dir, "flc_5km/30_30_deg")
 win_flc_5km_mosacic_file <- file.path(dirname(win_flc_5km_tiles_dir), "flc_5km_mosaic.nc")
 
+# aridity index
+ai_950m_file <- file.path("/data_2/scratch/ting/data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
+ai_5km_file <- file.path("/data_2/scratch/ting/data/aridityindex_zomer_2022_to5km/ai_v3_yr_to5km.nc")
 # -----------------------Results--------------------------------------------------
 
 # correalation between twi and vegh
@@ -32,4 +37,5 @@ cor_twi_vegh_mosaic_file <- file.path("/data_2/scratch/ting/data/cor_twi_vegh/co
 
 # -----------------------Additional Data------------------------------------------
 ecoregions_path <- file.path("/data_2/scratch/ting/data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
-cci_landcover_path <- file.path("/data_2/scratch/ting/data_raw/CCI_landcover_2020/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
+# cci_landcover_path <- file.path("/data_2/scratch/ting/data_raw/CCI_landcover_2020/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
+cci_landcover_path <- file.path("/data/archive/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
