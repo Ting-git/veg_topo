@@ -4,17 +4,15 @@ library(terra)
 library(furrr)
 library(stringr)
 
-source(here::here("config.R")) # cause erro when Rscript + nohup
+source(here::here("config.R"))
 source(here::here("R/aggregate_byfile.R"))
-# 或者在执行前定位到cd ~/veg_topo，或者引用绝对路径
-# source(file.path("/home/ting/veg_topo", "R", "aggregate_byfile.R"))
 
 # -------Configuration-----------------------------------------------------------------------
 
 vegh_10m_tiles_path <- fs::dir_ls(path = vegh_10m_tiles_dir, glob = "*_Map.tif")
 # vegh_10m_tiles_path_sub <- vegh_10m_tiles_path[1:10]
 
-# -----Aggregation--workers=8, 97 min--------------------------------------------
+# -----Aggregation: workers=8, 97 min--------------------------------------------
 # vegh 10m --> vegh 450m
 
 # get the resolution information of target raster(ga2 TWI)
