@@ -1,3 +1,4 @@
+# All tiles done [19.9 mins]
 # ------Set up------------------------------------------------------------------------
 
 library(terra)
@@ -11,15 +12,18 @@ library(furrr)
 source(here::here("config.R"))
 source(here::here("R/split_window_analysis.R"))
 source(here::here("R/build_global_tiles.R"))
+source(here::here("R/mosaicing.R"))
 
-tiles_info <- readRDS(tiles_info_path)
+tiles_info <- readRDS(valid_tiles_info_path)
 
 # ------calculate fraction of land use---------------------------------------------
 
 # Start paralell processing
 gc()
 plan(multisession, workers = 8)
+
 t00 <- Sys.time()
+message(paste0("Start processing:", format(t00, "%Y-%m-%d %H:%M:%S")))
 
 results <- future_pmap(
   tiles_info,
@@ -52,10 +56,8 @@ results <- future_pmap(
       #   theme_classic()
 
       # calculate the fractino of used, bared, water areas and save output
-      output_file <- file.path(win_flc_5km_tiles_dir, paste0("win_flc_5km_", tile_id, ".nc"))
-      df_flc <- calculate_fraction_land_use(
-        df_win,
-        output_file = output_file)
+      output_file <- file.path(flc_5km_tiles_dir, paste0("flc_5km_", tile_id, ".nc"))
+      df_flc <- calculate_fraction_land_use(df_win, output_file = output_file)
 
       # ---------- ploting the fraction of used land ----------
       # plot_his <- ggplot(
@@ -111,4 +113,13 @@ results <- future_pmap(
 plan(sequential)
 gc()
 
-message(sprintf("all tiles done [%.1fmins]", difftime(Sys.time(), t00, units = "mins")))
+elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
+message(sprintf("All tiles done [%.1f mins]", elapsed))
+
+# -------- combination ----------------------------------------------------------
+
+mosaic_r <- mosaic_tiles(
+  input_dir   = flc_5km_tiles_dir,
+  output_file = flc_5km_mosacic_file,
+  layer_names = c("fused", "fbare", "fwater")
+)
