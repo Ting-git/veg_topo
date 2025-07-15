@@ -1,0 +1,312 @@
+---
+title: "K-means Classification Analysis."
+author: "Ting Tan"
+date: "2025-06-24"
+output:
+  html_document:
+    fig_align: 'center'
+bibliography: literatures.bib  
+latex_engine: xelatex
+csl: apa.csl
+---
+
+```{r SetUp, include=FALSE, eval=TRUE}
+
+knitr::opts_chunk$set(
+  comment = "#>", echo = FALSE, fig.width = 10, message = FALSE, warning = FALSE
+)
+
+library(terra)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyterra)
+library(DataExplorer)
+library(RColorBrewer)
+library(rnaturalearth)
+library(sf)
+
+# Load configuration and functions
+source(here::here("config.R"))
+
+```
+
+
+```{r datapre}
+# Load resampled raster datasets (AI, TWI, fused)
+ai_5km_r <- terra::rast(ai_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
+flc_5km_r <- terra::rast(flc_5km_mosacic_file)[[1]]
+cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
+kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
+kmeans_12c_r <- terra::rast(kmeans_map_12c_path)
+
+# Crop FLC raster to match extent of AI raster
+flc_5km_r <- terra::crop(flc_5km_r, ai_5km_r)
+
+# Stack rasters into a single SpatRaster
+stacked <- c(cor_twi_vegh_5km_r,
+             flc_5km_r,
+             ai_5km_r,
+             kmeans_8c_r,
+             kmeans_12c_r)
+
+# Convert to data frame for k-means clustering
+df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
+colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "cluster8c", "cluster12c")
+
+```
+
+```{r plotds}
+# plot density
+p_ds <- DataExplorer::plot_density(df)
+
+# Combine the plot
+cp_ds <- patchwork::wrap_plots(p_ds)
+
+# Save plot
+ggsave(
+  filename = here::here("data/figures/03_4_kmeans_ds.png"),
+  plot = cp_ds,
+  width = 10,
+  height = 5,
+  dpi = 300,
+  units = "in"
+)
+```
+
+```{r plothg}
+# Ploting 
+p_hg <- DataExplorer::plot_histogram(df)
+
+# combine the plots
+cp_hg <- patchwork::wrap_plots(p_hg)
+
+# Save histogram plot
+ggsave(
+  filename = here::here("data/figures/03_4_kmeans_hg.png"),
+  plot = cp_hg,
+  width = 10,
+  height = 5,
+  dpi = 300,
+  units = "in"
+)
+```
+
+```{r}
+ggplot(df, aes(x = fused, fill = cluster12c)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ cluster12c, scales = "free") +
+  theme_minimal() +
+  labs(title = "Fused distribution")
+
+ggplot(df, aes(x = cor, fill = cluster12c)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ cluster12c, scales = "free") +
+  theme_minimal() +
+  labs(title = "Correlation distribution")
+
+ggplot(df, aes(x = ai, fill = cluster12c)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ cluster12c, scales = "free") +
+  theme_minimal() +
+  labs(title = "Aridity index distribution")
+```
+
+```{r}
+df$cluster8c <- factor(df$cluster8c)
+df$cluster12c <- factor(df$cluster12c)
+
+df_long <- df %>%
+  pivot_longer(
+    cols = c(cor, fused, ai),
+    names_to = "variable",
+    values_to = "value"
+  )
+```
+
+```{r var12c}
+ref_line <- data.frame(variable = "cor", yint = 0)
+
+p_var <- ggplot(df_long, aes(x = cluster12c, y = value, fill = cluster12c)) +
+  geom_violin(trim = FALSE, alpha = 0.6, color = NA) + 
+  geom_boxplot(width = 0.1, outlier.size = 0.5, alpha = 0.8, color = "black") +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2.5, 
+               fill = "white", color = "black", stroke = 0.5) + 
+  geom_hline(data = ref_line, aes(yintercept = yint), linetype = "dashed", color = "red") +
+  facet_wrap( ~ variable,
+              scales = "free",
+              ncol = 1,
+              labeller = as_labeller(c(
+                cor = "Correlation", fused = "Fraction of Used Land", ai = "Aridity Index"
+              ))) +
+  scale_fill_manual(
+    values = RColorBrewer::brewer.pal(12, "Paired"),
+    name = "Cluster",
+    na.value = NA) +
+  theme_bw(base_size = 13) +
+  theme(
+    strip.text = element_text(size = 16), # facet 子图标签
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5), # 主标题
+    axis.title = element_text(size = 15), # 坐标轴标题
+    axis.text = element_text(size = 13), # 坐标轴刻度
+    legend.title = element_text(size = 14), # 图例标题
+    legend.text = element_text(size = 13) # 图例内容
+  ) +
+  labs(
+    title = "Variables Distribution by Cluster",
+    x = "Cluster",
+    y = "Value",
+    fill = "Cluster"
+  )
+
+# save density 
+ggsave(
+  filename = file.path(project_root, "data/figures/03_4_kmeans_var_dis.png"),
+  plot = p_var,
+  width = 10,
+  height = 13,
+  dpi = 300,
+  units = "in"
+)
+
+```
+
+
+```{r kmeans12c}
+knitr::include_graphics(here::here("data/figures/03_4_kmeans_map_12c.png"))
+knitr::include_graphics(here::here("data/figures/03_4_kmeans_var_dis.png"))
+knitr::include_graphics(here::here("data/figures/03_3_kmeans_summ_12c.png"))
+```
+
+```{r var8c}
+ref_line <- data.frame(variable = "cor", yint = 0)
+
+p_var <- ggplot(df_long, aes(x = cluster8c, y = value, fill = cluster8c)) +
+  geom_violin(trim = FALSE, alpha = 0.6, color = NA) + 
+  geom_boxplot(width = 0.1, outlier.size = 0.5, alpha = 0.8, color = "black") +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2.5, 
+               fill = "white", color = "black", stroke = 0.5) + 
+  geom_hline(data = ref_line, aes(yintercept = yint), linetype = "dashed", color = "red") +
+  facet_wrap( ~ variable,
+              scales = "free",
+              ncol = 1,
+              labeller = as_labeller(c(
+                cor = "Correlation", fused = "Fraction of Used Land", ai = "Aridity Index"
+              ))) +
+  scale_fill_manual(
+    values = RColorBrewer::brewer.pal(12, "Paired"),
+    name = "Cluster",
+    na.value = NA) +
+  theme_bw(base_size = 13) +
+  theme(
+    strip.text = element_text(size = 16), # facet 子图标签
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5), # 主标题
+    axis.title = element_text(size = 15), # 坐标轴标题
+    axis.text = element_text(size = 13), # 坐标轴刻度
+    legend.title = element_text(size = 14), # 图例标题
+    legend.text = element_text(size = 13) # 图例内容
+  ) +
+  labs(
+    title = "Variables Distribution by Cluster",
+    x = "Cluster",
+    y = "Value",
+    fill = "Cluster"
+  )
+
+# save density 
+ggsave(
+  filename = file.path(project_root, "data/figures/03_4_kmeans_var_dis.png"),
+  plot = p_var,
+  width = 10,
+  height = 13,
+  dpi = 300,
+  units = "in"
+)
+```
+
+```{r}
+# ---------- data pre ----------------------------------------------------------
+# load coast outline, vector data
+coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+
+# load correlation data, raster data
+kmeans_r <- as.factor(terra::rast(kmeans_map_12c_path))
+
+# ------- Plot global classification analysis ---------------------
+
+# plot
+p_kmeans <- ggplot() +
+  tidyterra::geom_spatraster(data = kmeans_r, maxcell = Inf) +
+  geom_sf(data = coast,
+          colour = 'black',
+          linewidth = 0.1) +
+  scale_fill_manual(
+    values = RColorBrewer::brewer.pal(12, "Paired"),
+    name = "Cluster",
+    na.value = NA,
+    guide = guide_legend(
+      title.position = "left",
+      label.position = "bottom",
+      nrow = 1
+    )
+  ) +
+  labs(
+    title = "K-means Classification Map (K=12)"
+  ) +
+  scale_x_continuous(
+    expand = c(0, 0),
+    breaks = seq(-180, 180, by = 30)
+  ) +
+  scale_y_continuous(
+    expand = c(0, 0),
+    limits = c(-60, 85),
+    breaks = seq(-60, 90, by = 30)
+  ) +
+  theme(
+    plot.title = element_text(
+      size = 24,
+      face = "bold",
+      hjust = 0,
+      margin = margin(b = 5)
+    ),
+    plot.title.position = "panel",
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+
+    legend.position = "bottom",
+    legend.box = "horizontal",
+
+    legend.text = element_text(size = 14),
+    legend.title = element_text(
+      size = 16,
+      face = "bold",
+      margin = margin(r = 10)
+    ),
+  )
+
+
+# save
+ggsave(
+  filename = file.path(project_root, "data/figures/03_4_kmeans_map_12c.png"),
+  plot = p_kmeans,
+  width = 24,
+  height = 11.5,
+  dpi = 300,
+  units = "in"
+)
+
+
+```
+
+```{r kmeans8c}
+knitr::include_graphics(here::here("data/figures/03_4_kmeans_map_8c.png"))
+knitr::include_graphics(here::here("data/figures/03_3_kmeans_summ_8c.png"))
+```
+
+
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/03_5_kmeans_analysis.Rmd"))
+```

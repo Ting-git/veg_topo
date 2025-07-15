@@ -1,0 +1,30 @@
+---
+title: "Split Window Correlation -- Global Analysis. "
+author: "Ting Tan"
+date: "2025-05-05"
+output:
+  html_document:
+    fig_align: 'center'
+bibliography: literatures.bib  
+latex_engine: xelatex
+csl: apa.csl
+---
+
+```{r SetUp, include=FALSE, eval=TRUE}
+
+knitr::opts_chunk$set(
+  comment = "#>", echo = FALSE, fig.width = 10, message = FALSE, warning = FALSE
+)
+
+library(terra)
+library(future)
+```
+
+
+---
+
+## Objective
+
+To explore the global pattern of vegetation structure in relation to hillslope hydrology, this study investigates how **vegetation height (VEGH)** varies with the **topographic wetness index (TWI)** using a window-based spatial correlation approach.
+
+---

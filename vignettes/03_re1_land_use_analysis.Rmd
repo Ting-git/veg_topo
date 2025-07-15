@@ -1,0 +1,152 @@
+---
+title: "Anthropogenic vegetation patterns on land with high fraction of used land."
+author: "Ting Tan"
+date: "2025-07-14"
+output:
+  html_document:
+    fig_align: 'center'
+bibliography: literatures.bib  
+latex_engine: xelatex
+csl: apa.csl
+---
+
+```{r SetUp, include=FALSE, eval=TRUE}
+
+knitr::opts_chunk$set(
+  comment = "#>", echo = FALSE, fig.width = 10, message = FALSE, warning = FALSE
+)
+
+library(terra)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(gridExtra)
+library(patchwork)
+
+# Load configuration and functions
+source(here::here("config.R"))
+```
+
+
+```{r datapre}
+# Load rasters
+flc_5km_r <- rast(flc_5km_mosacic_file)[[1]]
+ai_5km_r <- rast(ai_5km_file) * 0.0001
+cor_twi_vegh_r <- rast(cor_twi_vegh_mosaic_file)[[1]]
+
+# Align extent of FLC with AI
+flc_5km_r <- crop(flc_5km_r, ai_5km_r)
+
+# Stack and convert to data frame
+df <- as.data.frame(c(cor_twi_vegh_r, flc_5km_r, ai_5km_r), xy = TRUE, na.rm = TRUE)
+colnames(df) <- c("lon", "lat", "cor", "fused", "ai")
+```
+
+```{r dfbin}
+
+# Create 0.1 interval bins for 'fused'
+df_binned <- df %>%
+  filter(!is.na(fused)) %>%
+  mutate(fused_bin = cut(
+    fused,
+    breaks = seq(0, 1, by = 0.1),
+    include.lowest = TRUE,
+    right = FALSE,
+    labels = paste0(
+      sprintf("%.1f", seq(0.0, 0.9, by = 0.1)),
+      "–",
+      sprintf("%.1f", seq(0.1, 1.0, by = 0.1))
+    )
+  ))
+
+bins <- unique(df_binned$fused_bin)
+```
+
+```{r dsplot,fig.width=6,fig.height=8}
+# Plot hexbin plots faceted by each fused_bin range
+ggplot(df_binned, aes(x = ai, y = cor)) +
+  geom_hex(bins = 40, stat = "bin") +  # count per panel
+  scale_fill_viridis_c(option = "C", trans = "sqrt") +  # sqrt or log to help scale
+  facet_wrap(~fused_bin, ncol = 3, scales = "free") +  # allow axis scaling if needed
+  labs(
+    title = "Hexbin Plot of Correlation vs. Aridity Index by Fused Ranges (0.1 bins)",
+    x = "Aridity Index",
+    y = "Correlation",
+    fill = "Count (per facet)"
+  ) +
+  theme_minimal()
+```
+
+```{r,fig.width=15,fig.height=15}
+plot_list <- lapply(bins, function(bin_label) {
+  df_sub <- df_binned %>% filter(fused_bin == bin_label)
+
+  # lm model for slope
+  lm_fit <- lm(cor ~ ai, data = df_sub)
+  slope <- round(coef(lm_fit)[2], 3)  # 提取斜率并四舍五入
+  intercept <- round(coef(lm_fit)[1], 3)
+
+  ggplot(df_sub, aes(x = ai, y = cor)) +
+    geom_hex(bins = 40) +
+    scale_fill_viridis_c(option = "C", trans = "sqrt") +
+    geom_smooth(method = "lm", color = "red", se = FALSE, linewidth = 1) +
+    xlim(0, 7) +
+    ylim(-1, 1) +
+    annotate(
+      "text",
+      x = 6.5, y = 0.9,
+      label = paste0("Slope: ", slope),
+      size = 4, hjust = 1, color = "red"
+    ) +
+    labs(
+      title = paste("Fused:", bin_label),
+      x = "Aridity Index",
+      y = "Correlation",
+      fill = "Count"
+    ) +
+    theme_bw() +
+    theme(legend.position = "none")
+})
+
+grid.arrange(grobs = plot_list, ncol = 3)
+
+```
+
+```{r,fig.width=15,fig.height=15}
+plot_list2 <- lapply(bins, function(bin_label) {
+  df_sub <- df_binned %>% filter(fused_bin == bin_label)
+
+  # lm model for slope
+  lm_fit <- lm(cor ~ ai, data = df_sub)
+  slope <- round(coef(lm_fit)[2], 3)  # 提取斜率并四舍五入
+  intercept <- round(coef(lm_fit)[1], 3)
+
+  ggplot(df_sub, aes(x = ai, y = cor)) +
+  geom_hex(bins = 40) +
+  scale_fill_viridis_c(option = "C", trans = "sqrt") +
+  geom_smooth(method = "lm", color = "red", se = FALSE, size = 1) +
+  coord_cartesian(xlim = c(0, 1.5), ylim = c(-1, 1)) +  # ← 放大 ai 区间
+  annotate(
+    "text",
+    x = 1.45, y = 0.9,
+    label = paste0("Slope: ", slope),
+    size = 4, hjust = 1, color = "red"
+  ) +
+  labs(
+    title = paste("Fused:", bin_label),
+    x = "Aridity Index",
+    y = "Correlation",
+    fill = "Count"
+  ) +
+  theme_bw() +
+  theme(legend.position = "none")
+})
+
+grid.arrange(grobs = plot_list2, ncol = 4)
+
+```
+
+```{cleanup}
+rm(list = ls())
+gc()
+```
