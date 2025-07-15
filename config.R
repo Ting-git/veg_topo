@@ -35,7 +35,8 @@ cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_v
 flc_5km_tiles_dir <- file.path(veg_topo_extr_dir,"data_temp/flc_5km/30_30_deg")
 flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
 
-kmeans_corth_fused_ai_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km.nc")
+kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_8c.nc")
+kmeans_map_12c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_12c.nc")
 
 # -----------------------Additional Data------------------------------------------
 ecoregions_path <- file.path("/data_2/scratch/ting/data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
