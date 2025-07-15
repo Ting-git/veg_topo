@@ -18,27 +18,14 @@ twi_r <- rast(twi_450m_mosaic_clean_path)
 vegh_r <- rast(vegh_450m_mosaic_path)
 raster_list <- list("twi" = twi_r , "vegh" = vegh_r) # Combine into a named list
 
-# ------Sequentially preprocess each tile---------------------------------------------------
-t0 <- Sys.time()  # Start timing
+# ------ Crop and merge for each tile, and exclude invalid tiles ---------------
+# Record start time
+start_time <- Sys.time()
 
-# Wrap the function with safely() to capture results and errors
-safe_preprocess <- purrr::safely(
-  preprocess_single_tile,
-  otherwise = NULL,  # Return NULL if an error occurs
-  quiet = FALSE      # Set to TRUE to suppress error messages
-)
-
-# Process all tiles, storing both results and errors
-all_results <- purrr::pmap(
-  list(
-    tile_id = tile_grid$tile_id,
-    xmin = tile_grid$xmin,
-    xmax = tile_grid$xmax,
-    ymin = tile_grid$ymin,
-    ymax = tile_grid$ymax
-  ),
-  function(tile_id, xmin, xmax, ymin, ymax) {
-    safe_preprocess(
+# Define processing function
+process_tile <- function(tile_id, xmin, xmax, ymin, ymax) {
+  tryCatch({
+    preprocess_single_tile(
       tile_id = tile_id,
       xmin = xmin,
       xmax = xmax,
@@ -47,23 +34,37 @@ all_results <- purrr::pmap(
       raster_list = list("twi" = twi_r, "vegh" = vegh_r),
       output_dir = twi_vegh_merg_450m_tiles_dir
     )
-  }
-)
-
-# Extract and print results
-successful_results <- purrr::map_dfr(all_results, "result") # discarding errors
-errors <- purrr::map(all_results, "error")
-failed_tiles <- which(!purrr::map_lgl(errors, is.null))
-
-if (length(failed_tiles) > 0) {
-  message("Failed to process tiles: ", paste(failed_tiles, collapse = ", "))
-} else {
-  message("All tiles processed successfully!")
+    return(TRUE)  # Return TRUE on success
+  }, error = function(e) {
+    message(sprintf("Failed to process tile %s: %s", tile_id, e$message))
+    return(FALSE)  # Return FALSE on failure
+  })
 }
 
-# free memory
-rm(twi_r, vegh_r, raster_list)
+# Process all tiles
+processing_results <- mapply(
+  process_tile,
+  tile_id = tile_grid$tile_id,
+  xmin = tile_grid$xmin,
+  xmax = tile_grid$xmax,
+  ymin = tile_grid$ymin,
+  ymax = tile_grid$ymax
+)
+
+# Generate summary report
+successful_tiles <- sum(processing_results)
+failed_tiles <- length(processing_results) - successful_tiles
+
+message(sprintf("Processing complete! Success: %d, Failed: %d",
+                successful_tiles, failed_tiles))
+
+# Clean up memory
+rm(twi_r, vegh_r)
 gc()
+
+# Display total processing time
+message(sprintf("Total processing time: %.1f minutes",
+                difftime(Sys.time(), start_time, units = "mins")))
 
 # ------Report processing time and save results---------------------------------------------
 message(sprintf("done [%.1f min]", difftime(Sys.time(), t0, units = "mins")))
