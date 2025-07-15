@@ -22,7 +22,10 @@
 
 # produced figures
 data/figures/*.png
+
+# Precessing messages
 data/figures/processing_log.txt
+log.txt
 
 # produced vignettes
 vignettes/*.html
