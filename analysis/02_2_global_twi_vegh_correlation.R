@@ -9,7 +9,8 @@ library(dplyr)
 # ------Load configuration and helper functions---------------------------------------------
 
 source(here::here("config.R"))
-source(here::here("R/split_window_analysis.R"))
+source(here::here("R/create_spatial_windows.R"))
+source(here::here("R/calculate_window_correlations.R"))
 source(here::here("R/mosaicing.R"))
 
 # ------Analysis---------------------------------------------
@@ -38,7 +39,9 @@ results <- future_pmap(
       # -------Load pre-processed raster------------
       premerg_r <- terra::rast(premerg_file)
 
-      df_cor <- windows_cor_analysis(premerg_r)
+      # df_cor <- windows_cor_analysis(premerg_r)
+      df_cor  <- create_spatial_windows(premerg_r) |>
+        calculate_window_correlations()
 
       df_data <- df_cor |>
         tidyr::unnest(cols = c(data)) |>  # Explicit cols parameter

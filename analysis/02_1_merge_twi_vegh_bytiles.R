@@ -7,7 +7,8 @@ library(sf)
 
 # ------Load configuration and helper functions---------------------------------------------
 source(here::here("config.R"))
-source(here::here("R/build_global_tiles.R")) # Load tile grid generation function
+source(here::here("R/preprocess_single_tile.R"))
+source(here::here("R/generate_tile_grid.R"))
 
 # ------Generate global tile grid-----------------------------------------------------------
 tile_grid <- generate_tile_grid(lon_step = 30, lat_step = 30) # Create 30x30 degree tiles
