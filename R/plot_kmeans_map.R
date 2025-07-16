@@ -1,10 +1,28 @@
-# Define function for plotting k-means classification map
-plot_kmeans_map <- function(raster, k, palette_name = "Paired", title_text = NULL) {
-  n_clusters <- length(unique(na.omit(values(raster))))
-  fill_colors <- RColorBrewer::brewer.pal(n_clusters, palette_name)
+plot_kmeans_map <- function(raster, k, palette_name = "Paired", title_text = NULL, highlight_cluster = NULL) {
+
+  fill_colors <- RColorBrewer::brewer.pal(k, palette_name)
+  names(fill_colors) <- as.character(1:k)
+
+  alpha_values <- rep(1, k)
+  names(alpha_values) <- as.character(1:k)
+
+  if (!is.null(highlight_cluster)) {
+    alpha_values[] <- 0.1
+    alpha_values[as.character(highlight_cluster)] <- 1
+  }
+
+  raster_factor <- as.factor(raster)
 
   ggplot() +
-    tidyterra::geom_spatraster(data = as.factor(raster), maxcell = Inf) +
+    tidyterra::geom_spatraster(
+      data = raster_factor,
+      aes(
+        fill = after_stat(factor(value)),  # explicitly map fill by cluster
+        alpha = after_stat(factor(value))  # match alpha to cluster too
+      ),
+      maxcell = Inf
+    ) +
+    # tidyterra::geom_spatraster(data = raster_factor, aes(alpha = factor(after_stat(value))), maxcell = Inf) +
     geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
     scale_fill_manual(
       values = fill_colors,
@@ -15,6 +33,10 @@ plot_kmeans_map <- function(raster, k, palette_name = "Paired", title_text = NUL
         label.position = "bottom",
         nrow = 1
       )
+    ) +
+    scale_alpha_manual(
+      values = alpha_values,
+      guide = "none"
     ) +
     labs(title = title_text) +
     scale_x_continuous(
