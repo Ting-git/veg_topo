@@ -4,17 +4,30 @@
 project_root <- "~/veg_topo"
 veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
 
-# -----------------------Data Raw and clean--------------------------------------------------
+# -----------------------Data Raw and Data Clean--------------------------------------------------
+
+# Vegtation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
-
-
 vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/3_3_deg")
 vegh_450m_mosaic_path <- file.path(dirname(vegh_450m_tiles_dir), "vegh_450m_2020_mosaic.nc")
 
+# Topographic Wetness Index
 twi_450m_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
 twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_clean/ga2_clean.nc")  # Target raster file path
-
 twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")
+
+# Digital Terrain Model
+dtm_30m_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dtm_30m_ho_2025/edtm/gedtm_rf_m_30m_s_20060101_20151231_go_epsg.4326.3855_v20250611.tif")
+
+dtm_sd_11km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dtm_sd_11km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
+dtm_sd_11km_re_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dtm_sd_11km/dtm_sd_11km_resampled.nc")
+
+# Protected area
+pa_shp0 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+pa_shp1 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_1/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+pa_shp2 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+
+pa_11km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_wdpa_11km_2025/WDPA_WDOECM_Jul2025_11km.tif")
 
 # -----------------------Data Pre--------------------------------------------------
 
@@ -25,6 +38,8 @@ valid_geotiles_path <- file.path(project_root, "data/valid_tiles.gpkg")
 # aridity index
 ai_950m_file <- file.path(veg_topo_extr_dir,"data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 ai_5km_file <- file.path(veg_topo_extr_dir, "data/global_aridityindex_zomer_2022_to5km/ai_v3_yr_to5km.nc")
+ai_11km_file <- file.path(veg_topo_extr_dir, "data/global_ai_11km/ai_11km.nc")
+
 # -----------------------Results--------------------------------------------------
 
 # correalation between twi and vegh
@@ -33,7 +48,14 @@ cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_v
 
 # fraction of used land
 flc_5km_tiles_dir <- file.path(veg_topo_extr_dir,"data_temp/flc_5km/30_30_deg")
-flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
+# flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
+fused_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fused_5km.nc")
+fbare_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fbare_5km.nc")
+fwater_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fwater_5km.nc")
+
+fused_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fused_11km.nc")
+fbare_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fbare_11km.nc")
+fwater_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fwater_11km.nc")
 
 kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_8c.nc")
 kmeans_map_12c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_12c.nc")
