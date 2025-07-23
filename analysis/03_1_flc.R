@@ -10,9 +10,9 @@ library(furrr)
 # ------Load configuration and helper functions---------------------------------------------
 
 source(here::here("config.R"))
-source(here::here("R/split_window_analysis.R"))
-source(here::here("R/build_global_tiles.R"))
-source(here::here("R/mosaicing.R"))
+source(here::here("R/create_spatial_windows.R"))
+source(here::here("R/calculate_fraction_land_use.R"))
+source(here::here("R/mosaic_tiles.R"))
 
 tiles_info <- readRDS(valid_tiles_info_path)
 
@@ -116,10 +116,20 @@ gc()
 elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
 message(sprintf("All tiles done [%.1f mins]", elapsed))
 
-# -------- combination ----------------------------------------------------------
+# -------- combination ---------------------------------------------------------
 
 mosaic_r <- mosaic_tiles(
   input_dir   = flc_5km_tiles_dir,
-  output_file = flc_5km_mosacic_file,
   layer_names = c("fused", "fbare", "fwater")
 )
+
+# --------  Save each layer separately -----------------------------------------
+
+# Define the save path
+output_files = c(fused_5km_file, fbare_5km_file, fwater_5km_file)
+
+# Write NetCDF files
+for (i in 1:3) {
+  terra::writeCDF(mosaic_r[[i]], output_files[i], overwrite = TRUE)
+  message("✅ Mosaic saved successfully to: ", output_files[i])
+}

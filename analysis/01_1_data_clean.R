@@ -2,12 +2,9 @@
 
 library(terra)
 
-# ------Configuration-----------------------------------------------------------
+source(here::here("config.R"))
 
-twi_450m_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
-twi_450m_clean_path <- file.path("/data_2/scratch/ting/data/twi_marthew_450m/ga2_clean.nc")
-
-# ------Data Clean--------------------------------------------------------------
+# ------Data Clean: 10 min--------------------------------------------------------------
 
 # Load the raster
 twi_r <- terra::rast(twi_450m_path)
@@ -15,9 +12,13 @@ twi_r <- terra::rast(twi_450m_path)
 # Replace -1 values with NA
 twi_r[twi_r == -1] <- NA
 
+# Expand the extent
+# target_ext <- ext(-180, 180, -60, 90)
+# twi_r <- terra::extend(twi_r, target_ext)
+
 # Save to NetCDF
-writeCDF(twi_r, file = twi_450m_clean_path, overwrite = TRUE)
-message("✅ Saved successfully to: ", twi_450m_clean_path)
+writeCDF(twi_r, file = twi_450m_mosaic_clean_path, overwrite = TRUE)
+message("✅ Saved successfully to: ", twi_450m_mosaic_clean_path)
 
 # Clean up memory
 rm(twi_r)

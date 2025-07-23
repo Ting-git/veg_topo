@@ -12,15 +12,15 @@ source(here::here("config.R"))
 
 # Load resampled raster datasets (AI, TWI, fused)
 ai_5km_r <- terra::rast(ai_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
-flc_5km_r <- terra::rast(flc_5km_mosacic_file)[[1]]
+fused_5km_r <- terra::rast(fused_5km_file)
 cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
 
 # Crop FLC raster to match extent of AI raster
-flc_5km_r_crop <- terra::crop(flc_5km_r, ai_5km_r)
+fused_5km_r_crop <- terra::crop(fused_5km_r, ai_5km_r)
 
 # Stack rasters into a single SpatRaster
 stacked <- c(cor_twi_vegh_5km_r,
-             flc_5km_r_crop,
+             fused_5km_r_crop,
              ai_5km_r)
 
 # Convert to data frame for k-means clustering
@@ -80,6 +80,6 @@ terra::writeCDF(cluster12c_r,
 message(paste0("Cluster map saved to: ", kmeans_map_12c_path))
 
 
-rm(ai_5km_r, flc_5km_r, cor_twi_vegh_5km_r, stacked, df, df_k, km8c, km12c)
+rm(ai_5km_r, fused_5km_r, cor_twi_vegh_5km_r, stacked, df, df_k, km8c, km12c)
 gc
 
