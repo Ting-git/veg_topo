@@ -1,5 +1,6 @@
+
 mosaic_tiles <- function(input_dir,
-                         output_file,
+                         output_file = NULL,
                          pattern = "*.nc",
                          overwrite = TRUE,
                          crs = NULL,
@@ -30,11 +31,11 @@ mosaic_tiles <- function(input_dir,
     names(mosaic_raster) <- layer_names
   }
 
-  # Write output
-  terra::writeCDF(mosaic_raster, output_file, overwrite = overwrite)
-
-  # Success message
-  message("✅ Mosaic saved successfully to: ", output_file)
+  # Write output if path provided
+  if (!is.null(output_file)) {
+    terra::writeCDF(mosaic_raster, output_file, overwrite = overwrite)
+    message("✅ Mosaic saved successfully to: ", output_file)
+  }
 
   return(invisible(mosaic_raster))
 }
