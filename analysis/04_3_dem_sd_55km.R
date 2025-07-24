@@ -1,4 +1,3 @@
-# ------------ Set Up ----------------------------------------------------------
 library(terra)
 
 # Load configuration and functions
@@ -6,22 +5,28 @@ source(here::here("config.R"))
 source(here::here("R/aggregate_byfile.R"))
 
 # ------ Aggregation ---------------------------------------------
-# check the output
-r1 <- rast(fused_5km_file)
-r1
 
+# Aggregation
 aggregate_byfile(
-  input_path = fused_5km_file,
-  output_path = fused_11km_file,
-  target_path = ai_11km_file,
-  varname = "fused",
+  input_path = dem_sd_10km_path,
+  output_path = dem_sd_55km_path,
+  target_path = ai_55km_file,
+  varname = "dem_sd",
   if_resample = TRUE
 )
 
-# check the output
-r2 <- rast(fused_11km_file)
+# check the input
+r1 <- rast(dem_sd_10km_path)
+r1
+
+r2 <- rast(ai_55km_file)
 r2
 
+# check the output
+r3 <- rast(dem_sd_55km_path)
+r3
+
+plot(r3)
 # ------ Cleanup ---------------------------------------------------------------
 rm(list = ls())
 gc()
