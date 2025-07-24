@@ -7,7 +7,6 @@ library(patchwork)
 library(DataExplorer)
 library(RColorBrewer)
 
-
 # Load configuration and functions
 source(here::here("config.R"))
 
@@ -37,7 +36,7 @@ colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "cluster8c", "cluster12c")
 rm(ai_5km_r, fused_5km_r, cor_twi_vegh_5km_r, kmeans_8c_r, kmeans_12c_r)
 gc()
 
-# ----------- Overviw: plot the Density for all variables  ---------------------
+# ----------- Overview: plot the Density for all variables  ---------------------
 
 # plot density
 p_ds <- DataExplorer::plot_density(df)
@@ -74,3 +73,90 @@ ggsave(
 )
 
 
+# ----------- summary (K = 8)---------------------------------------------------
+
+# Summarize the data
+df_summary <- df |>
+  group_by(cluster8c) |>
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    mean_fused = mean(fused, na.rm = TRUE),
+    mean_ai = mean(ai, na.rm = TRUE)
+  )
+
+# Convert from wide to long format for plotting
+df_long <- df_summary |>
+  pivot_longer(
+    cols = c(mean_cor, mean_fused, mean_ai),
+    names_to = "Metric",
+    values_to = "MeanValue"
+  )
+
+# Create the bar plot with value labels
+p_sum_8c <- ggplot(df_long, aes(x = factor(cluster8c, levels = sort(unique(cluster8c))), y = MeanValue, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = round(MeanValue, 2)),
+            position = position_dodge(width = 0.9),
+            vjust = -0.3, size = 3) +
+  labs(title = "Mean Values by Cluster (k=8)",
+       x = "Cluster",
+       y = "Mean Value") +
+  theme_bw()
+
+p_sum_8c
+
+# Save plot
+ggsave(
+  filename = here::here("data/figures/03_kmeans_summary_8c.png"),
+  plot = p_sum_8c,
+  width = 10,
+  height = 6,
+  dpi = 300,
+  units = "in"
+)
+
+# ----------- summary (K = 12)---------------------------------------------------
+
+# Summarize the data
+df_summary <- df |>
+  group_by(cluster12c) |>
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    mean_fused = mean(fused, na.rm = TRUE),
+    mean_ai = mean(ai, na.rm = TRUE)
+  )
+
+# Convert from wide to long format for plotting
+df_long <- df_summary |>
+  pivot_longer(
+    cols = c(mean_cor, mean_fused, mean_ai),
+    names_to = "Metric",
+    values_to = "MeanValue"
+  )
+
+# Create the bar plot with value labels
+p_sum_12c <- ggplot(df_long, aes(x = factor(cluster12c, levels = sort(unique(cluster12c))), y = MeanValue, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = round(MeanValue, 2)),
+            position = position_dodge(width = 0.9),
+            vjust = -0.3, size = 3) +
+  labs(title = "Mean Values by Cluster (k=12)",
+       x = "Cluster",
+       y = "Mean Value") +
+  theme_bw()
+
+p_sum_12c
+
+# Save plot
+ggsave(
+  filename = here::here("data/figures/03_kmeans_summary_12c.png"),
+  plot = p_sum_12c,
+  width = 10,
+  height = 6,
+  dpi = 300,
+  units = "in"
+)
+
+# ------------ Cleanup ---------------------------------------------------------
+rm(list = ls())
+gc()
