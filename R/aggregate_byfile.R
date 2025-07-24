@@ -19,7 +19,8 @@ aggregate_byfile <- function(input_path, output_path,
                              target_path = NULL,
                              varname = "band",
                              if_resample = FALSE,
-                             if_mask = FALSE) {
+                             if_mask = FALSE,
+                             fun = mean) {
 
   # Validate input: resampling or masking requires target_path
   if (if_resample && is.null(target_path)) {
@@ -45,7 +46,7 @@ aggregate_byfile <- function(input_path, output_path,
 
   # Aggregate raster if factors are >= 1
   if (fact_x >= 1 && fact_y >= 1) {
-    r_out <- terra::aggregate(r_in, fact = c(fact_x, fact_y), fun = mean, na.rm = TRUE)
+    r_out <- terra::aggregate(r_in, fact = c(fact_x, fact_y), fun = fun, na.rm = TRUE)
   } else {
     r_out <- r_in
   }
