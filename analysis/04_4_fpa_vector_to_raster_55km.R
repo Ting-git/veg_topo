@@ -2,29 +2,22 @@
 
 # load library
 library(terra)
+library(rnaturalearth)
+
 # Load configuration and functions
 source(here::here("config.R"))
 source(here::here("R/aggregate_byfile.R"))
 
-# ----convert vect to raster with bash -----------------------------------------
+# ---- Configuration -----------------------------------------
 
 # Define input shapefile paths
-# shp_files <- c(
-#   "/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp",
-#   "/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_1/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp",
-#   "/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp"
-# )
-
-shp_files <- c(
-  pa_shp0,
-  pa_shp1,
-  pa_shp2
-)
+shp_files <- c(pa_shp0, pa_shp1, pa_shp2)
 
 # Define output raster paths
-out_dir <- file.path(veg_topo_extr_dir, "/data_temp/pa_shp")
-out_files <- file.path(out_dir, paste0("pa_", 0:2, ".tif"))
-pa_merged_22km_path <- file.path(out_dir, "pa_merged_22km.tif")
+out_files <- file.path(veg_topo_extr_dir, "/data_temp/pa_shp", paste0("pa_", 0:2, ".tif"))
+pa_merged_22km_path <- file.path(veg_topo_extr_dir, "/data_temp/pa_shp/pa_merged_22km.tif")
+
+# ----convert vect to raster with bash -----------------------------------------
 
 # Rasterize function
 rasterize_shp <- function(shp_path, out_tif) {
@@ -61,7 +54,21 @@ system(merge_cmd)
 cat("All done! Merged raster saved at:\n", pa_merged_22km_path, "\n")
 
 
-# ---- Aggregate to 55km -------------------------------------------------------------
+# ---- Mask and Aggregate to 55km -------------------------------------------------------------
+
+# Download land polygons from Natural Earth
+land <- ne_countries(scale = 110, returnclass = "sf")
+land_vect <- vect(land)
+
+# Load merged raster
+r_pa <- rast(pa_merged_22km_path)
+
+# Crop and mask using the land polygons (in memory)
+r_crop <- crop(r_pa, land_vect)       # optional but faster
+r_masked <- mask(r_crop, land_vect)   # apply land-only mask
+
+# Save masked raster
+writeRaster(r_masked, pa_merged_22km_path, overwrite = TRUE)
 
 # Aggregation
 aggregate_byfile(
@@ -79,13 +86,11 @@ aggregate_byfile(
   }
 )
 
-# # check the data
-# r_out <- rast(fpa_55km_path)
-# r_out
-#
-# plot(r_out)
-#
-# summary(r_out)
+# check the data
+r_out <- rast(fpa_55km_path)
+r_out
+
+plot(r_out)
 
 # ------ Cleanup ---------------------------------------------------------------
 rm(list = ls())
