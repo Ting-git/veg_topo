@@ -151,21 +151,21 @@ df_samples_B <- df_binned |>
 
 # Add description column
 df_samples_A$strata_A_label <- c(
-  "very dry, low relief",
-  "moderate, low relief",
-  "very wet, low relief",
-  "very dry, high relief",
-  "moderate, high relief",
-  "very wet, high relief"
+  "dry_flat",
+  "mod_flat",
+  "wet_flat",
+  "dry_rugged",
+  "mod_rugged",
+  "wet_rugged"
 )
 
 df_samples_B$strata_B_label = c(
-  "low latitude, low relief",
-  "mid latitude, low relief",
-  "high latitude, low relief",
-  "low latitude, high relief",
-  "mid latitude, high relief",
-  "hight latitude, high relief"
+  "low_lat_flat",
+  "mid_lat_flat",
+  "high_lat_flat",
+  "low_lat_rugged",
+  "mid_lat_rugged",
+  "high_lat_rugged"
 )
 
 # Save the two data frames as RDS files

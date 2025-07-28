@@ -1,4 +1,4 @@
-# ------calculate_window_correlations------------------------------------
+# ------calculate_correlations_bywin------------------------------------
 
 #' Calculate windowed correlation statistics
 #'
@@ -12,7 +12,7 @@
 #' @param if_data Logical, keep raw data? (default FALSE)
 #' @param if_peak Logical, calculate peak relationships? (default FALSE)
 #' @return A data frame with correlation statistics by window
-calculate_window_correlations <- function(df_win,
+calculate_correlation_bywin <- function(df_win,
                                           x = "twi",
                                           y = "vegh",
                                           if_nobs = TRUE,
