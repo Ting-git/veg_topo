@@ -10,6 +10,8 @@ veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/3_3_deg")
 vegh_450m_mosaic_path <- file.path(dirname(vegh_450m_tiles_dir), "vegh_450m_2020_mosaic.nc")
+fvegh_55km_path <- file.path(veg_topo_extr_dir, "data/global_fvegh_55km.nc")
+
 
 # Topographic Wetness Index
 twi_450m_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
@@ -58,7 +60,7 @@ fbare_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fbare_11km
 fwater_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fwater_11km.nc")
 
 kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_8c.nc")
-kmeans_map_12c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_12c.nc")
+kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_1/kmeans_corth_fused_ai_5km_7c.nc")
 
 # -----------------------Additional Data------------------------------------------
 ecoregions_path <- file.path("/data_2/scratch/ting/data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")

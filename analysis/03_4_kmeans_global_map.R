@@ -4,7 +4,8 @@ library(ggplot2)
 library(tidyterra)
 library(rnaturalearth)
 library(sf)
-
+library(khroma)
+library(RColorBrewer)
 
 # Load configuration and functions
 source(here::here("config.R"))
@@ -16,40 +17,48 @@ source(here::here("R/plot_kmeans_map.R"))
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 # Load rasters
-kmeans_12c_r <- terra::rast(kmeans_map_12c_path)
+kmeans_7c_r <- terra::rast(kmeans_map_7c_path)
 kmeans_8c_r  <- terra::rast(kmeans_map_8c_path)
 
-# ---------- Create and save global maps (K=12) --------------------------------
-p_12c <- plot_kmeans_map(kmeans_12c_r, k = 12,
-                         palette_name = "Paired",
-                         title_text = "K-means Classification Map (K=12)")
-ggsave(
-  filename = here::here("data/figures/03_kmeans_gl_map_12c.png"),
-  plot = p_12c, width = 24, height = 11.5, dpi = 300, units = "in"
+# ---------- Create and save global maps (K=7) --------------------------------
+
+# Get Okabe & Ito's colorblind-friendly palette with 7 distinct colors
+okabe <- color("okabe ito")
+fill_colors <- okabe(7)
+
+# Plot map (requires a valid kmeans_7c_r object and a defined plot_kmeans_map function)
+p_7c <- plot_kmeans_map(
+  kmeans_7c_r,
+  fill_colors = fill_colors,
+  title_text = "K-means Classification Map (K=7)"
 )
 
-# ---------- Create and save single cluster maps (K=12) ------------------------
+ggsave(
+  filename = here::here("data/figures/03_kmeans_gl_map_7c.png"),
+  plot = p_7c, width = 24, height = 11.5, dpi = 300, units = "in"
+)
 
-# Loop over 12 clusters and save a map for each one
-for (i in 1:12) {
+# ---------- Create and save single cluster maps (K=7) ------------------------
+
+# Loop over 7 clusters and save a map for each one
+for (i in 1:7) {
   p <- plot_kmeans_map(
-    raster = kmeans_12c_r,
-    k = 12,
-    palette_name = "Paired",
+    raster = kmeans_7c_r,
+    fill_colors = fill_colors,
     title_text = paste("Cluster", i),
     highlight_cluster = i
   )
 
   # Save plot
   ggsave(
-    filename = here::here(paste0("data/figures/03_kmeans_gl_map_12c_", i, ".png")),
+    filename = here::here(paste0("data/figures/03_kmeans_gl_map_7c_", i, ".png")),
     plot = p, width = 24, height = 11.5, dpi = 300, units = "in"
   )
 }
 
 # ---------- Create and save global maps with 8 clusters (K=8) -----------------
-p_8c  <- plot_kmeans_map(kmeans_8c_r,  k = 8,
-                         palette_name = "Set2",
+p_8c  <- plot_kmeans_map(kmeans_8c_r,
+                         fill_colors = RColorBrewer::brewer.pal(8, "Set2"),
                          title_text = "K-means Classification Map (K=8)")
 
 ggsave(
@@ -64,8 +73,7 @@ ggsave(
 for (i in 1:8) {
   p <- plot_kmeans_map(
     raster = kmeans_8c_r,
-    k = 8,
-    palette_name = "Set2",
+    fill_colors = RColorBrewer::brewer.pal(8, "Set2"),
     title_text = paste("Cluster", i),
     highlight_cluster = i
   )

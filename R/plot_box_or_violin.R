@@ -1,4 +1,4 @@
-plot_box_or_violin <- function(data, xvar, yvar, type = "boxplot", ylab = NULL) {
+plot_box_or_violin <- function(data, xvar, yvar, type = "boxplot", ylab = NULL, fill_colors = NULL) {
 
   # data[[xvar]] <- factor(data[[xvar]], levels = unique(data[[xvar]]))
   data[[xvar]] <- factor(data[[xvar]], levels = sort(unique(data[[xvar]])))

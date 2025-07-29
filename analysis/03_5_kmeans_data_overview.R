@@ -14,26 +14,30 @@ source(here::here("config.R"))
 
 # Load resampled raster datasets (AI, TWI, fused)
 ai_5km_r <- terra::rast(ai_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
-fused_5km_r <- terra::rast(fused_5km_file)
+ai_5km_r[ai_5km_r == 0] <- NA
+log_ai_5km_r <- log(ai_5km_r)
+
 cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
 kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
-kmeans_12c_r <- terra::rast(kmeans_map_12c_path)
+kmeans_7c_r <- terra::rast(kmeans_map_7c_path)
 
 # Crop FLC raster to match extent of AI raster
+fused_5km_r <- terra::rast(fused_5km_file)
 fused_5km_r <- terra::crop(fused_5km_r, ai_5km_r)
 
 # Stack rasters into a single SpatRaster
 stacked <- c(cor_twi_vegh_5km_r,
              fused_5km_r,
              ai_5km_r,
+             log_ai_5km_r,
              kmeans_8c_r,
-             kmeans_12c_r)
+             kmeans_7c_r)
 
 # Convert to data frame for k-means clustering
 df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "cluster8c", "cluster12c")
+colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "log_ai", "cluster8c", "cluster7c")
 
-rm(ai_5km_r, fused_5km_r, cor_twi_vegh_5km_r, kmeans_8c_r, kmeans_12c_r)
+rm(ai_5km_r, fused_5km_r, cor_twi_vegh_5km_r, kmeans_8c_r, kmeans_7c_r)
 gc()
 
 # ----------- Overview: plot the Density for all variables  ---------------------
@@ -115,11 +119,11 @@ ggsave(
   units = "in"
 )
 
-# ----------- summary (K = 12)---------------------------------------------------
+# ----------- summary (K = 7)---------------------------------------------------
 
 # Summarize the data
 df_summary <- df |>
-  group_by(cluster12c) |>
+  group_by(cluster7c) |>
   summarise(
     mean_cor = mean(cor, na.rm = TRUE),
     mean_fused = mean(fused, na.rm = TRUE),
@@ -135,22 +139,22 @@ df_long <- df_summary |>
   )
 
 # Create the bar plot with value labels
-p_sum_12c <- ggplot(df_long, aes(x = factor(cluster12c, levels = sort(unique(cluster12c))), y = MeanValue, fill = Metric)) +
+p_sum_7c <- ggplot(df_long, aes(x = factor(cluster7c, levels = sort(unique(cluster7c))), y = MeanValue, fill = Metric)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   geom_text(aes(label = round(MeanValue, 2)),
             position = position_dodge(width = 0.9),
             vjust = -0.3, size = 3) +
-  labs(title = "Mean Values by Cluster (k=12)",
+  labs(title = "Mean Values by Cluster (k=7)",
        x = "Cluster",
        y = "Mean Value") +
   theme_bw()
 
-p_sum_12c
+p_sum_7c
 
 # Save plot
 ggsave(
-  filename = here::here("data/figures/03_kmeans_summary_12c.png"),
-  plot = p_sum_12c,
+  filename = here::here("data/figures/03_kmeans_summary_7c.png"),
+  plot = p_sum_7c,
   width = 10,
   height = 6,
   dpi = 300,
