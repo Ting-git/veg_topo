@@ -2,7 +2,7 @@
 
 # load library
 library(terra)
-library(rnaturalearth)
+# library(rnaturalearth)
 
 # Load configuration and functions
 source(here::here("config.R"))
@@ -54,21 +54,24 @@ system(merge_cmd)
 cat("All done! Merged raster saved at:\n", pa_merged_22km_path, "\n")
 
 
+# ---- Mask with land vect -------------------------------------------------------------
+
+# # Download land polygons from Natural Earth
+# land <- ne_countries(scale = 110, returnclass = "sf")
+# land_vect <- vect(land)
+#
+# # Load merged raster
+# r_pa <- rast(pa_merged_22km_path)
+#
+# # Crop and mask using the land polygons (in memory)
+# r_crop <- crop(r_pa, land_vect)       # optional but faster
+# r_masked <- mask(r_crop, land_vect)   # apply land-only mask
+#
+# # Save masked raster
+# writeRaster(r_masked, pa_merged_22km_path, overwrite = TRUE)
+
+
 # ---- Mask and Aggregate to 55km -------------------------------------------------------------
-
-# Download land polygons from Natural Earth
-land <- ne_countries(scale = 110, returnclass = "sf")
-land_vect <- vect(land)
-
-# Load merged raster
-r_pa <- rast(pa_merged_22km_path)
-
-# Crop and mask using the land polygons (in memory)
-r_crop <- crop(r_pa, land_vect)       # optional but faster
-r_masked <- mask(r_crop, land_vect)   # apply land-only mask
-
-# Save masked raster
-writeRaster(r_masked, pa_merged_22km_path, overwrite = TRUE)
 
 # Aggregation
 aggregate_byfile(
@@ -79,7 +82,7 @@ aggregate_byfile(
   if_resample = TRUE,
   fun = function(x, na.rm) {
     if (all(is.na(x))) {
-      return(NA)
+      return(0)
     } else {
       return(sum(x == 1, na.rm = na.rm) / length(x))
     }
@@ -87,10 +90,10 @@ aggregate_byfile(
 )
 
 # check the data
-r_out <- rast(fpa_55km_path)
-r_out
-
-plot(r_out)
+# r_out <- rast(fpa_55km_path)
+# r_out
+#
+# plot(r_out)
 
 # ------ Cleanup ---------------------------------------------------------------
 rm(list = ls())
