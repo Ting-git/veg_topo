@@ -11,6 +11,8 @@
 #' @param target_path Path to target raster file, required if resampling or masking.
 #' @param if_resample Logical, whether to resample input raster to target grid (requires target_path).
 #' @param if_mask     Logical, whether to mask output raster by target extent (requires target_path).
+#' @param na_value    Numeric value in the raster that should be treated as NA (e.g., 0 or -9999).
+#' @param fun         Aggregation function (default is mean).
 #'
 #' @return The output file path (character).
 aggregate_byfile <- function(input_path, output_path,
@@ -20,6 +22,7 @@ aggregate_byfile <- function(input_path, output_path,
                              varname = "band",
                              if_resample = FALSE,
                              if_mask = FALSE,
+                             na_value = NULL,
                              fun = mean) {
 
   # Validate input: resampling or masking requires target_path
@@ -32,6 +35,11 @@ aggregate_byfile <- function(input_path, output_path,
 
   # Load input raster
   r_in <- terra::rast(input_path)
+
+  # Set specified values to NA before aggregation
+  if (!is.null(na_value)) {
+    r_in[r_in == na_value] <- NA
+  }
 
   # If target raster is provided, load it and extract resolution
   if (!is.null(target_path)) {

@@ -26,7 +26,6 @@ aggregate_byfile(
 # # check the output
 # r2 <- rast(ai_55km_file)
 # r2
-
 # plot(r2)
 
 # ------ Cleanup ---------------------------------------------------------------
