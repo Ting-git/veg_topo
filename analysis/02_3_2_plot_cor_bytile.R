@@ -28,10 +28,15 @@ results <- future_pmap(
     args <- list(...)
     tryCatch({
 
-      tile_id <- args$tile_id
+      tile_id <- args$regA_info
 
       # set the input
       ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
+
+      twi_r <- rast(twi_30m_path)
+      vegh_r <- rast(vegh_10m_tiles_dir)
+
+
       message(sprintf("tile %s done [%.1f mins]", tile_id, difftime(Sys.time(), t0, units = "mins")))
 
     }, error = function(e) {
