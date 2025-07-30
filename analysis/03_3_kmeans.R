@@ -40,9 +40,16 @@ cat("Optimal lambda:", lambda, "\n")
 df$ai_boxcox <- bcPower(df$ai, lambda)
 
 # Plot histograms before and after transformation to compare distributions
+# Save as PNG file
+png(here::here("data/figures/03_ai_histograms.png"), width = 800, height = 400, res = 150)
+
+# Create histograms side by side
 par(mfrow = c(1, 2))
 hist(df$ai, main = "Original AI", col = "red")
 hist(df$ai_boxcox, main = "Box-Cox Transformed AI", col = "blue")
+
+# Close the graphics device
+dev.off()
 
 # Standardize the input variables for k-means clustering
 # This centers the data (mean = 0) and scales it (SD = 1)

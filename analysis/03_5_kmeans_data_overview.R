@@ -15,7 +15,6 @@ source(here::here("config.R"))
 # Load resampled raster datasets (AI, TWI, fused)
 ai_5km_r <- terra::rast(ai_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 ai_5km_r[ai_5km_r == 0] <- NA
-log_ai_5km_r <- log(ai_5km_r)
 
 cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
 kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
@@ -29,13 +28,12 @@ fused_5km_r <- terra::crop(fused_5km_r, ai_5km_r)
 stacked <- c(cor_twi_vegh_5km_r,
              fused_5km_r,
              ai_5km_r,
-             log_ai_5km_r,
              kmeans_8c_r,
              kmeans_7c_r)
 
 # Convert to data frame for k-means clustering
 df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "log_ai", "cluster8c", "cluster7c")
+colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "cluster8c", "cluster7c")
 
 rm(ai_5km_r, fused_5km_r, cor_twi_vegh_5km_r, kmeans_8c_r, kmeans_7c_r)
 gc()
@@ -111,7 +109,7 @@ p_sum_8c
 
 # Save plot
 ggsave(
-  filename = here::here("data/figures/03_kmeans_summary_8c.png"),
+  filename = here::here("data/figures/03_kmeans_8c_summary.png"),
   plot = p_sum_8c,
   width = 10,
   height = 6,
@@ -153,7 +151,7 @@ p_sum_7c
 
 # Save plot
 ggsave(
-  filename = here::here("data/figures/03_kmeans_summary_7c.png"),
+  filename = here::here("data/figures/03_kmeans_7c_summary.png"),
   plot = p_sum_7c,
   width = 10,
   height = 6,
