@@ -68,8 +68,8 @@ cp_hg <- patchwork::wrap_plots(p_hg)
 ggsave(
   filename = here::here("data/figures/04_variables_hg.png"),
   plot = cp_hg,
-  width = 10,
-  height = 5,
+  width = 8,
+  height = 6,
   dpi = 300,
   units = "in"
 )
@@ -128,7 +128,7 @@ df_binned <- df |>
 df_filt <- df_binned |>
 
   # use only data where influence of humans on veg height is minimal
-  filter(fused < 0.05, fpa > 0.95, fvegh > 0.8) |>
+  filter(fused < 0.05, fpa > 0.9, fvegh > 0.8) |>
     # filter(fused < 0.05, fpa > 0.95) |>
 
   # Filter to retain only data that is in bins 1/2, 3, and 5 for MI and Lat.
@@ -181,6 +181,46 @@ df_samples_B <- df_filt |>
 saveRDS(df_samples_A, here::here("data/df_samples_A.rds"))
 saveRDS(df_samples_B, here::here("data/df_samples_B.rds"))
 
+# -------------------------- Generate gpkg  ------------------------------------
+# regA
+# load region infos
+regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
+  select(ends_with("label"), ends_with("min"), ends_with("max"))
+
+regA_gpkg <- regA_info |>
+  rowwise() |>
+  mutate(geometry = list(st_polygon(list(matrix(
+    c(xmin, ymin,
+      xmin, ymax,
+      xmax, ymax,
+      xmax, ymin,
+      xmin, ymin),
+    ncol = 2, byrow = TRUE))))) |>
+  st_as_sf(crs = 4326)
+
+# 写入 gpkg 文件
+st_write(regA_gpkg, here::here("data/regionA_boxes.gpkg"), delete_layer = TRUE)
+
+
+# ---- regB
+# load region infos
+regB_info <- readRDS(here::here("data/df_samples_B.rds")) |>
+  select(ends_with("label"), ends_with("min"), ends_with("max"))
+
+regB_gpkg <- regB_info |>
+  rowwise() |>
+  mutate(geometry = list(st_polygon(list(matrix(
+    c(xmin, ymin,
+      xmin, ymax,
+      xmax, ymax,
+      xmax, ymin,
+      xmin, ymin),
+    ncol = 2, byrow = TRUE))))) |>
+  st_as_sf(crs = 4326)
+
+# 写入 gpkg 文件
+st_write(regB_gpkg, here::here("data/regionB_boxes.gpkg"), delete_layer = TRUE)
+
 # -------------------------- plot  ------------------------------------
 
 # Data overview
@@ -197,6 +237,12 @@ table(df_samples_B$strata_B_label)
 table(df_binned$ai_bin)
 table(df_binned$strata_A)
 table(df_binned$strata_B)
+
+# mid_lat_flat_relief (32.5° - 49°)
+# have vey low fpa and low fvegh !!!!!!!!!
+df_mid_flat <- df_binned |>
+  filter(strata_B_label == "mid_latitude_flat_relief")
+summary(df_mid_flat)
 
 # load coast outline, vector data
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
@@ -224,5 +270,10 @@ ggplot(df_filt, aes(x = lon, y = lat, fill = strata_B)) +
   geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
   theme_bw() +
   coord_sf()
+
+# ------ Cleanup ---------------------------------------------------------------
+
+rm(list = ls())
+gc
 
 
