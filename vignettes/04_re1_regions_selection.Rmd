@@ -4,6 +4,9 @@ author: "Ting Tan"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
     fig_align: 'center'
 bibliography: literatures.bib  
 latex_engine: xelatex
@@ -14,7 +17,7 @@ csl: apa.csl
 ```{r SetUp, include=FALSE, eval=TRUE}
 
 knitr::opts_chunk$set(
-  comment = "#>", echo = FALSE, fig.width = 10, message = FALSE, warning = FALSE
+  comment = "#>", fig.width = 10, message = FALSE, warning = FALSE
 )
 
 library(terra)
@@ -37,9 +40,39 @@ source(here::here("config.R"))
 
 ## Objective
 
-To explore the global pattern of vegetation structure in relation to hillslope hydrology, this study investigates how **vegetation height (VEGH)** varies with the **topographic wetness index (TWI)** using a window-based spatial correlation approach.
+This study aims to investigate the **topographic effects on vegetation patterns**, which may exhibit different signals across spatial scales. At the **regional scale**, we aggregate the raw 30 m resolution data into 20 × 20 pixel windows and calculate the window-based Pearson correlation between the **Topographic Wetness Index (TWI)** and **vegetation height**. However, due to the high computational demands, it is not feasible to apply this method at the global scale. Therefore, we selectively focus on a few representative regions for detailed analysis. To minimize the influence of human activities on natural vegetation patterns, we prioritize regions that are as undisturbed as possible.
+
+Under the framework of Fan et al. \[@fanHillslopeHydrologyGlobal2019, year-only], **topographic controls on vegetation** primarily operate through two mechanisms: **lateral subsurface flow** and **solar insolation** (via slope aspect). The interaction between hydroclimate and topographic relief determines the extent and direction of lateral flow impacts on vegetation growth. Similarly, variations in latitude and relief influence insolation patterns and, in turn, vegetation response.
+
+Accordingly, we select 12 representative regions for analysis, grouped by the dominant topographic control.
+
+### Lateral Subsurface Flow-Dominated Patterns
+
+(Selected based on hydroclimate and relief conditions):
+
+1. Very dry hydroclimate with flat relief
+2. Moderate hydroclimate with flat relief
+3. Very wet hydroclimate with flat relief
+4. Very dry hydroclimate with rugged relief
+5. Moderate hydroclimate with rugged relief
+6. Very wet hydroclimate with rugged relief
+
+### Insolation-Dominated Patterns
+
+(Selected based on latitude and relief conditions):
+
+1. Very low latitude with flat relief
+2. Moderate latitude with flat relief
+3. Very high latitude with flat relief
+4. Very low latitude with rugged relief
+5. Moderate latitude with rugged relief
+6. Very high latitude with rugged relief
 
 ---
+
+## Implementation
+
+### Avaliable Data
 
 ```{r DataPre}
 # Load resampled raster datasets (AI, TWI, fused)
@@ -97,7 +130,10 @@ ggsave(
 )
 ```
 
-```{r Bin}
+
+### Create bins
+
+```{r Bin, echo = TRUE}
 df_binned <- df |>
 
   # create bins
@@ -144,30 +180,155 @@ df_binned <- df |>
   ) |>
 
   select(-ai_label, -relief_label, -lat_label)
+
+# check data
+table(df_binned$ai_bin)
+table(df_binned$abs_lat_bin)
+table(df_binned$relief_bin)
+
+table(df_binned$strata_A_label)
+table(df_binned$strata_B_label)
+
 ```
 
+### Region filter
 
-```{r Filter}
+#### fused < 0.05, fpa > 0.8, fvegh > 0.8
 
-df_filt <- df_binned |>
+The criteria fused < 0.05 and fpa > 0.8 tend to select regions dominated by water bodies, bare ground, or other sparsely vegetated surfaces. To ensure that the selected regions are suitable for analyzing natural vegetation patterns, we introduce an additional condition: the region must have a vegetation data fraction greater than 0.8 (fvegh > 0.8).
 
-  # use only data where influence of humans on veg height is minimal
+However, this strict combination of filters may exclude many areas of interest—particularly flat, mid-latitude regions—since such landscapes are often heavily developed or used for agriculture and therefore lack large protected areas.
+
+
+
+```{r Filter, echo = TRUE}
+
+df_filt_A <- df_binned |>
+
   filter(fused < 0.05, fpa > 0.9, fvegh > 0.8) |>
-    # filter(fused < 0.05, fpa > 0.95) |>
-
-  # Filter to retain only data that is in bins 1/2, 3, and 5 for MI and Lat.
-  # and for bins 1 and 3 for relief
-
+  
   filter(
-    # retain only data that is in bins 1, 3, and 5
-    ai_bin %in% levels(ai_bin)[c(2, 3, 5)], # bin 1 are too dry that has little fraction of vegetation
-    # retain only data that is in bins 1 and 3
+    ai_bin %in% levels(ai_bin)[c(1, 3, 5)], # bin 1 are too dry that has little fraction of vegetation
     relief_bin %in% levels(relief_bin)[c(1, 3)],
-    # retain only data that is in bins 1, 3, and 5
+  )
+
+table(df_filt_A$strata_A_label)
+
+df_filt_B <- df_binned |>
+
+  filter(fused < 0.05, fpa > 0.9, fvegh > 0.8) |>
+  
+  filter(
+    relief_bin %in% levels(relief_bin)[c(1, 3)],
     abs_lat_bin %in% levels(abs_lat_bin)[c(1, 3, 5)]
   )
 
+table(df_filt_B$strata_B_label)
 ```
+
+
+#### Very Dry Areas with Naturally Low Vegetation Cover
+
+Very dry regions often have inherently low fractions of green vegetation, which may cause them to be excluded by strict vegetation thresholds. To address this limitation, we propose including certain arid regions that meet a relaxed criterion of fvegh > 0.5. This approach helps maintain geographic and ecological representativeness in our analysis.
+
+```{r dry}
+df_dry <- df_binned |>
+  filter(ai_bin %in% levels(ai_bin)[1]) |>
+  select(fpa, fvegh, fused, ai_bin) 
+
+summary(df_dry)
+
+df_filt_A_dry <- df_binned |>
+
+  filter(fused < 0.05, fpa > 0.8, fvegh > 0.5) |> # fvegh > 0.5
+  
+  filter(
+    ai_bin %in% levels(ai_bin)[c(1)], 
+    relief_bin %in% levels(relief_bin)[c(1)],
+  )
+
+table(df_filt_A_dry$strata_A_label)
+```
+
+#### Lack of Large Protected Areas in Flat Mid-Latitude Regions
+
+Large protected areas are generally absent in flat, mid-latitude regions, as these areas are often prime locations for development and agriculture. To address this limitation, we propose including certain flat mid-latitude regions that meet a relaxed criterion of `fpa > 0.5`. This adjustment ensures better geographic and ecological representativeness in our analysis.
+
+```{r mid_flat}
+# mid_lat_flat_relief (32.5° - 49°)
+# have vey low fpa !!!!!!!!!
+df_mid_flat <- df_binned |>
+  filter(strata_B_label == "mid_latitude_flat_relief") |>
+  select(fpa, fvegh, fused, abs_lat_bin, relief_bin) 
+
+  summary(df_mid_flat)
+  
+
+df_filt_B_mid_flat <- df_binned |>
+
+  filter(fused < 0.05, fpa > 0.5, fvegh > 0.8) |> # fpa > 0.5
+  
+  filter(
+    relief_bin %in% levels(relief_bin)[c(1)],
+    abs_lat_bin %in% levels(abs_lat_bin)[c(3)]
+  )
+
+table(df_filt_B_mid_flat$strata_B_label)
+```
+
+
+
+```{r Filterbind, echo = TRUE}
+
+df_filt_A_all <- df_filt_A |>
+  bind_rows(df_filt_A_dry)
+
+table(df_filt_A_all $strata_A_label)
+
+df_filt_B_all <- df_filt_B |>
+  bind_rows(df_filt_B_mid_flat)
+
+table(df_filt_B_all $strata_B_label)
+```
+
+---
+
+## Visuallization 
+
+```{r}
+
+# load coast outline, vector data
+coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+
+ggplot(df_binned, aes(x = lon, y = lat, fill = strata_A)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_binned, aes(x = lon, y = lat, fill = strata_B)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_filt_A_all, aes(x = lon, y = lat, fill = strata_A)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_filt_B_all, aes(x = lon, y = lat, fill = strata_B)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+```
+
+
+---
+
+## Sampling
 
 ```{r Sampling}
 # Pick one region (coarse gridcell) representing all combination of bins.
@@ -176,7 +337,7 @@ df_filt <- df_binned |>
 set.seed(999)
 
 # for Fig. 6 Down Valley drainage
-df_samples_A <- df_filt |>
+df_samples_A <- df_filt_A_all |>
   group_by(strata_A) |>
   sample_n(size = 1, replace = FALSE) |>
   mutate(
@@ -189,7 +350,7 @@ df_samples_A <- df_filt |>
   ungroup()
 
 # for Fig. 6 Aspect difference
-df_samples_B <- df_filt |>
+df_samples_B <- df_filt_B_all |>
   group_by(strata_B) |>
   sample_n(size = 1, replace = FALSE) |>
   mutate(
@@ -224,7 +385,7 @@ regA_gpkg <- regA_info |>
     ncol = 2, byrow = TRUE))))) |>
   st_as_sf(crs = 4326)
 
-# 写入 gpkg 文件
+# write gpkg document
 st_write(regA_gpkg, here::here("data/regionA_boxes.gpkg"), delete_layer = TRUE)
 
 
@@ -244,100 +405,6 @@ regB_gpkg <- regB_info |>
     ncol = 2, byrow = TRUE))))) |>
   st_as_sf(crs = 4326)
 
-# 写入 gpkg 文件
+# write gpkg document
 st_write(regB_gpkg, here::here("data/regionB_boxes.gpkg"), delete_layer = TRUE)
-
-
-```
-
-```{r}
-
-# Data overview
-table(df_binned$strata_A_label)
-table(df_binned$strata_B_label)
-
-table(df_filt$strata_A_label)
-table(df_filt$strata_B_label)
-
-table(df_samples_A$strata_A_label)
-table(df_samples_B$strata_B_label)
-
-# check the bins and the combinations
-table(df_binned$ai_bin)
-table(df_binned$strata_A)
-table(df_binned$strata_B)
-
-# mid_lat_flat_relief (32.5° - 49°)
-# have vey low fpa and low fvegh !!!!!!!!!
-df_mid_flat <- df_binned |>
-  filter(strata_B_label == "mid_latitude_flat_relief")
-summary(df_mid_flat)
-
-# load coast outline, vector data
-coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
-
-ggplot(df_binned, aes(x = lon, y = lat, fill = strata_A)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_binned, aes(x = lon, y = lat, fill = strata_B)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_filt, aes(x = lon, y = lat, fill = strata_A)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_filt, aes(x = lon, y = lat, fill = strata_B)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
 ```
