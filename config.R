@@ -48,6 +48,8 @@ ai_55km_file <- file.path(veg_topo_extr_dir, "data/global_ai_55km/ai_55km.nc")
 cor_twi_vegh_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_cor_twi_vegh/30_30_deg")
 cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mosaic.nc")
 
+regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regionalA_cor_twi_vegh")
+
 # fraction of used land
 flc_5km_tiles_dir <- file.path(veg_topo_extr_dir,"data_temp/flc_5km/30_30_deg")
 # flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
