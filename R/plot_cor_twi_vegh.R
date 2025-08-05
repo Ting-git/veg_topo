@@ -7,7 +7,7 @@
 #' @param y_breaks Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_cor_twi_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5, y_breaks = 5) {
+plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "r(H ~ TWI)", text_size = 6, x_breaks = 5, y_breaks = 5) {
 
   if (is.character(input)) {
     input <- terra::rast(input)
@@ -32,18 +32,17 @@ plot_cor_twi_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5,
   vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
   vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
 
-
-  ggplot2::ggplot() +
+  p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "bam",
       limits = c(vmin, vmax),
       midpoint = 0,
-      name = expression(r[TWI,VEGH]),
+      name = expression(r[H*","*TWI]),
       na.value = NA
     ) +
     ggplot2::labs(
-      title = "r(H ~ TWI)",
+      title = title_text,
       x = "Longitude",
       y = "Latitude"
     ) +
@@ -67,4 +66,6 @@ plot_cor_twi_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5,
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )
+
+  return(p)
 }

@@ -1,20 +1,20 @@
 # ~30 min
 
-# ------Load required libraries-------------------------------------------------------------
+# ------Load required libraries-------------------------------------------------
 library(terra)     # For handling raster data
 library(purrr)     # For functional programming tools like pmap_dfr
 library(sf)
 
-# ------Load configuration and helper functions---------------------------------------------
+# ------Load configuration and helper functions---------------------------------
 source(here::here("config.R"))
 source(here::here("R/preprocess_single_tile.R"))
 source(here::here("R/generate_tile_grid.R"))
 
-# ------Generate global tile grid-----------------------------------------------------------
+# ------Generate global tile grid-----------------------------------------------
 tile_grid <- generate_tile_grid(lon_step = 30, lat_step = 30) # Create 30x30 degree tiles
 # tile_grid <- tile_grid[32:35,]  # Select a subset of tiles (example range)
 
-# ------Load raster layers to be preprocessed-----------------------------------------------
+# ------Load raster layers to be preprocessed-----------------------------------
 twi_r <- rast(twi_450m_mosaic_clean_path)
 vegh_r <- rast(vegh_450m_mosaic_path)
 raster_list <- list("twi" = twi_r , "vegh" = vegh_r) # Combine into a named list
@@ -67,11 +67,11 @@ gc()
 message(sprintf("Total processing time: %.1f minutes",
                 difftime(Sys.time(), start_time, units = "mins")))
 
-# ------Report processing time and save results---------------------------------------------
+# ------Report processing time and save results---------------------------------
 message(sprintf("done [%.1f min]", difftime(Sys.time(), t0, units = "mins")))
 saveRDS(successful_results, file = here::here("data/valid_tiles_info.rds"))
 
-# --------Save as GeoPackage -----------------------------------------------------
+# --------Save as GeoPackage ---------------------------------------------------
 
 # Load tile boundary info (xmin, xmax, ymin, ymax, tile_id, etc.)
 valid_tiles_info <- readRDS(valid_tiles_info_path)

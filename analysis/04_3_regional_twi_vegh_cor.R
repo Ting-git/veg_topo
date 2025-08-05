@@ -1,4 +1,4 @@
-# ~30 min
+# ~1 min
 
 # ------Load required libraries-------------------------------------------------------------
 library(terra)     # For handling raster data
@@ -59,6 +59,7 @@ results <- future_pmap(
 
       # --- Load TWI Raster ---
       twi_r <- terra::rast(twi_30m_path)
+      names(twi_r) = "twi"
       twi_rc <- terra::crop(twi_r, ext)
 
       # --- Load and Prepare Vegetation Height Raster ---
@@ -78,12 +79,14 @@ results <- future_pmap(
       } else {
         terra::rast(vegh_filepaths)
       }
+      names(vegh_r) = "vegh"
 
       # Crop and resample vegH to TWI
       vegh_rc <- terra::crop(vegh_r, ext)
       vegh_rr <- terra::resample(vegh_rc, twi_rc, method = "bilinear")
 
       # --- Stack Rasters ---
+
       stacked_r <- c(twi_rc, vegh_rr)
       names(stacked_r) <- c("twi", "vegh")
 
@@ -95,7 +98,7 @@ results <- future_pmap(
       df_win <- create_spatial_windows(stacked_r, dwin = dwin)  # Custom function
       df_cor <- calculate_correlation_bywin(df_win)             # Custom function
 
-      # --- Convert to Raster and Save as NetCDF ---
+      # --- cor - Convert to Raster and Save as NetCDF ---
       cor_r <- terra::rast(
         df_cor[, c("lon_mid", "lat_mid", "correlation")],
         type = "xyz",
@@ -107,6 +110,20 @@ results <- future_pmap(
       terra::writeCDF(cor_r, nc_path, overwrite = TRUE)
 
       message("Saved: ", nc_path)
+
+      # --- vegh - Save as NetCDF ---
+
+      vegh_nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_vegh_30m.nc"))
+      terra::writeCDF(vegh_rr, vegh_nc_path, overwrite = TRUE)
+
+      message("Saved: ", vegh_nc_path)
+
+      # --- twi - Save as NetCDF ---
+
+      twi_nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_twi_30m.nc"))
+      terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
+
+      message("Saved: ", twi_nc_path)
 
       # ------------------------------------------------------------------------
 

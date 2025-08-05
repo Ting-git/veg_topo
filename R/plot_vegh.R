@@ -28,7 +28,7 @@ plot_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5, y_break
   ymin <- extent$ymin
   ymax <- extent$ymax
 
-  ggplot2::ggplot() +
+  p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(palette = "batlow", direction = -1, na.value = NA) +
     ggplot2::labs(
@@ -57,4 +57,6 @@ plot_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5, y_break
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )
+
+  return(p)
 }
