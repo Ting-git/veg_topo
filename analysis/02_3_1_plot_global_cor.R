@@ -24,7 +24,7 @@ p_cor <- plot_cor_twi_vegh(
   input = cor_r[[1]],
   extent = ext,
   title = "VEGH-TWI Pearson Correlation Map",
-  text_size = 14,
+  text_size = 16,
   x_breaks = 30,
   y_breaks = 30
 ) +
@@ -41,8 +41,6 @@ ggsave(
   dpi = 300,
   units = "in"
 )
-
-
 # --------- plot P value ----------------------------
 
 p_pval <-  plot_cor_pval(

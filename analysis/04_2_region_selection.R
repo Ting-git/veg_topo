@@ -13,7 +13,6 @@ library(sf)
 # Load configuration and functions
 source(here::here("config.R"))
 
-
 # ------------ Data Pre for whole-----------------------------------------------
 
 # Load resampled raster datasets (AI, TWI, fused)

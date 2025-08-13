@@ -39,6 +39,12 @@ cat("Optimal lambda:", lambda, "\n")
 # Apply the Box-Cox transformation using the selected lambda
 df$ai_boxcox <- bcPower(df$ai, lambda)
 
+# Standardize the input variables for k-means clustering
+# This centers the data (mean = 0) and scales it (SD = 1)
+df_k <- as.data.frame(scale(df[, c("cor", "fused", "ai_boxcox")]))
+
+# ---- plot to check the Box-Cox transformation of AI --------------------------
+
 # Plot histograms before and after transformation to compare distributions
 # Save as PNG file
 png(here::here("data/figures/03_ai_histograms.png"), width = 800, height = 400, res = 150)
@@ -51,37 +57,8 @@ hist(df$ai_boxcox, main = "Box-Cox Transformed AI", col = "blue")
 # Close the graphics device
 dev.off()
 
-# Standardize the input variables for k-means clustering
-# This centers the data (mean = 0) and scales it (SD = 1)
-df_k <- as.data.frame(scale(df[, c("cor", "fused", "ai_boxcox")]))
-
-# -------- kmeans clustering (k=8) ---------------------------------------------
-
-set.seed(123)
-km8c <- kmeans(df_k, centers = 8, nstart = 30, algorithm = "Lloyd")
-
-# Add clustering results to data frame
-df$cluster8c <- km8c$cluster
-df_k$cluster8c <- km8c$cluster
-
-# ------- Save cluster map (k=8)------------------------------------------------
-
-# Convert clustering results back to raster
-cluster8c_r <- terra::rast(df[, c("lon", "lat", "cluster8c")],
-                         type = "xyz",
-                         crs = terra::crs(ai_5km_r))
-
-# Define output path and write to NetCDF
-terra::writeCDF(cluster8c_r,
-                filename = kmeans_map_8c_path,
-                names = "cluster8c",
-                overwrite = TRUE)
-
-message(paste0("Cluster map saved to: ", kmeans_map_8c_path))
-
-
 # -------- kmeans clustering (k=7) ---------------------------------------------
-
+set.seed(123)
 km7c <- kmeans(df_k, centers = 7, nstart = 30, algorithm = "Lloyd")
 
 # Add clustering results to data frame
@@ -103,8 +80,4 @@ terra::writeCDF(cluster7c_r,
 
 message(paste0("Cluster map saved to: ", kmeans_map_7c_path))
 
-# ------ Cleanup ---------------------------------------------------------------
-
-rm(list = ls())
-gc
 

@@ -15,18 +15,18 @@ aggregate_byfile(
   if_resample = TRUE
 )
 
-# check the input
-r1 <- rast(dem_sd_10km_path)
-r1
-
-r2 <- rast(ai_55km_file)
-r2
-
-# check the output
-r3 <- rast(dem_sd_55km_path)
-r3
-
-plot(r3)
+# # check the input
+# r1 <- rast(dem_sd_10km_path)
+# r1
+#
+# r2 <- rast(ai_55km_file)
+# r2
+#
+# # check the output
+# r3 <- rast(dem_sd_55km_path)
+# r3
+#
+# plot(r3)
 # ------ Cleanup ---------------------------------------------------------------
 rm(list = ls())
 gc()
