@@ -13,7 +13,6 @@ latex_engine: xelatex
 csl: apa.csl
 ---
 
-
 ```{r SetUp, include=FALSE, eval=TRUE}
 
 knitr::opts_chunk$set(
@@ -32,63 +31,89 @@ library(sf)
 
 # Load configuration and functions
 source(here::here("config.R"))
-
 ```
-
 
 ---
 
-## Objective
+## **Introduction**
 
-This study aims to investigate the **topographic effects on vegetation patterns**, which may exhibit different signals across spatial scales. At the **regional scale**, we aggregate the raw 30 m resolution data into 20 × 20 pixel windows and calculate the window-based Pearson correlation between the **Topographic Wetness Index (TWI)** and **vegetation height**. However, due to the high computational demands, it is not feasible to apply this method at the global scale. Therefore, we selectively focus on a few representative regions for detailed analysis. To minimize the influence of human activities on natural vegetation patterns, we prioritize regions that are as undisturbed as possible.
+Topography redistributes subsurface water, producing wetter valleys that often support higher vegetation productivity and drier hilltops where growth is constrained. Conversely, excessive subsurface water (e.g., shallow water tables) can suppress vegetation via waterlogging and oxygen stress. Topographic position—commonly summarized by the Topographic Wetness Index (TWI)—is therefore a key control on vegetation patterns through its regulation of subsurface moisture. The strength and sign of this control, however, depend strongly on hydroclimatic context. Global analyses show that the correlation between TWI and vegetation height exhibits spatial structure that aligns with aridity gradients and plant functional types. Human activities (land use, irrigation, logging, etc.) can substantially alter or mask these natural relationships.
 
-Under the framework of Fan et al. \[@fanHillslopeHydrologyGlobal2019, year-only], **topographic controls on vegetation** primarily operate through two mechanisms: **lateral subsurface flow** and **solar insolation** (via slope aspect). The interaction between hydroclimate and topographic relief determines the extent and direction of lateral flow impacts on vegetation growth. Similarly, variations in latitude and relief influence insolation patterns and, in turn, vegetation response.
+Topography also produces strong aspect-driven contrasts (sunny versus shady slopes), which modify the local energy and water balance and thus vegetation productivity. The magnitude and seasonal timing of aspect effects are modulated by latitude and relief: the same slope aspect produces very different insolation regimes in the tropics versus high latitudes, and in gentle versus rugged terrain.
 
-Accordingly, we select 12 representative regions for analysis, grouped by the dominant topographic control.
+To isolate the natural topography–vegetation relationships at fine spatial scales, and to validate the framework of Fan et al. (2019), we focus on regions with minimal human management where vegetation patterns most clearly reflect topographic hydrological and insolation controls. Specifically, we examine how climate–terrain combinations shape down-valley drainage and hydrological isolation (TWI-driven effects), and how latitude–terrain combinations modulate slope-aspect (insolation-driven) effects.
 
-### Lateral Subsurface Flow-Dominated Patterns
+---
 
-(Selected based on hydroclimate and relief conditions):
+## **Objective**
 
-1. Very dry hydroclimate with flat relief
-2. Moderate hydroclimate with flat relief
-3. Very wet hydroclimate with flat relief
-4. Very dry hydroclimate with rugged relief
-5. Moderate hydroclimate with rugged relief
-6. Very wet hydroclimate with rugged relief
+Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework. This requires masking or excluding areas where vegetation is primarily controlled by non-topographic drivers, including intensive human management, extreme temperatures, persistent snow or ice, very high wind exposure, coastal or tidal effects, and locations with poor or unreliable data.
 
-### Insolation-Dominated Patterns
+## Pattern taxonomy
 
-(Selected based on latitude and relief conditions):
+Two complementary control sets are used for site selection and testing:
 
-1. Very low latitude with flat relief
-2. Moderate latitude with flat relief
-3. Very high latitude with flat relief
-4. Very low latitude with rugged relief
-5. Moderate latitude with rugged relief
-6. Very high latitude with rugged relief
+### **A. Lateral Subsurface Flow–Dominated Patterns**
+
+(Defined by hydroclimate and relief conditions)
+
+1. Very dry hydroclimate + flat relief
+2. Very dry hydroclimate + rugged relief
+3. Moderate hydroclimate + flat relief
+4. Moderate hydroclimate + rugged relief
+5. Very wet hydroclimate + flat relief
+6. Very wet hydroclimate + rugged relief
+
+### **B. Insolation‐Dominated Patterns**
+
+(Defined by latitude and relief conditions)
+
+1. Very low latitude + flat relief
+2. Very low latitude + rugged relief
+3. Mid latitude + flat relief
+4. Mid latitude + rugged relief
+5. Very high latitude + flat relief
+6. Very high latitude + rugged relief
 
 ---
 
 ## Implementation
 
-### Avaliable Data
+### Available Data
+
+We use globally resampled raster datasets at 55 km resolution, including:
+
+* **Aridity Index (AI)** – scaled to original values.
+* **Fused human influence index** (fused) – measures combined human footprint.
+* **Fraction of water/ice (FWI)** – to exclude non‐vegetated or cold regions.
+* **Relief (standard deviation of elevation)** and **elevation range** from DEM.
+* **Fraction of protected area (FPA)** – to select minimally disturbed regions.
+* **Fractional vegetation height (fVegH)** from Lang et al. (2023).
+* **Mean annual temperature (MAT)** – to avoid cold‐limited regions.
+
+These datasets are stacked into a single `SpatRaster`, masked to land areas using `rnaturalearth` polygons, and converted into a tidy data frame with longitude, latitude, and variables of interest.
 
 ```{r DataPre}
 # Load resampled raster datasets (AI, TWI, fused)
 
 ai_55km_r <- terra::rast(ai_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_55km_r <- terra::rast(fused_55km_file)
+fwi_55km_r <- terra::rast(fwi_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
+dem_rg_55km_r <- terra::rast(dem_rg_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
 fvegh_55km_r <- terra::rast(fvegh_55km_path)
+mat_55km_r <- terra::rast(mat_55km_file)
 
 # Stack rasters into a single SpatRaster
 stacked <- c(ai_55km_r,
              fused_55km_r,
+             fwi_55km_r,
              dem_sd_55km_r,
+             dem_rg_55km_r,
              fpa_55km_r,
-             fvegh_55km_r)
+             fvegh_55km_r,
+             mat_55km_r)
 
 # Use land polygons to remove ocean area with NA
 
@@ -103,11 +128,15 @@ plot(stacked_masked)
 
 # Convert to data frame
 df <- as.data.frame(stacked_masked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "ai", "fused", "relief", "fpa", "fvegh")
+colnames(df) <- c("lon", "lat", "ai", "fused", "fwi", "relief", "dem_rg", "fpa", "fvegh", "mat")
 
 # Clean up
-rm(ai_55km_r, fused_55km_r, dem_sd_55km_r, fpa_55km_r, fvegh_55km_r)
+rm(ai_55km_r, fused_55km_r, fwi_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r, fvegh_55km_r, mat_55km_r)
 gc()
+
+
+# load coast outline, vector data for plotting
+coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 ```
 
@@ -129,9 +158,22 @@ ggsave(
   units = "in"
 )
 ```
+---
 
+### Binning Variables
 
-### Create bins
+To classify the global landscape into meaningful categories, we create bins for key drivers:
+
+* **Aridity index (AI)**: split into five equal‐frequency bins (very dry → very humid).
+* **Relief**: split into three equal‐frequency bins (flat → rugged).
+* **Absolute latitude**: split into five equal‐frequency bins (low → high latitude).
+
+From these, we define two sets of strata:
+
+1. **Strata A** – combination of AI bin and relief bin (for lateral subsurface flow patterns).
+2. **Strata B** – combination of latitude bin and relief bin (for insolation‐driven patterns).
+
+Readable text labels (e.g., `"very_dry_flat_relief"`) are assigned for easier interpretation.
 
 ```{r Bin, echo = TRUE}
 df_binned <- df |>
@@ -188,176 +230,114 @@ table(df_binned$relief_bin)
 
 table(df_binned$strata_A_label)
 table(df_binned$strata_B_label)
-
 ```
 
-### Region filter
+---
 
-#### fused < 0.05, fpa > 0.8, fvegh > 0.8
+### Filtering Candidate Regions
 
-The criteria fused < 0.05 and fpa > 0.8 tend to select regions dominated by water bodies, bare ground, or other sparsely vegetated surfaces. To ensure that the selected regions are suitable for analyzing natural vegetation patterns, we introduce an additional condition: the region must have a vegetation data fraction greater than 0.8 (fvegh > 0.8).
+#### For Lateral Subsurface Flow–Dominated Analysis (Strata A)
 
-However, this strict combination of filters may exclude many areas of interest—particularly flat, mid-latitude regions—since such landscapes are often heavily developed or used for agriculture and therefore lack large protected areas.
+We retain only regions that meet all of the following:
 
+* AI in very dry, moderate, or very humid categories.
+* Relief in flat or rugged categories.
+* Low human footprint (`fused < 0.05`) and minimal water/ice cover (`fwi < 0.1`).
+* Sufficient vegetation height data (`fVegH > 0.1`).
+* High protection status (`FPA > 0.9`).
+* Warm climate (`MAT > 10 °C`).
+* Moderate elevation range (< 500 m).
 
-
-```{r Filter, echo = TRUE}
+```{r FilterA, echo = TRUE}
 
 df_filt_A <- df_binned |>
-
-  filter(fused < 0.05, fpa > 0.9, fvegh > 0.8) |>
   
   filter(
-    ai_bin %in% levels(ai_bin)[c(1, 3, 5)], # bin 1 are too dry that has little fraction of vegetation
+    ai_bin %in% levels(ai_bin)[c(1, 3, 5)],
     relief_bin %in% levels(relief_bin)[c(1, 3)],
-  )
+  ) |>
+  
+ 
+  filter(fused < 0.05,  fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
+  
+  filter(fvegh > 0.1) |> # avoid poor data from vegh data of Lang et.al (2023)
+  
+  filter(fpa > 0.9) |> # slect regions with 90% protected areas
+  
+  filter(mat > 10) |>       # avoid cold regions for hydrology-specific analysis
+  
+	filter(dem_rg < 500)   # consider only gridcells where the range of elevation is less than 500 m.
 
+# print the numbers of possible region
 table(df_filt_A$strata_A_label)
+```
+
+#### For Insolation‐Dominated Analysis (Strata B)
+
+We retain only regions with:
+
+* Low human footprint and high protection status.
+* Relief in flat or rugged categories.
+* Latitude in very low, mid, or very high categories.
+
+```{r FilterB, echo = TRUE}
 
 df_filt_B <- df_binned |>
 
-  filter(fused < 0.05, fpa > 0.9, fvegh > 0.8) |>
+  filter(fused < 0.05, fpa > 0.9, fwi < 0.1 ) |>
   
   filter(
     relief_bin %in% levels(relief_bin)[c(1, 3)],
     abs_lat_bin %in% levels(abs_lat_bin)[c(1, 3, 5)]
   )
 
+# print the numbers of possible region
 table(df_filt_B$strata_B_label)
 ```
 
-
-#### Very Dry Areas with Naturally Low Vegetation Cover
-
-Very dry regions often have inherently low fractions of green vegetation, which may cause them to be excluded by strict vegetation thresholds. To address this limitation, we propose including certain arid regions that meet a relaxed criterion of fvegh > 0.5. This approach helps maintain geographic and ecological representativeness in our analysis.
-
-```{r dry}
-df_dry <- df_binned |>
-  filter(ai_bin %in% levels(ai_bin)[1]) |>
-  select(fpa, fvegh, fused, ai_bin) 
-
-summary(df_dry)
-
-df_filt_A_dry <- df_binned |>
-
-  filter(fused < 0.05, fpa > 0.8, fvegh > 0.5) |> # fvegh > 0.5
-  
-  filter(
-    ai_bin %in% levels(ai_bin)[c(1)], 
-    relief_bin %in% levels(relief_bin)[c(1)],
-  )
-
-table(df_filt_A_dry$strata_A_label)
-```
-
-#### Lack of Large Protected Areas in Flat Mid-Latitude Regions
-
-Large protected areas are generally absent in flat, mid-latitude regions, as these areas are often prime locations for development and agriculture. To address this limitation, we propose including certain flat mid-latitude regions that meet a relaxed criterion of `fpa > 0.5`. This adjustment ensures better geographic and ecological representativeness in our analysis.
-
-```{r mid_flat}
-# mid_lat_flat_relief (32.5° - 49°)
-# have vey low fpa !!!!!!!!!
-df_mid_flat <- df_binned |>
-  filter(strata_B_label == "mid_latitude_flat_relief") |>
-  select(fpa, fvegh, fused, abs_lat_bin, relief_bin) 
-
-  summary(df_mid_flat)
-  
-
-df_filt_B_mid_flat <- df_binned |>
-
-  filter(fused < 0.05, fpa > 0.5, fvegh > 0.8) |> # fpa > 0.5
-  
-  filter(
-    relief_bin %in% levels(relief_bin)[c(1)],
-    abs_lat_bin %in% levels(abs_lat_bin)[c(3)]
-  )
-
-table(df_filt_B_mid_flat$strata_B_label)
-```
-
-
-
-```{r Filterbind, echo = TRUE}
-
-df_filt_A_all <- df_filt_A |>
-  bind_rows(df_filt_A_dry)
-
-table(df_filt_A_all $strata_A_label)
-
-df_filt_B_all <- df_filt_B |>
-  bind_rows(df_filt_B_mid_flat)
-
-table(df_filt_B_all $strata_B_label)
-```
-
 ---
 
-## Visuallization 
+### Sampling Representative Locations
 
-```{r}
+From each set of filtered strata, we randomly select **one coarse grid cell** to represent each category combination. This yields:
 
-# load coast outline, vector data
-coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+* **6 samples** for lateral subsurface flow analysis (Strata A).
+* **6 samples** for insolation‐driven analysis (Strata B).
 
-ggplot(df_binned, aes(x = lon, y = lat, fill = strata_A)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_binned, aes(x = lon, y = lat, fill = strata_B)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_filt_A_all, aes(x = lon, y = lat, fill = strata_A)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-
-ggplot(df_filt_B_all, aes(x = lon, y = lat, fill = strata_B)) +
-  geom_tile() +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
-  theme_bw() +
-  coord_sf()
-```
-
-
----
-
-## Sampling
+For each sample, we define a bounding box (±0.25° in both latitude and longitude) and record the central coordinates.
 
 ```{r Sampling}
 # Pick one region (coarse gridcell) representing all combination of bins.
 # Should yield 6 samples
 
-set.seed(999)
+set.seed(2222)
 
 # for Fig. 6 Down Valley drainage
-df_samples_A <- df_filt_A_all |>
+df_samples_A <- df_filt_A |>
   group_by(strata_A) |>
   sample_n(size = 1, replace = FALSE) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,
     ymin = lat - 0.25,
-    ymax = lat + 0.25
+    ymax = lat + 0.25,
+    xmid= (xmin + xmax)/2,
+    ymid = (ymin + ymax)/2
   ) |>
   select(-starts_with("strata_B")) |>
   ungroup()
 
 # for Fig. 6 Aspect difference
-df_samples_B <- df_filt_B_all |>
+df_samples_B <- df_filt_B |>
   group_by(strata_B) |>
   sample_n(size = 1, replace = FALSE) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,
     ymin = lat - 0.25,
-    ymax = lat + 0.25
+    ymax = lat + 0.25,
+    xmid= (xmin + xmax)/2,
+    ymid = (ymin + ymax)/2
   ) |>
   select(-starts_with("strata_A")) |>
   ungroup()
@@ -368,12 +348,24 @@ saveRDS(df_samples_A, here::here("data/df_samples_A.rds"))
 saveRDS(df_samples_B, here::here("data/df_samples_B.rds"))
 ```
 
-```{r gpkg}
-# ---- regA
+---
+
+### Export and Visualization
+
+* Bounding boxes are saved as GeoPackage (`.gpkg`) files for GIS use.
+* Locations are plotted on global maps, color‐coded by strata category.
+* Additional maps show the global distribution of bins, filtered areas, and final selected regions.
+
+```{r loadinfo}
 # load region infos
 regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"))
+  select(ends_with("label"), ends_with("min"), ends_with("max"), ends_with("mid"))
+regB_info <- readRDS(here::here("data/df_samples_B.rds")) |>
+  select(ends_with("label"), ends_with("min"), ends_with("max"), ends_with("mid"))
+```
 
+```{r gpkg}
+# ---- regA
 regA_gpkg <- regA_info |>
   rowwise() |>
   mutate(geometry = list(st_polygon(list(matrix(
@@ -388,12 +380,7 @@ regA_gpkg <- regA_info |>
 # write gpkg document
 st_write(regA_gpkg, here::here("data/regionA_boxes.gpkg"), delete_layer = TRUE)
 
-
 # ---- regB
-# load region infos
-regB_info <- readRDS(here::here("data/df_samples_B.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"))
-
 regB_gpkg <- regB_info |>
   rowwise() |>
   mutate(geometry = list(st_polygon(list(matrix(
@@ -407,4 +394,72 @@ regB_gpkg <- regB_info |>
 
 # write gpkg document
 st_write(regB_gpkg, here::here("data/regionB_boxes.gpkg"), delete_layer = TRUE)
+```
+
+
+
+```{r plot_location}
+
+# Load world map
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Plot with colored points and legend, all English labels
+ggplot(data = world) +
+  geom_sf(fill = "antiquewhite") +
+  geom_point(data = regA_info, aes(x = xmid, y = ymid, color = strata_A_label), size = 3) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) +
+  labs(title = "Locations of Six Regions on the World Map",
+       x = "Longitude",
+       y = "Latitude",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+# ---- plot regB location ----
+
+# Plot with colored points and legend, all English labels
+ggplot(data = world) +
+  geom_sf(fill = "antiquewhite") +
+  geom_point(data = regB_info, aes(x = xmid, y = ymid, color = strata_B_label), size = 3) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) +
+  labs(title = "Locations of Six Regions on the World Map",
+       x = "Longitude",
+       y = "Latitude",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+
+```{r}
+
+ggplot(df_binned, aes(x = lon, y = lat, fill = strata_A)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_binned, aes(x = lon, y = lat, fill = strata_B)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_filt_A, aes(x = lon, y = lat, fill = strata_A)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+
+ggplot(df_filt_B, aes(x = lon, y = lat, fill = strata_B)) +
+  geom_tile() +
+  geom_sf(data = coast, colour = 'black', linewidth = 0.1, inherit.aes = FALSE) +
+  theme_bw() +
+  coord_sf()
+```
+
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/04_re1_regions_selection.Rmd"))
 ```
