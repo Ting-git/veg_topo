@@ -1,4 +1,4 @@
-# All tiles done [19.9 mins]
+# All tiles done [20.1 mins]
 # ------Set up------------------------------------------------------------------------
 
 library(terra)
@@ -56,7 +56,7 @@ results <- future_pmap(
       #   theme_classic()
 
       # calculate the fractino of used, bared, water areas and save output
-      output_file <- file.path(flc_5km_tiles_dir, paste0("flc_5km_", tile_id, ".nc"))
+      output_file <- file.path(veg_topo_extr_dir, paste0("data_temp/flc_5km/30_30_deg/flc_5km_", tile_id, ".nc"))
       df_flc <- calculate_fraction_land_use(df_win, output_file = output_file)
 
       # ---------- ploting the fraction of used land ----------
@@ -119,17 +119,20 @@ message(sprintf("All tiles done [%.1f mins]", elapsed))
 # -------- combination ---------------------------------------------------------
 
 mosaic_r <- mosaic_tiles(
-  input_dir   = flc_5km_tiles_dir,
-  layer_names = c("fused", "fbare", "fwater")
+  input_dir   = file.path(veg_topo_extr_dir, paste0("data_temp/flc_5km/30_30_deg")),
+  layer_names = c("fused", "fbare", "fwi")
 )
 
 # --------  Save each layer separately -----------------------------------------
 
 # Define the save path
-output_files = c(fused_5km_file, fbare_5km_file, fwater_5km_file)
+output_files = c(fused_5km_file, fbare_5km_file, fwi_5km_file)
 
 # Write NetCDF files
 for (i in 1:3) {
   terra::writeCDF(mosaic_r[[i]], output_files[i], overwrite = TRUE)
   message("✅ Mosaic saved successfully to: ", output_files[i])
 }
+
+elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
+message(sprintf("Mosaicing done [%.1f mins]", elapsed))
