@@ -65,3 +65,9 @@ ggplot(data = world) +
 
 ```{r}
 ```
+
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/04_re2_regional_analysis.Rmd"))
+```

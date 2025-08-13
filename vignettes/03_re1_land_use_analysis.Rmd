@@ -69,7 +69,7 @@ plot_list <- lapply(bins, function(bin_label) {
 
   # lm model for slope
   lm_fit <- lm(cor ~ ai, data = df_sub)
-  slope <- round(coef(lm_fit)[2], 3)  # 提取斜率并四舍五入
+  slope <- round(coef(lm_fit)[2], 3) 
   intercept <- round(coef(lm_fit)[1], 3)
 
   ggplot(df_sub, aes(x = ai, y = cor)) +
