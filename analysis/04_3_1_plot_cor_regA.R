@@ -6,13 +6,14 @@ library(dplyr)
 library(ggplot2)
 library(tidyterra)
 library(scico)
+library(khroma)
 library(patchwork)
 
 library(furrr)     # For functional programming tools like pmap_dfr
 library(future)
 
 source(here::here("config.R"))
-source(here::here("R/plot_vegh_with_twi_bydf.R"))
+source(here::here("R/plot_hex_vegh_twi.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_twi.R"))
 source(here::here("R/plot_vegh.R"))
@@ -96,7 +97,7 @@ results <- future_pmap(
       df_st <- as.data.frame(stacked, xy = FALSE, na.rm = TRUE)
 
       # plot vegetation height with TWI scatterplot
-      p_dt <- plot_vegh_with_twi_bydf(df_st)
+      p_dt <- plot_hex_vegh_twi(df_st)
 
       # plot correlation raster map
       p_cor <- plot_cor_twi_vegh(
@@ -152,7 +153,7 @@ results <- future_pmap(
 
       # ------------------------------------------------------------------------
 
-      message(sprintf("region %s done [%.1f mins]", reg_id, difftime(Sys.time(), t0, units = "mins")))
+      message(sprintf("Plot region %s done [%.1f mins]", reg_id, difftime(Sys.time(), t0, units = "mins")))
 
     }, error = function(e) {
       msg <- sprintf("Region %s failed: %s", args$strata_A_label %||% "unknown", conditionMessage(e))
