@@ -49,16 +49,15 @@ ggsave(
   units = "in"
 )
 
-
-# ------- Comparison -----------------------------------------------------------
+# ------- Comparison: before and after mask -----------------------------------------------------------
 
 # Convert rasters to data frames
 df_cor_r <- as.data.frame(cor_r, xy = FALSE, na.rm = TRUE)
 df_cor_rm <- as.data.frame(cor_rm, xy = FALSE, na.rm = TRUE)
 
 # Add source labels
-df_cor_r$source <- "r"
-df_cor_rm$source <- "r (fused < 0.05)"
+df_cor_r$source <- "r_present (fused < 1)"
+df_cor_rm$source <- "r_nature (fused < 0.05)"
 
 # Combine data frames
 df_all <- rbind(df_cor_r, df_cor_rm)
@@ -67,7 +66,6 @@ colnames(df_all) <- c("value", "source")
 # Define consistent colors
 my_colors <- c("r" = "#F8766D",             # Example fill color 1 (red-ish)
                "r (fused < 0.05)" = "#00BFC4")  # Example fill color 2 (blue-ish)
-
 
 # Plot distributions
 text_size = 10
@@ -104,4 +102,15 @@ ggsave(
   dpi = 300,
   units = "in"
 )
+
+# ------- Data Pre for Plot -----------------------------------------------------------
+
+mat_5km_r <- rast(mat_5km_file)
+ecoregion_r <- rast(ecoregion_5km_path)
+
+stacked <- c(cor_rm, mat_5km_r, ecoregion_r)
+
+# ------- Plot cor VS MAT -----------------------------------------------------------
+
+# ------- Plot cor VS BIOME -----------------------------------------------------------
 
