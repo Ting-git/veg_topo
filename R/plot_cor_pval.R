@@ -7,7 +7,7 @@
 #' @param y_breaks Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_cor_pval <- function(input, extent = NULL, title_text = "VEGH–TWI Pearson Correlation: P-value Map", text_size = 14, x_breaks = 30, y_breaks = 30) {
+plot_cor_pval <- function(input, extent = NULL, title_text = "VEGH–TWI Pearson Correlation: P-value Map", text_size = 16, x_breaks = 30, y_breaks = 30) {
 
   if (is.character(input)) {
     input <- terra::rast(input)
@@ -69,7 +69,7 @@ plot_cor_pval <- function(input, extent = NULL, title_text = "VEGH–TWI Pearson
     ggplot2::theme(
       legend.position = "bottom",
       legend.text = element_text(size = text_size, angle = 45),
-      legend.title = ggplot2::element_text(size = text_size),
+      legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),
       axis.text = ggplot2::element_text(size = text_size * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),

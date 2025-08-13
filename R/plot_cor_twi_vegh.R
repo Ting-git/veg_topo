@@ -60,7 +60,7 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "r(H ~ TWI)", t
     ggplot2::theme(
       legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size),
-      legend.title = ggplot2::element_text(size = text_size),
+      legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),
       axis.text = ggplot2::element_text(size = text_size * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
