@@ -1,4 +1,4 @@
-# ~1 min
+# ~1.4 min
 
 # ------Load required libraries-------------------------------------------------------------
 library(terra)     # For handling raster data
@@ -144,9 +144,5 @@ gc()
 elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
 message(sprintf("All regions done [%.1f mins]", elapsed))
 
-# ------ Cleanup ---------------------------------------------------------------
-
-rm(list = ls())
-gc
 
 
