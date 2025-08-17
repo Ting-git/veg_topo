@@ -13,12 +13,12 @@
 #' @param if_peak Logical, calculate peak relationships? (default FALSE)
 #' @return A data frame with correlation statistics by window
 calculate_correlation_bywin <- function(df_win,
-                                          x = "twi",
-                                          y = "vegh",
-                                          if_nobs = TRUE,
-                                          if_pval = TRUE,
-                                          if_data = FALSE,
-                                          if_peak = FALSE) {
+                                        x = "twi",
+                                        y = "vegh",
+                                        if_nobs = TRUE,
+                                        if_pval = TRUE,
+                                        if_data = FALSE,
+                                        if_peak = FALSE) {
 
   df_cor <- df_win |>
 
@@ -59,13 +59,13 @@ calculate_correlation_bywin <- function(df_win,
     # Remove NULL columns (those not requested)
     select(-stats) |>
     # Remove columns based on function arguments
-    # {function(.) {
-    #   if (!if_data) . <- select(., -data)
-    #   if (!if_nobs) . <- select(., -n_obs)
-    #   if (!if_pval) . <- select(., -cor_pval)
-    #   if (!if_peak) . <- select(., -peak)
-    #   .
-    # }}() |>
+    {function(.) {
+      if (!if_data) . <- select(., -data)
+      # if (!if_nobs) . <- select(., -n_obs)
+      # if (!if_pval) . <- select(., -cor_pval)
+      # if (!if_peak) . <- select(., -peak)
+      .
+    }}() |>
     ungroup()
 
   return(df_cor)
