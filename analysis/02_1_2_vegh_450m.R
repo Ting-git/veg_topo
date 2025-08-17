@@ -80,7 +80,7 @@ vegh_450m_mosaic_rr <- terra::resample(vegh_450m_mosaic_r, twi_450m_r, method = 
 vegh_450m_mosaic_rr
 
 # Save merged raster
-terra::writeCDF(vegh_450m_mosaic_rr, vegh_450m_mosaic_path, overwrite = TRUE)
+terra::writeCDF(vegh_450m_mosaic_rr, vegh_450m_mosaic_path, overwrite = TRUE, varname = "vegh")
 message("✅ Saved successfully to: ", vegh_450m_mosaic_path)
 
 
