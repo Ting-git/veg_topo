@@ -3,7 +3,7 @@ calc_sw_in <- function(...){
   sum(
     unlist(
       lapply(1:365, function(doy){
-        calc_sw_in_daily(..., doy)
+        calc_sw_in_daily(..., doy = doy)
       })
     )
   )
