@@ -4,12 +4,11 @@
 project_root <- "~/veg_topo"
 veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
 
-# -----------------------Data Raw and Data Clean--------------------------------------------------
+# -----------------------Data Raw and Data Clean--------------------------------
 
 # Vegtation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
-vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/3_3_deg")
-vegh_450m_mosaic_path <- file.path(dirname(vegh_450m_tiles_dir), "vegh_450m_2020_mosaic.nc")
+vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/vegh_450m_2020_mosaic.nc")
 fvegh_55km_path <- file.path(veg_topo_extr_dir, "data/global_fvegh_55km/fvegh_55km.nc")
 
 # Topographic Wetness Index
