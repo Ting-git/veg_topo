@@ -1,0 +1,292 @@
+---
+title: "Comparison of Incident Radiation Estimates from SPLASH 2.0 and meteoland"
+author: "Ting Tan"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(terra)       # Raster handling
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+library(dplyr)
+library(meteoland)   # Radiation functions
+
+source(here::here("config.R"))
+source(here::here("R/batch_process_rasters.R"))
+
+source(here::here("R/helpers.R"))
+source(here::here("R/calc_sw_in.R")) # SPLASH
+source(here::here("R/compute_annual_radiation.R")) # meteoland
+
+source(here::here("R/create_spatial_windows.R"))
+source(here::here("R/calculate_correlation_bywin.R"))
+```
+
+
+# Introduction
+
+Topography strongly influences incoming solar radiation, which in turn drives systematic variation in vegetation productivity along topographic gradients.
+
+To test the accuracy and applicability of code adapted from SPLASH 2.0 (Sandoval et al.), we compared its estimates with those from the published R package {meteoland}.
+
+This comparison allows us to evaluate the feasibility of SPLASH-based radiation calculations relative to an established implementation.
+
+---
+
+# Data Pre
+
+## Read DEM and calculate slope & aspect 
+
+```{r}
+# Read DEM (GeoTIFF) and target raster 
+dem <- rast("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m/Copernicus_DSM_COG_10_N67_00_W155_00_DEM/Copernicus_DSM_COG_10_N67_00_W155_00_DEM.tif")
+
+# reduce extent to example region
+extent <- ext(-154.5,-154.25, 67.25, 67.5)
+# extent <- ext(-154.5,-154, 67.25, 67.75)
+dem_crop <- crop(dem, extent)
+
+# Calculate slope and aspect (in degrees)
+slope <- terrain(dem_crop, v="slope", unit="degrees")
+aspect <- terrain(dem_crop, v="aspect", unit="degrees")
+
+# load and crop vegh to calculate r(R~H) 
+vegh <- rast(vegh_450m_mosaic_path)
+vegh_crop <- terra::crop(vegh, terra::ext(dem_crop)) 
+```
+
+---
+
+## Aggregate to 15 arcsec resolution (as TWI data from Marthew et. al)
+
+```{r}
+# target layer for aggregation
+# Crop TWI to DEM extent first, otherwise resampling DEM to TWI would expand it to global extent
+twi <- rast(twi_450m_mosaic_clean_path)
+twi_crop <- terra::crop(twi, terra::ext(dem_crop)) # need to crop it first, otherwise the output extent of resampled one is global.
+
+# Aggregate to 450m resolution as TWI data from Marthew et. al.
+aligned <- batch_process_rasters(list(dem = dem_crop, slope = slope, aspect = aspect), target = twi_crop)
+tictoc::toc()
+
+```
+
+---
+
+## Extract data from raster
+
+```{r}
+df <- as.data.frame(aligned[["dem"]], xy = TRUE) |> 
+  dplyr::left_join(
+    as.data.frame(aligned[["slope"]], xy = TRUE),
+    by = c("x", "y")
+  ) |> 
+  dplyr::left_join(
+    as.data.frame(aligned[["aspect"]], xy = TRUE),
+    by = c("x", "y")
+  ) |> 
+  dplyr::left_join(
+    as.data.frame(vegh_crop, xy = TRUE),
+    by = c("x", "y")
+  ) |>
+  as_tibble() |> 
+  drop_na()
+
+names(df) = c("lon", "lat", "dem", "slope" ,"aspect", "vegh")
+```
+
+---
+
+## Input Data Visualization
+
+```{r}
+
+p1 <- ggplot() +
+  tidyterra::geom_spatraster(data = dem_450m) +
+  scale_fill_viridis_c() +
+  labs(title = "Elevation (m)", fill = "Elevation") +
+  theme_bw()
+
+p2 <- ggplot() +
+  tidyterra::geom_spatraster(data = slope_450m) +
+  scale_fill_viridis_c() +
+  labs(title = "Slope (°)", fill = "Slope") +
+  theme_bw()
+
+# Define a smooth circular color palette
+my_colors <- c("navy", "#88ccee", "white", "#ff8888", "red", "#ff8888", "white", "#88ccee", "navy")
+my_values <- seq(0, 360, length.out = length(my_colors))/360  # normalize 0-360 to 0-1
+
+p3 <- ggplot() +
+  tidyterra::geom_spatraster(data = aspect_450m) +
+  scale_fill_gradientn(
+    colors = my_colors,
+    values = my_values,
+    limits = c(0, 360),
+    oob = scales::squish
+  ) +
+  labs(title = "Aspect (°)", fill = "Aspect") +
+  theme_bw()
+
+p4 <- ggplot() +
+  tidyterra::geom_spatraster(data = vegh_crop) +
+  scale_fill_viridis_c() +
+  labs(title = "vegetation Heigh (m)", fill = "vegh") +
+  theme_bw()
+
+# print
+p1 + p2 + p3
+
+```
+
+# Comparision
+
+---
+
+## SPLASH 2.0
+
+```{r}
+tictoc::tic()
+df$splash_rad <- sapply(1:nrow(df), function(i){
+  calc_sw_in(
+    lat = df$lat[i],
+    slope = df$slope[i],
+    aspect = df$aspect[i],
+    year = 2020
+  )
+})
+tictoc::toc()
+```
+
+---
+
+## `meteoland::radiation_potentialRadiation`
+
+```{r}
+tictoc::tic()
+df$meteoland_rad <- sapply(1:nrow(df), function(i){
+  compute_annual_radiation(
+    lat_deg = df$lat[i],
+    slope_deg = df$slope[i],
+    aspect_deg = df$aspect[i],
+    year = 2020
+  )
+})
+tictoc::toc()
+```
+
+
+## Scatterplot Comparison
+
+```{r}
+ggplot(df, aes(x = splash_rad, y = meteoland_rad)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    x = "SPLASH Radiation",
+    y = "Meteoland Radiation",
+    title = "Comparison of SPLASH vs Meteoland Radiation"
+  ) +
+  theme_bw()
+```
+
+## Density Distributions
+
+```{r}
+df_long <- df %>%
+  pivot_longer(cols = c(splash_rad, meteoland_rad),
+               names_to = "source",
+               values_to = "radiation")
+
+ggplot(df_long, aes(x = radiation, fill = source, color = source)) +
+  geom_density(alpha = 0.4) +
+  labs(x = "Radiation", y = "Density", title = "Density distribution of SPLASH vs Meteoland") +
+  theme_minimal()
+```
+
+## Spatial Visualization
+
+```{r}
+p5 <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    fill = "SPLASH Radiation",
+    title = "Spatial Distribution of SPLASH Radiation"
+  ) +
+  coord_fixed() +
+  theme_bw()
+
+p6 <- ggplot(df, aes(x = lon, y = lat, fill = meteoland_rad)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    fill = "SPLASH Radiation",
+    title = "Spatial Distribution of meteoland Radiation"
+  ) +
+  coord_fixed() +
+  theme_bw()
+
+p3 
+p5
+p6
+```
+
+# Calculate r(R~H)
+
+```{r}
+gc()
+
+
+dwin <- 0.05  # ~500m window at equator
+df_win <- create_spatial_windows(df, 
+                                 coord_vars = c("lon", "lat"),
+                                 value_vars = c( "dem", "slope", "aspect", "splash_rad", "meteoland_rad", "vegh"),
+                                 dwin = dwin)  
+colnames(df_win)
+
+df_cor <- calculate_correlation_bywin(df_win, 
+                                      x = "splash_rad",
+                                      y = "vegh")            
+
+colnames(df_cor)
+```
+
+
+```{r}
+p7 <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
+  geom_tile() +
+  scico::scale_fill_scico(
+      palette = "bam",
+      limits = c(vmin, vmax),
+      midpoint = 0,
+      name = expression(r[H*","*TWI]),
+      na.value = NA
+    ) +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    fill = "r(R~H)",
+    title = "r(R~H)"
+  ) +
+  coord_fixed() +
+  theme_bw()
+
+p4
+p5
+p7
+```
+
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/05_re1_compare_radiation_methods.Rmd"))
+```
