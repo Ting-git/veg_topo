@@ -1,4 +1,4 @@
-# ~1.4 min
+# ~4.5 min for 18 sample regions
 
 # ------Load required libraries-------------------------------------------------------------
 library(terra)     # For handling raster data
@@ -16,8 +16,9 @@ source(here::here("R/calculate_correlation_bywin.R"))
 
 # --- Load Region Info ---
 regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"))
+  select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
 
+colnames(regA_info)
 # --------------- none paralell testing ----------------------------------------
 
 # --- Set Region Extent ---
@@ -28,6 +29,7 @@ regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
 # xmax <- regA_info$xmax[1]
 # ymin <- regA_info$ymin[1]
 # ymax <- regA_info$ymax[1]
+# sample_id <- regA_info$sample_id[1]
 #
 # ext <- terra::ext(xmin, xmax, ymin, ymax)
 
@@ -52,7 +54,7 @@ results <- future_pmap(
       t0 <- Sys.time()
 
       # set region info
-      reg_id <- args$strata_A_label
+      reg_id <- paste0(args$strata_A_label, "_", args$sample_id)
       ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
 
       # ---- main processing ---------------------------------------------------
@@ -106,10 +108,10 @@ results <- future_pmap(
       )
       names(cor_r) <- "correlation"
 
-      nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_cor_twi_vegh_500m.nc"))
-      terra::writeCDF(cor_r, nc_path, overwrite = TRUE)
+      cor_nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_cor_twi_vegh_500m.nc"))
+      terra::writeCDF(cor_r, cor_nc_path, overwrite = TRUE)
 
-      message("Saved: ", nc_path)
+      message("Saved: ", cor_nc_path)
 
       # --- vegh - Save as NetCDF ---
 
