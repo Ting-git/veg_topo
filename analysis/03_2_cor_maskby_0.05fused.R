@@ -15,7 +15,6 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 # load correlation data, raster data
 cor_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
-ext <- terra::ext(-180, 180, -60, 85)
 
 # load fused data (<0.05), raster data
 fused_r <- rast(fused_5km_file)
@@ -25,11 +24,15 @@ fused_r[fused_r >= 0.05] <- NA
 # mask
 cor_rm <- terra::mask(cor_r, fused_r)
 
+# save
+writeCDF(cor_rm, cor_twi_vegh_mask_fused0.05_file, varname = "r_H_TWI", overwrite = TRUE)
+if(file.exists(cor_twi_vegh_mask_fused0.05_file)) message(paste("Saved:", cor_twi_vegh_mask_fused0.05_file))
+
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
 
 p_cor <- plot_cor_twi_vegh(
   input = cor_rm,
-  extent = ext,
+  extent = ext_global,
   title = "VEGH-TWI Pearson Correlation Map (fused < 0.05)",
   text_size = 14,
   x_breaks = 30,
@@ -49,7 +52,7 @@ ggsave(
   units = "in"
 )
 
-# ------- Comparison: before and after mask -----------------------------------------------------------
+# ------- Comparison: before and after mask ------------------------------------
 
 # Convert rasters to data frames
 df_cor_r <- as.data.frame(cor_r, xy = FALSE, na.rm = TRUE)
@@ -103,14 +106,4 @@ ggsave(
   units = "in"
 )
 
-# ------- Data Pre for Plot -----------------------------------------------------------
-
-mat_5km_r <- rast(mat_5km_file)
-ecoregion_r <- rast(ecoregion_5km_path)
-
-stacked <- c(cor_rm, mat_5km_r, ecoregion_r)
-
-# ------- Plot cor VS MAT -----------------------------------------------------------
-
-# ------- Plot cor VS BIOME -----------------------------------------------------------
 

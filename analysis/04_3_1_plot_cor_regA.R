@@ -1,4 +1,4 @@
-# ~0.4 min
+# ~1.5 min
 
 # ------Load required libraries-------------------------------------------------
 library(terra)     # For handling raster data
@@ -21,7 +21,7 @@ source(here::here("R/plot_vegh.R"))
 
 # --- Load Region Info ---
 regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"))
+  select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
 
 regA_info
 
@@ -35,6 +35,7 @@ xmin <- regA_info$xmin[1]
 xmax <- regA_info$xmax[1]
 ymin <- regA_info$ymin[1]
 ymax <- regA_info$ymax[1]
+sample_id <- regA_info$sample_id[1]
 
 ext <- terra::ext(xmin, xmax, ymin, ymax)
 
@@ -59,7 +60,8 @@ results <- future_pmap(
       t0 <- Sys.time()
 
       # set region info
-      reg_id <- args$strata_A_label
+      reg_id <- paste0(args$strata_A_label, "_", args$sample_id)
+
       ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
 
       # ---- main processing ---------------------------------------------------
