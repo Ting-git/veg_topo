@@ -40,7 +40,7 @@ calculate_correlation_bywin <- function(df_win,
         )
 
         # Only calculate correlation if there are enough valid observations with variation
-        if (n_obs >= 3 && sd(df[[x]], na.rm = TRUE) > 0 && sd(df[[y]], na.rm = TRUE) > 0) {
+        if (n_obs >= 30 && sd(df[[x]], na.rm = TRUE) > 0 && sd(df[[y]], na.rm = TRUE) > 0) {
           test <- cor.test(df[[x]], df[[y]])  # Pearson correlation test
           result$correlation <- test$estimate  # Extract correlation coefficient
           if(if_pval) result$cor_pval <- test$p.value  # Extract p-value
