@@ -89,8 +89,12 @@ vegh <- rast(vegh_450m_mosaic_path)
 plot(vegh)
 
 # ---------- Delete intermediate data ------------------------------------------
-# files <- list.files(vegh_450m_tiles_dir, full.names = TRUE, recursive = TRUE)
-# if (length(files) > 0) file.remove(files)
+
+# List all files in the directory vegh_450m_tiles_dir that match "*_to450m.nc"
+# If there are any files found, delete them
+
+# vegh_450m_tiles_path <- fs::dir_ls(path = vegh_450m_tiles_dir, glob = "*_to450m.nc")
+# if (length(vegh_450m_tiles_path) > 0) file.remove(vegh_450m_tiles_path)
 
 # r1 <- rast("/data_2/archive/vegheight_lang_2023/data/3deg_cogs/ETH_GlobalCanopyHeight_10m_2020_N21W003_Map.tif")
 # plot(r1)
