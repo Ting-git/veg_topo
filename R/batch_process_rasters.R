@@ -1,7 +1,4 @@
 
-# source the single-raster function
-source(here::here("R/process_raster.R"))
-
 #' Batch process rasters: align multiple rasters to a target
 #'
 #' @param raster_list Named list of SpatRaster objects or file paths.
@@ -13,7 +10,7 @@ source(here::here("R/process_raster.R"))
 #' @param output_dir Optional directory to save outputs. Filenames will be names of raster_list.
 #'
 #' @return Named list of processed SpatRaster objects.
-batch_process_rasters <- function(input_list, target,
+batch_process_rasters <- function(input_list, res_tar = NULL, target = NULL,
                                   if_resample = TRUE, if_mask = FALSE,
                                   fun = mean, na_value = NULL,
                                   output_dir = NULL) {
@@ -22,6 +19,7 @@ batch_process_rasters <- function(input_list, target,
     r <- input_list[[name]]
     out_r <- process_raster(
       input = r,
+      res_tar = res_tar,
       target = target,
       if_resample = if_resample,
       if_mask = if_mask,

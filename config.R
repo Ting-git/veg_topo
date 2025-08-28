@@ -4,6 +4,9 @@
 project_root <- "~/veg_topo"
 veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
 
+# Use it to create global map
+ext_global <- ext(-180, 180, -60, 85)
+
 # -----------------------Data Raw and Data Clean--------------------------------
 
 # Vegtation height
@@ -17,7 +20,7 @@ twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_
 twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")
 
 # Digital Terrain Model
-dtm_30m_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dtm_30m_ho_2025/edtm/gedtm_rf_m_30m_s_20060101_20151231_go_epsg.4326.3855_v20250611.tif")
+dem_30m_copernicus_dir <- "/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m"
 
 dem_sd_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
 dem_max_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMma_GMTEDma.tif")
@@ -37,22 +40,21 @@ fpa_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_fpa_5
 mat_55km_file <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_mat_55km/global_mat_55km_1970_2000.nc")
 mat_5km_file <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_mat_5km/global_mat_5km_1970_2000.nc")
 
-# -----------------------Data Pre--------------------------------------------------
-
 twi_vegh_merg_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data_temp/global_merg_twi_vegh_450m_30_30_deg")
 valid_tiles_info_path <- file.path(project_root,"data/valid_tiles_info.rds")
-valid_geotiles_path <- file.path(project_root, "data/valid_tiles.gpkg")
+valid_tiles_vect_path <- file.path(project_root, "data/valid_tiles.gpkg")
 
 # aridity index
 ai_950m_file <- file.path(veg_topo_extr_dir,"data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 ai_5km_file <- file.path(veg_topo_extr_dir, "data/global_aridityindex_zomer_2022_to5km/ai_v3_yr_to5km.nc")
 ai_55km_file <- file.path(veg_topo_extr_dir, "data/global_ai_55km/ai_55km.nc")
 
-# -----------------------Results--------------------------------------------------
-
 # correalation between twi and vegh
 cor_twi_vegh_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_cor_twi_vegh/30_30_deg")
 cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mosaic.nc")
+pval_cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"pval_cor_twi_vegh_5km_mosaic.nc")
+
+cor_twi_vegh_mask_fused0.05_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mask_fused0.05.nc")
 
 regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regA_cor_twi_vegh")
 
@@ -69,6 +71,9 @@ fwater_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fwater_11
 
 kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_8c.nc")
 kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_7c.nc")
+
+sw_in_450m_dir <-  file.path(veg_topo_extr_dir, "data/global_sw_in_450m/30_30_deg")
+sw_in_450m_file <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/global_sw_in_450m.nc")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
