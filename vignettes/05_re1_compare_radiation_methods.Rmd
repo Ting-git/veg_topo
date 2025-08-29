@@ -6,16 +6,16 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
 library(terra)       # Raster handling
 library(ggplot2)
 library(patchwork)
 library(tidyr)
 library(dplyr)
+library(lubridate)
 library(meteoland)   # Radiation functions
 
 source(here::here("config.R"))
+source(here::here("R/process_raster.R"))
 source(here::here("R/batch_process_rasters.R"))
 
 source(here::here("R/helpers.R"))
@@ -46,17 +46,23 @@ This comparison allows us to evaluate the feasibility of SPLASH-based radiation 
 dem <- rast("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m/Copernicus_DSM_COG_10_N67_00_W155_00_DEM/Copernicus_DSM_COG_10_N67_00_W155_00_DEM.tif")
 
 # reduce extent to example region
-extent <- ext(-154.5,-154.25, 67.25, 67.5)
-# extent <- ext(-154.5,-154, 67.25, 67.75)
+# extent <- ext(-154.5,-154.25, 67.25, 67.5)
+extent <- ext(-154.5,-154, 67.25, 67.75)
 dem_crop <- crop(dem, extent)
 
 # Calculate slope and aspect (in degrees)
 slope <- terrain(dem_crop, v="slope", unit="degrees")
 aspect <- terrain(dem_crop, v="aspect", unit="degrees")
+```
 
+Load vegetation Data, the aggregation seems to be not correct due to the NA handling.
+
+```{r}
 # load and crop vegh to calculate r(R~H) 
 vegh <- rast(vegh_450m_mosaic_path)
 vegh_crop <- terra::crop(vegh, terra::ext(dem_crop)) 
+
+plot(vegh)
 ```
 
 ---
@@ -103,16 +109,16 @@ names(df) = c("lon", "lat", "dem", "slope" ,"aspect", "vegh")
 
 ## Input Data Visualization
 
-```{r}
+```{r,fig.width=8,fig.height=12}
 
-p1 <- ggplot() +
-  tidyterra::geom_spatraster(data = dem_450m) +
+p_dem <- ggplot() +
+  tidyterra::geom_spatraster(data = aligned[["dem"]]) +
   scale_fill_viridis_c() +
   labs(title = "Elevation (m)", fill = "Elevation") +
   theme_bw()
 
-p2 <- ggplot() +
-  tidyterra::geom_spatraster(data = slope_450m) +
+p_slope <- ggplot() +
+  tidyterra::geom_spatraster(data = aligned[["slope"]]) +
   scale_fill_viridis_c() +
   labs(title = "Slope (°)", fill = "Slope") +
   theme_bw()
@@ -121,8 +127,8 @@ p2 <- ggplot() +
 my_colors <- c("navy", "#88ccee", "white", "#ff8888", "red", "#ff8888", "white", "#88ccee", "navy")
 my_values <- seq(0, 360, length.out = length(my_colors))/360  # normalize 0-360 to 0-1
 
-p3 <- ggplot() +
-  tidyterra::geom_spatraster(data = aspect_450m) +
+p_aspect <- ggplot() +
+  tidyterra::geom_spatraster(data = aligned[["aspect"]]) +
   scale_fill_gradientn(
     colors = my_colors,
     values = my_values,
@@ -132,15 +138,14 @@ p3 <- ggplot() +
   labs(title = "Aspect (°)", fill = "Aspect") +
   theme_bw()
 
-p4 <- ggplot() +
+p_vegh <- ggplot() +
   tidyterra::geom_spatraster(data = vegh_crop) +
   scale_fill_viridis_c() +
   labs(title = "vegetation Heigh (m)", fill = "vegh") +
   theme_bw()
 
 # print
-p1 + p2 + p3
-
+p_dem + p_vegh + p_slope + p_aspect
 ```
 
 # Comparision
@@ -157,7 +162,7 @@ df$splash_rad <- sapply(1:nrow(df), function(i){
     slope = df$slope[i],
     aspect = df$aspect[i],
     year = 2020
-  )
+  )  / 1e6
 })
 tictoc::toc()
 ```
@@ -182,7 +187,7 @@ tictoc::toc()
 
 ## Scatterplot Comparison
 
-```{r}
+```{r,fig.width=6,fig.height=4}
 ggplot(df, aes(x = splash_rad, y = meteoland_rad)) +
   geom_point(alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
@@ -196,7 +201,7 @@ ggplot(df, aes(x = splash_rad, y = meteoland_rad)) +
 
 ## Density Distributions
 
-```{r}
+```{r,fig.width=6,fig.height=4}
 df_long <- df %>%
   pivot_longer(cols = c(splash_rad, meteoland_rad),
                names_to = "source",
@@ -210,8 +215,8 @@ ggplot(df_long, aes(x = radiation, fill = source, color = source)) +
 
 ## Spatial Visualization
 
-```{r}
-p5 <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
+```{r, fig.width=8,fig.height=12}
+p_splash <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
   geom_tile() +
   scale_fill_viridis_c() +
   labs(
@@ -223,28 +228,29 @@ p5 <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
   coord_fixed() +
   theme_bw()
 
-p6 <- ggplot(df, aes(x = lon, y = lat, fill = meteoland_rad)) +
+p_meteoland <- ggplot(df, aes(x = lon, y = lat, fill = meteoland_rad)) +
   geom_tile() +
   scale_fill_viridis_c() +
   labs(
     x = "Longitude",
     y = "Latitude",
-    fill = "SPLASH Radiation",
+    fill = "meteoland Radiation",
     title = "Spatial Distribution of meteoland Radiation"
   ) +
   coord_fixed() +
   theme_bw()
 
-p3 
-p5
-p6
+# print
+p_dem + p_vegh + p_splash + p_meteoland
 ```
 
 # Calculate r(R~H)
 
+In high-latitude regions, vegetation on the south slope, which receives stronger incident solar radiation, shows lower production efficiency than on the north slope. This is contrary to the framework proposed by Fan et al. (2019).
+
+
 ```{r}
 gc()
-
 
 dwin <- 0.05  # ~500m window at equator
 df_win <- create_spatial_windows(df, 
@@ -262,13 +268,16 @@ colnames(df_cor)
 
 
 ```{r}
-p7 <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
+vmin <- min(df_cor$correlation, na.rm = TRUE)
+vmax <- max(df_cor$correlation, na.rm = TRUE)
+
+p_cor <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
   geom_tile() +
   scico::scale_fill_scico(
       palette = "bam",
       limits = c(vmin, vmax),
       midpoint = 0,
-      name = expression(r[H*","*TWI]),
+      name = expression(r[R*","*H]),
       na.value = NA
     ) +
   labs(
@@ -280,9 +289,8 @@ p7 <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
   coord_fixed() +
   theme_bw()
 
-p4
-p5
-p7
+
+p_meteoland + p_cor
 ```
 
 
