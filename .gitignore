@@ -19,9 +19,13 @@
 
 # RStudio files
 .Rproj.user/
+R-proj-template.Rproj
 
-# produced figures
+# produced figures and other data
 data/figures/*.png
+data/*.csv
+data/*.rds
+data/*.gpkg
 
 # Precessing messages
 data/figures/processing_log.txt
