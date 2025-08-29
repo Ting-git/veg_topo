@@ -101,6 +101,7 @@ tictoc::toc()
 ```
 
 ### Visuallize the outcome to check it
+I attempted to align the legend bar with the height of the plotting panel, but was unsuccessful.
 
 ```{r}
 # source(here::here("R/extract_legend_dummy.R"))
@@ -154,8 +155,5 @@ tictoc::toc()
 ```
 
 ```{r}
-# visualize it
-tictoc::tic()
-# combined
-tictoc::toc()
+knitr::include_graphics(here::here("data/figures/02_single_tile_com_plot.png"))
 ```
