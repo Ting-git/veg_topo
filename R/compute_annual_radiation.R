@@ -21,7 +21,8 @@ compute_annual_radiation <- function(lat_deg, lon_deg=NULL, slope_deg, aspect_de
   # Daily Julian days using meteoland function
   dates <- seq(as.Date(paste0(year, "-01-01")),
                as.Date(paste0(year, "-12-31")), by="day")
-  J <- radiation_julianDay(year(dates), as.integer(format(dates, "%m")), as.integer(format(dates, "%d")))
+
+  J <- radiation_dateStringToJulianDays(format(dates, "%Y-%m-%d"))
 
   # Base solar constant in kW/m²
   S0 <- 1.361
@@ -34,8 +35,8 @@ compute_annual_radiation <- function(lat_deg, lon_deg=NULL, slope_deg, aspect_de
     daily_Rpot[i] <- radiation_potentialRadiation(Sc, lat_rad, slope_rad, aspect_rad, delta)
   }
 
-  # Annual radiation in J/m²
-  return(sum(daily_Rpot, na.rm = TRUE) * 1e6)
+  # return(sum(daily_Rpot, na.rm = TRUE) * 1e6)  # Annual radiation in J/m²
+  return(sum(daily_Rpot, na.rm = TRUE))  # Annual radiation in MJ/m²
 }
 
 # Example usage:
