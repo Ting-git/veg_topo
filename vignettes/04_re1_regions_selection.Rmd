@@ -53,7 +53,7 @@ Automatically identify regions where vegetation patterns are predominantly terra
 
 Two complementary control sets are used for site selection and testing:
 
-### **A. Lateral Subsurface Flow–Dominated Patterns**
+### **A. Lateral Subsurface Flow Patterns**
 
 (Defined by hydroclimate and relief conditions)
 
@@ -64,7 +64,7 @@ Two complementary control sets are used for site selection and testing:
 5. Very wet hydroclimate + flat relief
 6. Very wet hydroclimate + rugged relief
 
-### **B. Insolation‐Dominated Patterns**
+### **B. Insolation Patterns**
 
 (Defined by latitude and relief conditions)
 
@@ -252,21 +252,18 @@ We retain only regions that meet all of the following:
 
 df_filt_A <- df_binned |>
   
-  filter(
-    ai_bin %in% levels(ai_bin)[c(1, 3, 5)],
-    relief_bin %in% levels(relief_bin)[c(1, 3)],
-  ) |>
+  filter(ai_bin %in% levels(ai_bin)[c(1, 3, 5)],
+         relief_bin %in% levels(relief_bin)[c(1, 3)],) |>
   
- 
-  filter(fused < 0.05,  fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
+  filter(fused < 0.05, fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
   
   filter(fvegh > 0.1) |> # avoid poor data from vegh data of Lang et.al (2023)
   
-  filter(fpa > 0.9) |> # slect regions with 90% protected areas
+  filter(fpa > 0.5) |> # slect regions with 90% protected areas
   
   filter(mat > 10) |>       # avoid cold regions for hydrology-specific analysis
   
-	filter(dem_rg < 500)   # consider only gridcells where the range of elevation is less than 500 m.
+  filter(dem_rg < 500)   # consider only gridcells where the range of elevation is less than 500 m.
 
 # print the numbers of possible region
 table(df_filt_A$strata_A_label)
@@ -284,7 +281,7 @@ We retain only regions with:
 
 df_filt_B <- df_binned |>
 
-  filter(fused < 0.05, fpa > 0.9, fwi < 0.1 ) |>
+  filter(fused < 0.05, fpa > 0.5, fwi < 0.1 ) |>
   
   filter(
     relief_bin %in% levels(relief_bin)[c(1, 3)],
@@ -315,14 +312,15 @@ set.seed(2222)
 # for Fig. 6 Down Valley drainage
 df_samples_A <- df_filt_A |>
   group_by(strata_A) |>
-  sample_n(size = 1, replace = FALSE) |>
+  sample_n(size = 3, replace = FALSE) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,
     ymin = lat - 0.25,
     ymax = lat + 0.25,
     xmid= (xmin + xmax)/2,
-    ymid = (ymin + ymax)/2
+    ymid = (ymin + ymax)/2,
+    sample_id = row_number()
   ) |>
   select(-starts_with("strata_B")) |>
   ungroup()
@@ -330,14 +328,15 @@ df_samples_A <- df_filt_A |>
 # for Fig. 6 Aspect difference
 df_samples_B <- df_filt_B |>
   group_by(strata_B) |>
-  sample_n(size = 1, replace = FALSE) |>
+  sample_n(size = 3, replace = FALSE) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,
     ymin = lat - 0.25,
     ymax = lat + 0.25,
     xmid= (xmin + xmax)/2,
-    ymid = (ymin + ymax)/2
+    ymid = (ymin + ymax)/2,
+    sample_id = row_number()
   ) |>
   select(-starts_with("strata_A")) |>
   ungroup()
@@ -396,14 +395,14 @@ regB_gpkg <- regB_info |>
 st_write(regB_gpkg, here::here("data/regionB_boxes.gpkg"), delete_layer = TRUE)
 ```
 
-
+Lateral Subsurface Flow and location of selected regions 
 
 ```{r plot_location}
 
 # Load world map
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-# Plot with colored points and legend, all English labels
+# ---- plot regB location ----
 ggplot(data = world) +
   geom_sf(fill = "antiquewhite") +
   geom_point(data = regA_info, aes(x = xmid, y = ymid, color = strata_A_label), size = 3) +
@@ -414,10 +413,12 @@ ggplot(data = world) +
        color = "Region") +
   theme_minimal() +
   theme(legend.position = "right")
+```
 
+Radiation and location of selected regions 
+
+```{r}
 # ---- plot regB location ----
-
-# Plot with colored points and legend, all English labels
 ggplot(data = world) +
   geom_sf(fill = "antiquewhite") +
   geom_point(data = regB_info, aes(x = xmid, y = ymid, color = strata_B_label), size = 3) +
@@ -430,6 +431,7 @@ ggplot(data = world) +
   theme(legend.position = "right")
 ```
 
+Additional plots
 
 ```{r}
 
