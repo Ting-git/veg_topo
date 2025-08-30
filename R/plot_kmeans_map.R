@@ -38,7 +38,6 @@ plot_kmeans_map <- function(raster, fill_colors, title_text = NULL, highlight_cl
       ),
       maxcell = Inf
     ) +
-    geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
     scale_fill_manual(
       values = fill_colors,
       name = "Cluster",
