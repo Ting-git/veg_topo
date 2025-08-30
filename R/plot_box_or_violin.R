@@ -3,7 +3,8 @@ plot_box_or_violin <- function(data, xvar, yvar, type = "boxplot", ylab = NULL, 
   # data[[xvar]] <- factor(data[[xvar]], levels = unique(data[[xvar]]))
   data[[xvar]] <- factor(data[[xvar]], levels = sort(unique(data[[xvar]])))
 
-  geom_fun <- if (type == "boxplot") geom_boxplot(width = 0.9) else geom_violin(width = 0.9)
+  geom_fun <- if (type == "boxplot") geom_boxplot(width = 0.9, size = 0.5) else geom_violin(width = 0.9, size = 0.5)
+
 
   title_text <- if (yvar == "cor" && type == "boxplot") "Boxplot" else
     if (yvar == "cor" && type == "violin") "Violin Distribution" else NULL
