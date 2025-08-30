@@ -45,9 +45,9 @@ valid_tiles_info_path <- file.path(project_root,"data/valid_tiles_info.rds")
 valid_tiles_vect_path <- file.path(project_root, "data/valid_tiles.gpkg")
 
 # aridity index
-ai_950m_file <- file.path(veg_topo_extr_dir,"data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
-ai_5km_file <- file.path(veg_topo_extr_dir, "data/global_aridityindex_zomer_2022_to5km/ai_v3_yr_to5km.nc")
-ai_55km_file <- file.path(veg_topo_extr_dir, "data/global_ai_55km/ai_55km.nc")
+mi_950m_file <- file.path(veg_topo_extr_dir,"data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
+mi_5km_file <- file.path(veg_topo_extr_dir, "data/global_mi_5km/mi_5km.nc")
+mi_55km_file <- file.path(veg_topo_extr_dir, "data/global_mi_55km/mi_55km.nc")
 
 # correalation between twi and vegh
 cor_twi_vegh_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_cor_twi_vegh/30_30_deg")
