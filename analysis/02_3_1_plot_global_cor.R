@@ -44,7 +44,7 @@ ggsave(
 # --------- plot P value ----------------------------
 
 p_pval <-  plot_cor_pval(
-  input = cor_r[[2]],
+  input = pval_cor_twi_vegh_mosaic_file,
   extent = ext
 ) +
   geom_sf(data = coast,
