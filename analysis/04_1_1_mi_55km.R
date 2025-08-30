@@ -10,21 +10,21 @@ source(here::here("R/aggregate_byfile.R"))
 
 # aggregation
 aggregate_byfile(
-  input_path = ai_5km_file,
-  output_path = ai_55km_file,
+  input_path = mi_5km_file,
+  output_path = mi_55km_file,
   xres_tar = 0.5,
   yres_tar = 0.5,
-  varname = "aridity_index",
+  varname = "moisture_index",
   if_resample = FALSE,
   fun = mean
 )
 
 # # check the input
-# ai_5km_r <- rast(ai_5km_file)
+# ai_5km_r <- rast(mi_5km_file)
 # ai_5km_r
 #
 # # check the output
-# r2 <- rast(ai_55km_file)
+# r2 <- rast(mi_55km_file)
 # r2
 # plot(r2)
 
