@@ -1,5 +1,6 @@
 ---
-title: "K-means Classification Analysis."
+title: "Global Patterns of Subsurface Flow–Vegetation Coupling Under Moisture and Land-Use Gradients"
+subtitle: 'K-Means Clustering of Correlation, Moisture Index, and Fraction of Used Land — $r_{H\sim TWI}$, $MI$, and $f_{\mathrm{used}}$'
 author: "Ting Tan"
 date: "2025-06-24"
 output:
@@ -10,303 +11,204 @@ latex_engine: xelatex
 csl: apa.csl
 ---
 
-```{r SetUp, include=FALSE, eval=TRUE}
+## Task
 
-knitr::opts_chunk$set(
-  comment = "#>", echo = FALSE, fig.width = 10, message = FALSE, warning = FALSE
-)
+Groundwater depth affects vegetation growth in both positive and negative ways, and these effects vary under different hydroclimatic conditions.
 
-library(terra)
-library(tidyr)
-library(dplyr)
-library(ggplot2)
-library(patchwork)
-library(tidyterra)
-library(DataExplorer)
-library(RColorBrewer)
-library(rnaturalearth)
-library(sf)
+We hypothesize that the **Moisture Index (MI) modulates the influence of topography and groundwater** on vegetation:
 
-# Load configuration and functions
-source(here::here("config.R"))
+* In areas with **higher MI**, soils are wetter, so vegetation relies less on local water accumulation, and the effect of groundwater (or topographic wetness) may be more negative.
+* In areas with **lower MI**, soils are drier, and vegetation depends more on water accumulation in topographically wetter positions (higher TWI), leading to a more positive influence.
+* **Human management** can further modify surface vegetation, potentially disrupting these natural patterns.
+
+To quantify these relationships, we plan to perform a **K-Means analysis (K=8)** on three indices — $r_{H\sim TWI}$, $MI$, and $fused$ — to identify their intrinsic variation and how MI shapes groundwater–vegetation interactions.
+
+---
+
+```{r setup-kmeans, include=FALSE}
+# Load the K-Means script chunks (for later use in Rmd)
+knitr::read_chunk(here::here("analysis/03_3_kmeans.R"))
+
+# Run the data preprocessing script
+# Comment out if you don’t want to execute it
+# source(here::here("analysis/03_3_kmeans.R"))
+```
+
+---
+
+## Implementation
+
+### Load Necessary Libraries and Custom Functions
+
+```{r Set-Up, eval=TRUE}
+```
+
+---
+
+
+### Load Inoput Data
+
+```{r Data-Load, eval=FALSE}
+```
+
+Visualize Data Distribution Before Standardization and Transformation
+
+```{r Density-Data-Raw, eval=FALSE}
+```
+
+```{r Print-Density-Data-Raw}
+# print
+knitr::include_graphics(here::here("data/figures/03_4_kmeans_data_raw_ds.png"))
+```
+
+---
+
+### Data Preprocessing (MI Transformation and Standardization of r, MI, and Fused)
+
+```{r Data-Pre, eval=FALSE}
+
+# Use Box-Cox transformation to select the optimal lambda (power)
+# This helps make the 'mi' variable more normally distributed
+pt <- powerTransform(df$mi)
+lambda <- pt$lambda
+cat("Optimal lambda:", lambda, "\n")
+
+# Apply the Box-Cox transformation using the selected lambda
+df$mi_trans <- bcPower(df$mi, lambda)
+
+# Standardize the input variables for k-means clustering
+# This centers the data (mean = 0) and scales it (SD = 1)
+df_k <- as.data.frame(scale(df[, c("cor", "fused", "mi_trans")]))
 
 ```
 
+Visualize Data Distribution After Standardization and Transformation
 
-```{r datapre}
-# Load resampled raster datasets (AI, TWI, fused)
-ai_5km_r <- terra::rast(ai_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
-flc_5km_r <- terra::rast(flc_5km_mosacic_file)[[1]]
-cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)[[1]]
-kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
-kmeans_12c_r <- terra::rast(kmeans_map_12c_path)
-
-# Crop FLC raster to match extent of AI raster
-flc_5km_r <- terra::crop(flc_5km_r, ai_5km_r)
-
-# Stack rasters into a single SpatRaster
-stacked <- c(cor_twi_vegh_5km_r,
-             flc_5km_r,
-             ai_5km_r,
-             kmeans_8c_r,
-             kmeans_12c_r)
-
-# Convert to data frame for k-means clustering
-df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "cor", "fused", "ai", "cluster8c", "cluster12c")
-
-```
-
-```{r plotds}
-# plot density
-p_ds <- DataExplorer::plot_density(df)
-
-# Combine the plot
-cp_ds <- patchwork::wrap_plots(p_ds)
-
-# Save plot
-ggsave(
-  filename = here::here("data/figures/03_4_kmeans_ds.png"),
-  plot = cp_ds,
-  width = 10,
-  height = 5,
-  dpi = 300,
-  units = "in"
-)
-```
-
-```{r plothg}
-# Ploting 
-p_hg <- DataExplorer::plot_histogram(df)
-
-# combine the plots
-cp_hg <- patchwork::wrap_plots(p_hg)
-
-# Save histogram plot
-ggsave(
-  filename = here::here("data/figures/03_4_kmeans_hg.png"),
-  plot = cp_hg,
-  width = 10,
-  height = 5,
-  dpi = 300,
-  units = "in"
-)
-```
-
-```{r}
-ggplot(df, aes(x = fused, fill = cluster12c)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~ cluster12c, scales = "free") +
-  theme_minimal() +
-  labs(title = "Fused distribution")
-
-ggplot(df, aes(x = cor, fill = cluster12c)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~ cluster12c, scales = "free") +
-  theme_minimal() +
-  labs(title = "Correlation distribution")
-
-ggplot(df, aes(x = ai, fill = cluster12c)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~ cluster12c, scales = "free") +
-  theme_minimal() +
-  labs(title = "Aridity index distribution")
-```
-
-```{r}
-df$cluster8c <- factor(df$cluster8c)
-df$cluster12c <- factor(df$cluster12c)
-
-df_long <- df %>%
-  pivot_longer(
-    cols = c(cor, fused, ai),
-    names_to = "variable",
-    values_to = "value"
-  )
-```
-
-```{r var12c}
-ref_line <- data.frame(variable = "cor", yint = 0)
-
-p_var <- ggplot(df_long, aes(x = cluster12c, y = value, fill = cluster12c)) +
-  geom_violin(trim = FALSE, alpha = 0.6, color = NA) + 
-  geom_boxplot(width = 0.1, outlier.size = 0.5, alpha = 0.8, color = "black") +
-  stat_summary(fun = mean, geom = "point", shape = 23, size = 2.5, 
-               fill = "white", color = "black", stroke = 0.5) + 
-  geom_hline(data = ref_line, aes(yintercept = yint), linetype = "dashed", color = "red") +
-  facet_wrap( ~ variable,
-              scales = "free",
-              ncol = 1,
-              labeller = as_labeller(c(
-                cor = "Correlation", fused = "Fraction of Used Land", ai = "Aridity Index"
-              ))) +
-  scale_fill_manual(
-    values = RColorBrewer::brewer.pal(12, "Paired"),
-    name = "Cluster",
-    na.value = NA) +
-  theme_bw(base_size = 13) +
-  theme(
-    strip.text = element_text(size = 16), # facet 子图标签
-    plot.title = element_text(size = 18, face = "bold", hjust = 0.5), # 主标题
-    axis.title = element_text(size = 15), # 坐标轴标题
-    axis.text = element_text(size = 13), # 坐标轴刻度
-    legend.title = element_text(size = 14), # 图例标题
-    legend.text = element_text(size = 13) # 图例内容
-  ) +
-  labs(
-    title = "Variables Distribution by Cluster",
-    x = "Cluster",
-    y = "Value",
-    fill = "Cluster"
-  )
-
-# save density 
-ggsave(
-  filename = file.path(project_root, "data/figures/03_4_kmeans_var_dis.png"),
-  plot = p_var,
-  width = 10,
-  height = 13,
-  dpi = 300,
-  units = "in"
+```{r Density-Data-Pre, eval=FALSE}
+# Select columns
+cols <- c("mi_trans", "cor", "fused")
+plot_density_grid(
+  df_k,
+  cols,
+  main_title = "Standardized variables distribution",
+  nrow = 1,
+  width = 6,
+  height = 2,
+  save_path = here::here("data/figures/03_4_kmeans_data_pre_ds.png")
 )
 
 ```
 
-
-```{r kmeans12c}
-knitr::include_graphics(here::here("data/figures/03_4_kmeans_map_12c.png"))
-knitr::include_graphics(here::here("data/figures/03_4_kmeans_var_dis.png"))
-knitr::include_graphics(here::here("data/figures/03_3_kmeans_summ_12c.png"))
+```{r Print-Density-Data-Pre, eval=FALSE}
+# print
+knitr::include_graphics(here::here("data/figures/03_4_kmeans_data_pre_ds.png"))
 ```
 
-```{r var8c}
-ref_line <- data.frame(variable = "cor", yint = 0)
+---
 
-p_var <- ggplot(df_long, aes(x = cluster8c, y = value, fill = cluster8c)) +
-  geom_violin(trim = FALSE, alpha = 0.6, color = NA) + 
-  geom_boxplot(width = 0.1, outlier.size = 0.5, alpha = 0.8, color = "black") +
-  stat_summary(fun = mean, geom = "point", shape = 23, size = 2.5, 
-               fill = "white", color = "black", stroke = 0.5) + 
-  geom_hline(data = ref_line, aes(yintercept = yint), linetype = "dashed", color = "red") +
-  facet_wrap( ~ variable,
-              scales = "free",
-              ncol = 1,
-              labeller = as_labeller(c(
-                cor = "Correlation", fused = "Fraction of Used Land", ai = "Aridity Index"
-              ))) +
-  scale_fill_manual(
-    values = RColorBrewer::brewer.pal(12, "Paired"),
-    name = "Cluster",
-    na.value = NA) +
-  theme_bw(base_size = 13) +
-  theme(
-    strip.text = element_text(size = 16), # facet 子图标签
-    plot.title = element_text(size = 18, face = "bold", hjust = 0.5), # 主标题
-    axis.title = element_text(size = 15), # 坐标轴标题
-    axis.text = element_text(size = 13), # 坐标轴刻度
-    legend.title = element_text(size = 14), # 图例标题
-    legend.text = element_text(size = 13) # 图例内容
-  ) +
-  labs(
-    title = "Variables Distribution by Cluster",
-    x = "Cluster",
-    y = "Value",
-    fill = "Cluster"
-  )
+### K-Means Clustering Implementation
 
-# save density 
-ggsave(
-  filename = file.path(project_root, "data/figures/03_4_kmeans_var_dis.png"),
-  plot = p_var,
-  width = 10,
-  height = 13,
-  dpi = 300,
-  units = "in"
-)
+For very large datasets, such as millions of rows, standard k-means can be extremely slow, memory-intensive, and may fail to converge. This is because it processes all data points in each iteration, and algorithms like Hartigan-Wong can exceed internal computation limits. Mini-Batch K-Means provides a scalable alternative by updating cluster centers using small random batches of data at each iteration. This approach is much faster, requires less memory, and produces cluster centers that are nearly identical to those from standard k-means, making it highly suitable for large-scale clustering tasks.
+
+
+```{r K-Means, eval=FALSE}
 ```
 
-```{r}
-# ---------- data pre ----------------------------------------------------------
-# load coast outline, vector data
-coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+Save the Raster of the Result
 
-# load correlation data, raster data
-kmeans_r <- as.factor(terra::rast(kmeans_map_12c_path))
+```{r Save-Cluster-Raster, eval=FALSE}
+```
 
-# ------- Plot global classification analysis ---------------------
+---
 
-# plot
-p_kmeans <- ggplot() +
-  tidyterra::geom_spatraster(data = kmeans_r, maxcell = Inf) +
-  geom_sf(data = coast,
-          colour = 'black',
-          linewidth = 0.1) +
-  scale_fill_manual(
-    values = RColorBrewer::brewer.pal(12, "Paired"),
-    name = "Cluster",
-    na.value = NA,
-    guide = guide_legend(
-      title.position = "left",
-      label.position = "bottom",
-      nrow = 1
-    )
-  ) +
-  labs(
-    title = "K-means Classification Map (K=12)"
-  ) +
-  scale_x_continuous(
-    expand = c(0, 0),
-    breaks = seq(-180, 180, by = 30)
-  ) +
-  scale_y_continuous(
-    expand = c(0, 0),
-    limits = c(-60, 85),
-    breaks = seq(-60, 90, by = 30)
-  ) +
-  theme(
-    plot.title = element_text(
-      size = 24,
-      face = "bold",
-      hjust = 0,
-      margin = margin(b = 5)
-    ),
-    plot.title.position = "panel",
-    axis.title = element_text(size = 18),
-    axis.text = element_text(size = 14),
+### Visualize Data Distribution with Boxplots and Violin Plots
 
-    legend.position = "bottom",
-    legend.box = "horizontal",
-
-    legend.text = element_text(size = 14),
-    legend.title = element_text(
-      size = 16,
-      face = "bold",
-      margin = margin(r = 10)
-    ),
-  )
-
-
-# save
-ggsave(
-  filename = file.path(project_root, "data/figures/03_4_kmeans_map_12c.png"),
-  plot = p_kmeans,
-  width = 24,
-  height = 11.5,
-  dpi = 300,
-  units = "in"
-)
-
+```{r Cluster-Box_Vio, eval=FALSE}
 
 ```
 
-```{r kmeans8c}
-knitr::include_graphics(here::here("data/figures/03_4_kmeans_map_8c.png"))
-knitr::include_graphics(here::here("data/figures/03_3_kmeans_summ_8c.png"))
+```{r Print-Cluster-Box_Vio}
+# print
+knitr::include_graphics(here::here("data/figures/03_kmeans_8c_combined_plot.png"))
 ```
 
+---
 
+### Global Map of K-Means Clustering Results
 
-```{r, include=FALSE, eval=FALSE}
+```{r Plot-K-Means-Global-Map, eval=FALSE}
+```
+
+```{r Print-K-Means-Global-Map}
+# print
+knitr::include_graphics(here::here("data/figures/03_kmeans_gl_map_8c.png"))
+```
+
+```{r Plot-Map-Each-Cluster}, eval=FALSE}
+
+```
+
+---
+
+#### Global Map of K-Means Clustering Results for Each Cluster
+
+---
+
+```{r Kmeans-Maps-C1}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_1.png")))
+```
+
+```{r Kmeans-Maps-C2}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_2.png")))
+```
+
+```{r Kmeans-Maps-C3}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_3.png")))
+```
+
+```{r Kmeans-Maps-C4}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_4.png")))
+```
+
+```{r Kmeans-Maps-C5}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_5.png")))
+```
+
+```{r Kmeans-Maps-C6}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_6.png")))
+```
+
+```{r Kmeans-Maps-C7}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_7.png")))
+```
+
+```{r Kmeans-Maps-C8}
+knitr::include_graphics(here::here(paste0("data/figures/03_kmeans_gl_map_8c_8.png")))
+
+```
+
+---
+
+## Interpretation of Findings and Next Steps
+
+In our analysis, using K-means clustering based on the variable **r (H\~TWI)** tends to group data points with similar r values together, even when their **MI (Moisture Index)** and **fused values** differ substantially. As a result, the clusters often contain many points with anomalous MI or fused values, which may obscure certain patterns.
+
+Alternatively, if we enforce clustering based solely on **MI and fused values**, creating bins for MI-fused combinations, and then examine their correlation with r, we observe a different behavior. In this case, many r values appear as outliers, but the **overall trend remains discernible**. This approach aligns with reality: MI largely drives the overall trend, but **spatial heterogeneity** is still present.
+
+In summary, the choice of clustering criteria affects the distribution of anomalies:
+
+* Clustering by r emphasizes similarity in r, but may hide MI/fused differences.
+* Clustering by MI/fused highlights the main drivers of trends, while exposing r variability.
+
+**Next steps (detailed research plan):**
+
+1. **Data binning:** Construct combination bins based on MI and fused values (AI-fused bins) to represent different levels of these two factors.
+2. **r distribution analysis:** For each bin, analyze the distribution of r (H\~TWI) values to identify outliers, local variability, and overall statistical characteristics.
+3. **Comparative evaluation:** Compare MI-fused-based clustering results with MI-fused-r-based clustering outcomes to assess how the choice of clustering criteria affects anomaly detection, trend interpretation, and the representation of spatial heterogeneity.
+
+---
+
+```{r knit, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/03_5_kmeans_analysis.Rmd"))
+rmarkdown::render(here::here("vignettes/03_re2_kmeans_analysis.Rmd"))
 ```
