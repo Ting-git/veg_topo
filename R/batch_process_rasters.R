@@ -1,19 +1,17 @@
-
-#' Batch process rasters: align multiple rasters to a target
-#'
-#' @param raster_list Named list of SpatRaster objects or file paths.
-#' @param target Target SpatRaster or file path to align to.
-#' @param if_resample Logical, whether to resample to target.
-#' @param if_mask Logical, whether to mask to target extent.
-#' @param fun Aggregation function (default: mean)
-#' @param na_value Numeric value to treat as NA
-#' @param output_dir Optional directory to save outputs. Filenames will be names of raster_list.
-#'
-#' @return Named list of processed SpatRaster objects.
+# Batch process multiple rasters: align and save as NetCDF
+# @param input_list Named list of SpatRaster objects or file paths
+# @param res_tar Target resolution (optional if target is provided)
+# @param target Target SpatRaster or file path for alignment
+# @param if_resample Logical, resample to target grid
+# @param if_mask Logical, mask by target extent
+# @param fun Aggregation function (default = mean)
+# @param na_value Value to treat as NA
+# @param output_list Named character vector of .nc output file paths (names must match input_list)
+# @return Named list of processed SpatRaster objects
 batch_process_rasters <- function(input_list, res_tar = NULL, target = NULL,
                                   if_resample = TRUE, if_mask = FALSE,
                                   fun = mean, na_value = NULL,
-                                  output_dir = NULL) {
+                                  output_list = NULL) {
   out_list <- list()
   for (name in names(input_list)) {
     r <- input_list[[name]]
@@ -28,9 +26,16 @@ batch_process_rasters <- function(input_list, res_tar = NULL, target = NULL,
       varname = name
     )
 
-    if (!is.null(output_dir)) {
-      out_path <- file.path(output_dir, paste0(name, ".tif"))
-      terra::writeRaster(out_r, out_path, overwrite = TRUE)
+    # Always write NetCDF if output paths are provided
+    if (!is.null(output_list)) {
+      if (!name %in% names(output_list)) {
+        stop("output_list must have the same names as input_list")
+      }
+      out_path <- output_list[[name]]
+      if (!grepl("\\.nc$", out_path, ignore.case = TRUE)) {
+        stop("All output_list file paths must end with .nc")
+      }
+      terra::writeCDF(out_r, out_path, overwrite = TRUE, varname = name)
     }
 
     out_list[[name]] <- out_r
