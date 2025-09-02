@@ -5,11 +5,11 @@ plot_density_grid <- function(data, columns, nrow = 1, main_title = "Density dis
 
   # Generate density plots without titles or individual y labels
   plot_list <- lapply(columns, function(col) {
-    ggplot(data, aes_string(x = col)) +
+    ggplot(data, aes(x = !!sym(col))) +
       geom_density(fill = "#69b3a2",      # nicer fill color
                    color = "#1f3552",     # darker outline for contrast
                    alpha = 0.6,           # slightly transparent
-                   size = 0.3) +
+                   linewidth = 0.3) +
       theme_bw(base_size = 6) +           # clean theme with bigger font
       labs(title = NULL, y = NULL) +
       theme(
