@@ -1,3 +1,6 @@
+# Works well on Wrostation02
+# >70 cores: ~1 hour to process 200 files (total: 26,450 files)
+
 # DEM → Slope/Aspect → Annual SW_in @ 450 m workflow with nested parallelism
 # - External: furrr::future_map() (one worker per DEM tile)
 # - Inner layer: foreach/doParallel (parallel radiation calculation within tiles)
@@ -24,7 +27,7 @@ source(here::here("R/compute_annual_radiation.R"))
 # ---- Core configuration ----
 INNER_CORES <- 4
 total_cores <- parallel::detectCores()
-available_cores <- total_cores - 10  # 留一个给系统
+available_cores <- total_cores - 10
 
 # Outer workers = floor(available / inner)
 outer_cores <- max(1, floor(available_cores / INNER_CORES))
