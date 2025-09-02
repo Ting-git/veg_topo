@@ -23,6 +23,10 @@ We hypothesize that the **Moisture Index (MI) modulates the influence of topogra
 
 To quantify these relationships, we plan to perform a **K-Means analysis (K=8)** on three indices — $r_{H\sim TWI}$, $MI$, and $fused$ — to identify their intrinsic variation and how MI shapes groundwater–vegetation interactions.
 
+
+> *To obtain all the resources for this R Markdown file, the analysis should be run up to `~/veg_topo/analysis/03_5_plot_kmeans_map.R`.*
+
+
 ---
 
 ```{r setup-kmeans, include=FALSE}
@@ -123,29 +127,29 @@ Save the Raster of the Result
 
 ### Visualize Data Distribution with Boxplots and Violin Plots
 
-```{r Cluster-Box_Vio, eval=FALSE}
 
+```{r Print-Cluster-Data-Distribution}
+# print
+knitr::include_graphics(here::here("data/figures/03_kmeans_8c_data_distribution.png"))
 ```
 
-```{r Print-Cluster-Box_Vio}
+---
+
+
+### Biome Composition for Each Cluster
+
+```{r Print-Cluster-Biome-Composition}
 # print
-knitr::include_graphics(here::here("data/figures/03_kmeans_8c_combined_plot.png"))
+knitr::include_graphics(here::here("data/figures/03_kmeans_8c_biome_counts.png"))
 ```
 
 ---
 
 ### Global Map of K-Means Clustering Results
 
-```{r Plot-K-Means-Global-Map, eval=FALSE}
-```
-
 ```{r Print-K-Means-Global-Map}
 # print
 knitr::include_graphics(here::here("data/figures/03_kmeans_gl_map_8c.png"))
-```
-
-```{r Plot-Map-Each-Cluster}, eval=FALSE}
-
 ```
 
 ---
@@ -210,5 +214,5 @@ In summary, the choice of clustering criteria affects the distribution of anomal
 
 ```{r knit, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/03_re2_kmeans_analysis.Rmd"))
+rmarkdown::render(here::here("vignettes/03_re3_kmeans_analysis.Rmd"))
 ```
