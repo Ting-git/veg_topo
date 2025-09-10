@@ -1,0 +1,21 @@
+---
+title: "Further analysis based on the Raster r_H_R"
+author: "Ting Tan"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(terra)      
+library(ggplot2)
+library(patchwork)
+# library(tidyr)
+
+source(here::here("config.R"))
+```
+
+## Task
+
+
+```{r mapprint}
+```
