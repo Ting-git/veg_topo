@@ -27,5 +27,7 @@ mosaic_tiles <- function(input_dir,
     if(file.exists(output_file)) message("✅ Mosaic saved successfully to: ", output_file)
   }
 
+  rm(tile_rasters);gc()
+
   return(invisible(mosaic_raster))
 }

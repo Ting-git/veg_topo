@@ -8,7 +8,6 @@
 #'
 #' @return Annual potential radiation in J/m²
 compute_annual_radiation <- function(lat_deg, lon_deg=NULL, slope_deg, aspect_deg, year=2020) {
-  library(meteoland)
 
   # Degrees → radians helper
   deg2rad <- function(d) d * pi / 180
@@ -22,7 +21,7 @@ compute_annual_radiation <- function(lat_deg, lon_deg=NULL, slope_deg, aspect_de
   dates <- seq(as.Date(paste0(year, "-01-01")),
                as.Date(paste0(year, "-12-31")), by="day")
 
-  J <- radiation_dateStringToJulianDays(format(dates, "%Y-%m-%d"))
+  J <- meteoland::radiation_dateStringToJulianDays(format(dates, "%Y-%m-%d"))
 
   # Base solar constant in kW/m²
   S0 <- 1.361
@@ -31,8 +30,8 @@ compute_annual_radiation <- function(lat_deg, lon_deg=NULL, slope_deg, aspect_de
   # Loop through days
   for (i in seq_along(J)) {
     Sc <- S0 * (1 + 0.033 * cos(2 * pi * (i) / 365))  # orbital correction
-    delta <- radiation_solarDeclination(J[i])
-    daily_Rpot[i] <- radiation_potentialRadiation(Sc, lat_rad, slope_rad, aspect_rad, delta)
+    delta <- meteoland::radiation_solarDeclination(J[i])
+    daily_Rpot[i] <- meteoland::radiation_potentialRadiation(Sc, lat_rad, slope_rad, aspect_rad, delta)
   }
 
   # return(sum(daily_Rpot, na.rm = TRUE) * 1e6)  # Annual radiation in J/m²
