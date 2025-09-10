@@ -21,7 +21,6 @@ sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc
 
 # Load target grid and create mask
 twi_450m_r <- rast(twi_450m_mosaic_clean_path)
-land_mask <- !is.na(twi_450m_r)  # Create mask from non-NA values
 
 # Mosaicing ------------------------------------------------------
 message("Starting mosaicing for flat earth radiation...")
@@ -41,7 +40,7 @@ rm(sw_in_flat_mosaic)  # 立即清理镶嵌数据
 gc()
 
 message("Applying land mask...")
-sw_in_flat_resampled <- mask(sw_in_flat_resampled, land_mask)
+sw_in_flat_resampled <- mask(sw_in_flat_resampled, twi_450m_r)
 message("Masking completed.")
 
 # Save Results ------------------------------------------------------------

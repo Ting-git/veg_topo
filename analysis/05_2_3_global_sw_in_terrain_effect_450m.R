@@ -21,7 +21,6 @@ sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc
 
 # Load target grid and create mask
 twi_450m_r <- rast(twi_450m_mosaic_clean_path)
-land_mask <- !is.na(twi_450m_r)  # Create mask from non-NA values
 
 # Calculation and Mask ------------------------------------------------------
 message("Loading preprocessed data...")
@@ -37,7 +36,7 @@ message("Calculating terrain effect (sw_in / sw_in_flat)...")
 sw_in_terrain_effect <- sw_in_450m / sw_in_flat_450m
 
 message("Applying land mask...")
-sw_in_terrain_effect <- mask(sw_in_terrain_effect, land_mask)
+sw_in_terrain_effect <- mask(sw_in_terrain_effect, twi_450m_r)
 message("Calculation completed.")
 
 # Save Results ------------------------------------------------------------

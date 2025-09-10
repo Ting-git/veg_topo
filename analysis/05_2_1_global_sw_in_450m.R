@@ -21,7 +21,6 @@ sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc
 
 # Load target grid and create mask
 twi_450m_r <- rast(twi_450m_mosaic_clean_path)
-land_mask <- !is.na(twi_450m_r)  # Create mask from non-NA values
 
 # Mosaicing ------------------------------------------------------
 
@@ -47,7 +46,7 @@ rm(sw_in_mosaic)
 gc()
 
 # Apply land mask to remove ocean areas
-sw_in_resampled <- mask(sw_in_resampled, land_mask)
+sw_in_resampled <- mask(sw_in_resampled, twi_450m_r)
 
 # Save Results ------------------------------------------------------------
 
