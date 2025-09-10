@@ -3,11 +3,11 @@
 #SBATCH --time=2:00:00     # 增加时间预算
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --mem=400G  # 200不行，500比较合适
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=512G  # 500比较合适
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
-
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4

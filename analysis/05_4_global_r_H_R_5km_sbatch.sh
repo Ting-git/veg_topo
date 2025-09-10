@@ -2,6 +2,7 @@
 #SBATCH --job-name="global_r_R_H_5km"
 #SBATCH --time=2:00:00
 #SBATCH --ntasks=1
+#SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=49
 #SBATCH --mem=400G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
