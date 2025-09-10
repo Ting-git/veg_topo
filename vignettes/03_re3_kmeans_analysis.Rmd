@@ -1,5 +1,5 @@
 ---
-title: "Global Patterns of Subsurface Flow–Vegetation Coupling Under Moisture and Land-Use Gradients"
+title: "Global Patterns of Groundwater–Vegetation Interactions Along Climate and Land-Use Gradients"
 subtitle: 'K-Means Clustering of Correlation, Moisture Index, and Fraction of Used Land — $r_{H\sim TWI}$, $MI$, and $f_{\mathrm{used}}$'
 author: "Ting Tan"
 date: "2025-06-24"
@@ -137,6 +137,8 @@ knitr::include_graphics(here::here("data/figures/03_kmeans_8c_data_distribution.
 
 
 ### Biome Composition for Each Cluster
+
+The effect of TWI (Topographic Wetness Index) on vegetation height (H) in high-latitude regions can be opposite depending on local conditions. While higher TWI often indicates wetter soils that could enhance growth, in **tundra** and **boreal forests** it may also correspond to colder, poorly drained sites that limit growth. Overall, local soil temperature and slope aspect, which control solar radiation and the length of the growing season, are the primary drivers of vegetation height, with secondary modulation by wind exposure, snow cover, and soil moisture.
 
 ```{r Print-Cluster-Biome-Composition}
 # print
