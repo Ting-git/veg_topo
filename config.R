@@ -72,13 +72,17 @@ fwater_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fwater_11
 kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_8c.nc")
 kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_7c.nc")
 
-sw_in_450m_dir <-  file.path(veg_topo_extr_dir, "data/global_sw_in_450m/30_30_deg")
-sw_in_450m_file <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/global_sw_in_450m.nc")
+sw_in_450m_tile_dir <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/1_1_deg_tiles")
+sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_450m.nc")
+sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_flat_450m.nc")
+sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_terrain_effect_450m.nc")
+
+r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/r_H_R_5km.nc")
+pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/pval_r_H_R_5km.nc")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
 ecoregion_5km_path <- file.path(veg_topo_extr_dir, "data/global_ecoregion_5km/Ecoregions2017_5km.nc")
-
 
 # cci_landcover_path <- file.path("/data_2/scratch/ting/data_raw/CCI_landcover_2020/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 cci_landcover_path <- file.path("/data/archive/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
