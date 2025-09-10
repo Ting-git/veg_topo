@@ -39,7 +39,7 @@ Therefore, it is useful to first run the analysis on a single tile to:
 ### Read DEM file path
 ```{r}
 
-# 1️⃣ 获取所有 *_DEM.tif 文件路径
+#  Get paths for all tiles
 dem_30m_copernicus_dir <- "/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m"
 dem_files <- fs::dir_ls(
   path = dem_30m_copernicus_dir,
@@ -47,7 +47,7 @@ dem_files <- fs::dir_ls(
   recurse = TRUE
 )
 
-length(dem_files)  # 总文件数，检查是否 26450
+length(dem_files)  # totle numbers of tile: 26450
 ```
 
 
@@ -114,6 +114,10 @@ tictoc::toc()
 
 #### parallel
 
+Without the outer parallel processing (`furrr::future_map()`) for each tile, the inner parallel processing (`multidplyr`) for each dataframe works very well. However, it does not work properly when nested within the outer parallel. Therefore, the inner parallel processing will be switched to `foreach/doParallel`. 
+
+> The full process for calculating the correlation across all tiles can be found in: `~/veg_topo/analysis/05_1_dem_to_sw_in_450m_tile.R`.
+
 ```{r}
 source(here::here("R/compute_annual_radiation.R")) # meteoland
 
@@ -145,41 +149,6 @@ tmp <- df |>
 tictoc::toc()
 ```
 
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
