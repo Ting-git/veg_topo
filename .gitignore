@@ -50,3 +50,38 @@ vignettes/*.log
 
 # R Environment Variables
 .Renviron
+
+# LaTeX intermediate files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.run.xml
+*.bcf
+
+# PDF output
+*.pdf
+
+# Backup files
+*~
+*.bak
+*.backup
+*.tmp
+
+# Other generated files
+*.nav
+*.snm
+*.vrb
+
+# MacOS Finder
+.DS_Store
+
+# VS Code
+.vscode/

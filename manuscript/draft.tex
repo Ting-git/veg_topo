@@ -1,0 +1,101 @@
+\documentclass[12pt, a4paper]{article}
+
+% 编码与字体
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% 字体与数学
+\usepackage{mathptmx}       % Times 风格字体
+\usepackage{amsmath,amssymb}
+
+% 图表
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+% 页面与边距
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% 行距（可选）
+% \usepackage{setspace}
+% \onehalfspacing
+
+% 文献引用（APA 格式）
+\usepackage[style=apa,backend=biber]{biblatex}
+\addbibresource{references.bib} % 确保 references.bib 在同目录下
+
+% 超链接
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=cyan,
+    citecolor=blue
+}
+
+% 标题信息
+\title{Topographic Control on Vegetation Patterns \\ \Large Master's Thesis Draft}
+
+
+\author{
+    Ting Tan \\
+    Institute of Geography, University of Bern, Bern, Switzerland
+    \and
+    Benjamin D. Stocker\thanks{Corresponding author: benjamin.stocker@unibe.ch} \\
+    Institute of Geography, University of Bern, Bern, Switzerland
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Vegetation regulates land-atmosphere exchanges of carbon, water, and energy, yet global models often miss hillslope-scale processes. Topography redistributes water and solar energy, shaping vegetation structure, but its global role remains unclear. Novel high-resolution (10 m) global canopy height (H) data provide an opportunity to investigate fine-scale topographic controls, forming the central motivation of this study. We use H as a proxy for growth conditions, reflecting how vegetation adapts to local environments. Using its high resolution, we assess correlations between H, the Topographic Wetness Index (TWI, a proxy for subsurface water), and surface-incident solar radiation via a splitting-window approach. The TWI–H relationship shows clear climate dependence, shifting from negative in humid regions—where excess moisture limits growth in valley bottoms—to positive in arid regions—where moisture convergence promotes growth in low-lying areas. Land use further co-varies with topography, modulating the TWI-H relationship. These findings provide robust evidence that hydrological moisture redistribution along topographical gradients is a first-order global control on vegetation structure. Ongoing analyses of solar radiation will clarify how energy and water jointly shape canopy height. Incorporating fine-scale topographic processes into sub-grid vegetation models is critical for improving predictions of ecosystem structure and carbon storage.
+\end{abstract}
+
+\textbf{Keywords:} Topographic Wetness Index, Vegetation Height, Solar Radiation
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+This is the introduction \cite{fan2019a}.
+
+\section{Methodology}
+\subsection{Data}
+Describe datasets here.
+
+\section{Results}
+\begin{table}[htbp]
+    \centering
+    \caption{Example Table}
+    \begin{tabular}{lcc}
+        \toprule
+        Group & Mean & Std. Dev. \\
+        \midrule
+        A & 10.2 & 1.5 \\
+        B & 15.7 & 2.1 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\linewidth]{../data/figures/05_r_H_R_map.png}
+    \caption{Example figure.}
+\end{figure}
+
+\section{Math}
+Inline example: $E=mc^2$.  
+Displayed:
+\begin{equation}
+F(\omega) = \int_{-\infty}^{\infty} f(t) e^{-i\omega t}\,dt
+\end{equation}
+
+\section{Conclusion}
+Summarize findings here.
+
+\printbibliography
+
+\end{document}
