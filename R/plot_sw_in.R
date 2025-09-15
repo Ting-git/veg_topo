@@ -1,6 +1,6 @@
-#' Plot Correlation between VEGH and R (Radiation)
+#' Plot incident solar radiation
 #'
-#' @param input A SpatRaster object or a raster file path
+#' @param input A SpatRaster object or raster file path
 #' @param extent Optional terra::ext() extent.
 #'   If provided and smaller than the input raster extent,
 #'   the raster will be cropped to their intersecting area.
@@ -9,8 +9,9 @@
 #' @param y_breaks Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_r_H_R <- function(input, extent = NULL, title_text = "r (H ~ R)",
-                              text_size = 6, x_breaks = 5, y_breaks = 5) {
+plot_sw_in <- function(input, extent = NULL, title_text = "Incident Solar Radiation: Flat Surface",
+                      text_size = 16, x_breaks = 30, y_breaks = 30) {
+
 
   if (is.character(input)) {
     input <- terra::rast(input)
@@ -52,18 +53,16 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "r (H ~ R)",
     scico::scale_fill_scico(
       palette = "vik",
       direction = 1,
-      limits = c(-1, 1),
-      breaks = seq(-1, 1, by = 0.5),
-      midpoint = 0,
-      name = expression(r[H*","*R]),
+      # limits = c(-1, 1),
+      # breaks = seq(-1, 1, by = 0.5),
+      # midpoint = 0,
+      name = "MJ/m²",
       na.value = NA
     ) +
     ggplot2::labs(
       title = title_text,
-      x = NULL,
-      y = NULL
-      # x = "Longitude",
-      # y = "Latitude"
+      x = "Longitude",
+      y = "Latitude"
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
@@ -77,7 +76,7 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "r (H ~ R)",
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
+      legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),
