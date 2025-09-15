@@ -28,10 +28,10 @@ echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
 echo "CPU cores allocated: $SLURM_CPUS_PER_TASK"
-echo "Memory allocated: $SLURM_MEM_PER_NODE"  # 如果设置了内存
+echo "Memory allocated: $SLURM_MEM_PER_NODE"
 echo "=================================================="
 
-# 检查R脚本是否存在
+# Check if the R script exists
 if [ ! -f "05_4_global_r_H_R_5km.R" ]; then
     echo "ERROR: R script 05_4_global_r_H_R_5km.R not found!"
     exit 1
@@ -59,3 +59,5 @@ echo "=================================================="
 
 # Exit with the same status as the R script
 exit $EXIT_STATUS
+
+#

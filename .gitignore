@@ -26,6 +26,7 @@ data/figures/*.png
 data/*.csv
 data/*.rds
 data/*.gpkg
+*.png
 
 # Precessing messages
 data/figures/processing_log.txt

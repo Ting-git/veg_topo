@@ -1,4 +1,5 @@
-# done [25.1 min]
+# done [25.1 min] with 8 cores on workstation2
+# done [6.5 min] with 49 cores on UBELIX
 
 # ------Load required libraries-------------------------------------------------
 
@@ -98,8 +99,8 @@ results <- future_pmap(
       message("❌ ", msg)
       return(list(success = FALSE, error = msg, tile_id = args$tile_id))
     })
-  },  # 这个括号闭合了function(...) {
-  .options = furrr_options(seed = TRUE)  # 移到这里，作为future_pmap的参数
+  },
+  .options = furrr_options(seed = TRUE)
 )
 
 plan(sequential)
@@ -130,3 +131,9 @@ mosaic_tiles(
 
 # cor_5km_tiles_path <- fs::dir_ls(path = r_H_R_tiles_dir, glob = "*.nc")
 # if (length(cor_5km_tiles_path) > 0) file.remove(cor_5km_tiles_path)
+
+# check the output
+# r_H_R_5km_path <- file.path("/storage/scratch/giub_geco/tting/global_r_H_R_5km/r_H_R_5km.nc")
+# pval_r_H_R_5km_path <- file.path("/storage/scratch/giub_geco/tting/global_r_H_R_5km/pval_r_H_R_5km.nc")
+# plot(terra::rast(r_H_R_5km_path))
+# plot(terra::rast(pval_r_H_R_5km_path))
