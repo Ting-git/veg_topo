@@ -52,6 +52,9 @@ vignettes/*.log
 .Renviron
 
 # LaTeX temporary files
+*.pdf
+*.bcf
+*.run.xml
 *.aux
 *.log
 *.toc
