@@ -76,7 +76,7 @@ plot_sw_in <- function(input, extent = NULL, title_text = "Incident Solar Radiat
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "right",
+      legend.position = "bottom",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),

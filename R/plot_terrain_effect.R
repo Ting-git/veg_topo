@@ -9,7 +9,7 @@
 #' @param y_breaks Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_terrain_effec <- function(input, extent = NULL, title_text = "Spatial Distribution of Terrain-Induced Solar Radiation Variation",
+plot_terrain_effect <- function(input, extent = NULL, title_text = "Spatial Distribution of Terrain-Induced Solar Radiation Variation",
                       text_size = 6, x_breaks = 5, y_breaks = 5) {
 
 
@@ -76,7 +76,7 @@ plot_terrain_effec <- function(input, extent = NULL, title_text = "Spatial Distr
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "right",
+      legend.position = "bottom",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),
