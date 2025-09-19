@@ -13,14 +13,13 @@ library(purrr)
 library(furrr)         # outer parallelism
 library(fs)
 library(stringr)
-library(here)
 library(readr)
 library(parallel)      # for core detection
 library(doParallel)    # inner parallelism
 library(foreach)
 
 # --- User/project config ----
-source(here::here("config.R")) # no need for it, due to not execute in workstation02
+# source(here::here("config.R")) # no need for it, due to not execute in workstation02
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/helpers.R")) # SPLASH
@@ -28,13 +27,13 @@ source(here::here("R/calc_sw_in.R")) # SPLASH
 
 # ----Data Source Configuration-----
 # Input dir of DEM tiles
-# dem_30m_copernicus_dir <- file.path("/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m")
+dem_30m_copernicus_dir <- file.path("/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m")
 
 # Output dir of SW_IN tiles
-# sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
+sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
 
 # Target grid for aggregation
-# twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
+twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
 
 # Check if input directory exists, stop if not
 if (!dir.exists(dem_30m_copernicus_dir)) {
@@ -61,8 +60,8 @@ dem_files_all <- fs::dir_ls(
 message(sprintf("Found %d DEM tiles", length(dem_files_all)))
 
 # ---- Processing info ----
-start_idx <- 1
-end_idx   <- 2
+start_idx <- 2601
+end_idx   <- 26450
 dem_files <- dem_files_all[start_idx:end_idx]
 message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
 
@@ -77,8 +76,8 @@ message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, l
 INNER_CORES <- 4
 
 # Use the number of allocated CPU cores in SLURM, or detectCores() if there is no SLURM environment
-# available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores()))
-available_cores <- 8 # test on workstation2
+available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores())) # on UBELIX
+# available_cores <- 8 # test on workstation2
 total_cores <- parallel::detectCores()  # Total number of cores on the node
 
 # numbers of outer core

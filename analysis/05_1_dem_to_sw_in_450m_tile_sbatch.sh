@@ -1,9 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="DEM-missing"
-#SBATCH --time=40:00:00
+#SBATCH --job-name="DEM2601-26450"
+#SBATCH --time=48:00:00
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=40
+#SBATCH --cpus-per-task=60
+#SBATCH --mem=480G  #
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -18,16 +19,29 @@ module load GDAL/3.10.0-foss-2024a
 module load R/4.4.2-gfbf-2024a
 
 # Job information
-echo "Started on: $(date --rfc-3339=seconds)"
+echo "=================================================="
+echo "Job started on: $(date --rfc-3339=seconds)"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job name: $SLURM_JOB_NAME"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
+echo "=================================================="
 
 # Force Rscript to use the same library paths as RStudio Server
 Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); source("05_1_dem_to_sw_in_450m_tile.R")'
+)); cat("Running script: 05_1_dem_to_sw_in_450m_tile.R\n"); source("05_1_dem_to_sw_in_450m_tile.R")'
 
-echo "Finished on: $(date --rfc-3339=seconds)"
+# Capture the exit status
+EXIT_STATUS=$?
+echo "=================================================="
+echo "Job finished on: $(date --rfc-3339=seconds)"
+echo "Exit status: $EXIT_STATUS"
+echo "Job name: $SLURM_JOB_NAME"
+echo "=================================================="
+
+# Exit with the same status as the R script
+exit $EXIT_STATUS

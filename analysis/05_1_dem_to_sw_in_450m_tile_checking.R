@@ -1,11 +1,11 @@
 library(terra)
 library(fs)
 
-source(here::here("config.R")) # no need for it, due to not execute in workstation02
+# source(here::here("config.R")) # no need for it, due to not execute in workstation02
 
 # ---- Data Source Configuration ----
-# dem_30m_copernicus_dir <- "/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m"
-# sw_in_450m_tile_dir <- "/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles"
+dem_30m_copernicus_dir <- "/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m"
+sw_in_450m_tile_dir <- "/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles"
 
 # Read input DEM files
 dem_files_all <- list.files(
