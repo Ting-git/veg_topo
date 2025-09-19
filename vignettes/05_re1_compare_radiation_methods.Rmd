@@ -1,5 +1,6 @@
 ---
 title: "Comparison of Incident Radiation Estimates from SPLASH 2.0 and meteoland"
+subtitle: "Aletsch glacier"
 author: "Ting Tan"
 date: "`r Sys.Date()`"
 output: html_document
@@ -13,17 +14,23 @@ library(tidyr)
 library(dplyr)
 library(lubridate)
 library(meteoland)   # Radiation functions
+library(multidplyr)
+library(purrr)
+library(furrr)
 
 source(here::here("config.R"))
-source(here::here("R/process_raster.R"))
-source(here::here("R/batch_process_rasters.R"))
+source(here::here("R/raster_preprocess_save.R"))
+source(here::here("R/aggregate_topography.R"))
+source(here::here("R/extent_to_tile_ids.R"))
 
-source(here::here("R/helpers.R"))
+source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
 source(here::here("R/compute_annual_radiation.R")) # meteoland
 
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
+
+source(here::here("R/plot_density_grid.R"))
 ```
 
 
@@ -37,48 +44,58 @@ This comparison allows us to evaluate the feasibility of SPLASH-based radiation 
 
 ---
 
-# Data Pre
 
-## Read DEM and calculate slope & aspect 
+## Get slope and aspect data with 450m resolution
+
+Load DEM 30m
 
 ```{r}
 # Read DEM (GeoTIFF) and target raster 
-dem <- rast("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m/Copernicus_DSM_COG_10_N67_00_W155_00_DEM/Copernicus_DSM_COG_10_N67_00_W155_00_DEM.tif")
 
 # reduce extent to example region
 # extent <- ext(-154.5,-154.25, 67.25, 67.5)
-extent <- ext(-154.5,-154, 67.25, 67.75)
-dem_crop <- crop(dem, extent)
+# extent <- ext(-154.5,-154, 67.25, 67.75)
+# extent <- ext(-70, -67.5,-30,-29 ) # South America
+# extent <- ext(6, 8, 45.5, 46.5 ) # Alp region
+# extent <- ext(7.8, 7.9, 46.4, 46.5) # Aletsch glacier - beni
 
-# Calculate slope and aspect (in degrees)
-slope <- terrain(dem_crop, v="slope", unit="degrees")
-aspect <- terrain(dem_crop, v="aspect", unit="degrees")
+extent <- ext(7, 8, 46, 47) # Aletsch glacier
+# Load and crop dem from tiles
+dem_crop <- extent_to_tile_ids(extent, tile_size = 1,  return_raster = TRUE, source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
+names(dem_crop) = "dem"
+
+# plot(dem_crop)
 ```
 
-Load vegetation Data, the aggregation seems to be not correct due to the NA handling.
+Load vegetation Data
 
 ```{r}
+
 # load and crop vegh to calculate r(R~H) 
 vegh <- rast(vegh_450m_mosaic_path)
 vegh_crop <- terra::crop(vegh, terra::ext(dem_crop)) 
 
-plot(vegh)
 ```
 
----
-
-## Aggregate to 15 arcsec resolution (as TWI data from Marthew et. al)
+Load TWI data
 
 ```{r}
+
 # target layer for aggregation
 # Crop TWI to DEM extent first, otherwise resampling DEM to TWI would expand it to global extent
 twi <- rast(twi_450m_mosaic_clean_path)
 twi_crop <- terra::crop(twi, terra::ext(dem_crop)) # need to crop it first, otherwise the output extent of resampled one is global.
+res_tar <- res(twi)
+```
 
-# Aggregate to 450m resolution as TWI data from Marthew et. al.
-aligned <- batch_process_rasters(list(dem = dem_crop, slope = slope, aspect = aspect), target = twi_crop)
+Calculate and aggregate slope and aspect (in degrees)
+
+```{r}
+tictoc::tic()
+# Calculate slope and aspect (in degrees) and aggregate to 450m resolution as TWI data from Marthew et. al.
+aligned <- aggregate_topography(dem = dem_crop, target = twi_crop, if_resample = TRUE)
 tictoc::toc()
-
+# aligned
 ```
 
 ---
@@ -109,7 +126,7 @@ names(df) = c("lon", "lat", "dem", "slope" ,"aspect", "vegh")
 
 ## Input Data Visualization
 
-```{r,fig.width=8,fig.height=12}
+```{r,fig.width=12,fig.height=12}
 
 p_dem <- ggplot() +
   tidyterra::geom_spatraster(data = aligned[["dem"]]) +
@@ -141,11 +158,14 @@ p_aspect <- ggplot() +
 p_vegh <- ggplot() +
   tidyterra::geom_spatraster(data = vegh_crop) +
   scale_fill_viridis_c() +
-  labs(title = "vegetation Heigh (m)", fill = "vegh") +
+  labs(title = "Vegetation Heigh (m)", fill = "vegh") +
   theme_bw()
 
 # print
 p_dem + p_vegh + p_slope + p_aspect
+```
+```{r}
+rm(dem_crop, twi, twi_crop, vegh, vegh_crop, aligned); gc()
 ```
 
 # Comparision
@@ -154,16 +174,37 @@ p_dem + p_vegh + p_slope + p_aspect
 
 ## SPLASH 2.0
 
-```{r}
+```{r SPLASH2}
+source(here::here("R/calc_sw_in.R")) # SPLASH
+
 tictoc::tic()
-df$splash_rad <- sapply(1:nrow(df), function(i){
-  calc_sw_in(
-    lat = df$lat[i],
-    slope = df$slope[i],
-    aspect = df$aspect[i],
-    year = 2020
-  )  / 1e6
+
+# Parallel Configuration
+ncores <- 8
+plan(multisession, workers = ncores)
+
+# Chunk Processing
+chunk_size <- 5000  # rows per chunk, adjust based on memory
+chunks <- split(df, ceiling(seq_len(nrow(df)) / chunk_size))
+
+# Parallel Calculation for Each Chunk
+df <- future_map_dfr(chunks, function(chunk) {
+  
+  sw_in_uneven <- calc_sw_in(chunk$lat, chunk$slope, chunk$aspect, year = 2020)
+  sw_in_flat <- calc_sw_in(chunk$lat, rep(0, nrow(chunk)), rep(0, nrow(chunk)), year = 2020)
+  
+  chunk |>
+    mutate(
+      sw_in_uneven = sw_in_uneven,
+      sw_in_flat   = sw_in_flat,
+      splash_rad = sw_in_uneven,
+      index_terrain = sw_in_uneven / sw_in_flat
+    )
 })
+
+# ---- End Parallel Processing ----
+plan(sequential)  # restore sequential execution
+
 tictoc::toc()
 ```
 
@@ -171,16 +212,33 @@ tictoc::toc()
 
 ## `meteoland::radiation_potentialRadiation`
 
-```{r}
+```{r meteoland}
+
 tictoc::tic()
-df$meteoland_rad <- sapply(1:nrow(df), function(i){
-  compute_annual_radiation(
-    lat_deg = df$lat[i],
-    slope_deg = df$slope[i],
-    aspect_deg = df$aspect[i],
-    year = 2020
-  )
-})
+# ncores <- parallel::detectCores() - 1 
+ncores <- 8
+cl <- multidplyr::new_cluster(ncores) |>
+      multidplyr::cluster_assign(
+        compute_annual_radiation = compute_annual_radiation,
+        deg2rad = function(d) d * pi / 180
+      )
+
+df <- df |>
+  dplyr::group_by(id = row_number()) |>
+  tidyr::nest(input = c(lat, slope, aspect)) |> 
+  multidplyr::partition(cl) |> 
+  dplyr::mutate(meteoland_rad = purrr::map(input, 
+                                   ~compute_annual_radiation(
+                                     lat_deg = .x$lat[[1]],
+                                     slope_deg = .x$slope[[1]], 
+                                     aspect_deg = .x$aspect[[1]], 
+                                     year = 2020
+                                   )
+  )) |>
+  dplyr::collect() |>
+  dplyr::ungroup() |>
+  tidyr::unnest(c(meteoland_rad, input))
+
 tictoc::toc()
 ```
 
@@ -188,6 +246,7 @@ tictoc::toc()
 ## Scatterplot Comparison
 
 ```{r,fig.width=6,fig.height=4}
+colnames(df)
 ggplot(df, aes(x = splash_rad, y = meteoland_rad)) +
   geom_point(alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
@@ -202,7 +261,7 @@ ggplot(df, aes(x = splash_rad, y = meteoland_rad)) +
 ## Density Distributions
 
 ```{r,fig.width=6,fig.height=4}
-df_long <- df %>%
+df_long <- df |>
   pivot_longer(cols = c(splash_rad, meteoland_rad),
                names_to = "source",
                values_to = "radiation")
@@ -215,7 +274,7 @@ ggplot(df_long, aes(x = radiation, fill = source, color = source)) +
 
 ## Spatial Visualization
 
-```{r, fig.width=8,fig.height=12}
+```{r, fig.width=12,fig.height=6}
 p_splash <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
   geom_tile() +
   scale_fill_viridis_c() +
@@ -267,14 +326,14 @@ colnames(df_cor)
 ```
 
 
-```{r}
+```{r,fig.width=12,fig.height=6}
 vmin <- min(df_cor$correlation, na.rm = TRUE)
 vmax <- max(df_cor$correlation, na.rm = TRUE)
 
 p_cor <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
   geom_tile() +
   scico::scale_fill_scico(
-      palette = "bam",
+      palette = "vik",
       limits = c(vmin, vmax),
       midpoint = 0,
       name = expression(r[R*","*H]),
@@ -292,7 +351,12 @@ p_cor <- ggplot(df_cor, aes(x = lon_mid, y = lat_mid, fill = correlation)) +
 
 p_meteoland + p_cor
 ```
-
+```{r}
+# colnames(df)
+cols <- c( "vegh", "splash_rad",  "dem","slope", "aspect", "meteoland_rad", "lon", "lat")
+combined_plot <- plot_density_grid(df, cols, nrow = 3, save_path = NULL)
+combined_plot
+```
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output

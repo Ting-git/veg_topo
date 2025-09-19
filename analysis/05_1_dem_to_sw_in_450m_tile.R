@@ -1,5 +1,5 @@
 # This script is configured to run on UBELIX.
-# To run it on workstation02, update the file paths in the Data Source Configuration section
+# To run it on workstation02, update the file Configuration section and numbers of available core
 # because the input/output directories differ between servers.
 
 # DEM → Slope/Aspect → Annual SW_in @ 450 m workflow with nested parallelism
@@ -9,7 +9,6 @@
 library(terra)
 library(dplyr)
 library(tidyr)
-library(meteoland)
 library(purrr)
 library(furrr)         # outer parallelism
 library(fs)
@@ -21,31 +20,34 @@ library(doParallel)    # inner parallelism
 library(foreach)
 
 # --- User/project config ----
-# source(here::here("config.R")) # no need for it, due to not execute in workstation02
-source(here::here("R/process_raster.R"))
-source(here::here("R/batch_process_rasters.R"))
-source(here::here("R/compute_annual_radiation.R"))
+source(here::here("config.R")) # no need for it, due to not execute in workstation02
+source(here::here("R/raster_preprocess_save.R"))
+source(here::here("R/aggregate_topography.R"))
+source(here::here("R/helpers.R")) # SPLASH
+source(here::here("R/calc_sw_in.R")) # SPLASH
 
 # ----Data Source Configuration-----
 # Input dir of DEM tiles
-dem_30m_copernicus_dir <- file.path("/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m")
+# dem_30m_copernicus_dir <- file.path("/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m")
+
+# Output dir of SW_IN tiles
+# sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
+
+# Target grid for aggregation
+# twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
 
 # Check if input directory exists, stop if not
 if (!dir.exists(dem_30m_copernicus_dir)) {
   stop(paste("Input directory does not exist:", dem_30m_copernicus_dir))
 }
 
-# Output dir of SW_IN tiles
-sw_in_450m_tiles_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
-
 # Check if output directory exists, create if not
-if (!dir.exists(sw_in_450m_tiles_dir)) {
-  dir.create(sw_in_450m_tiles_dir, recursive = TRUE)
-  message(paste("Created output directory:", sw_in_450m_tiles_dir))
+if (!dir.exists(sw_in_450m_tile_dir)) {
+  dir.create(sw_in_450m_tile_dir, recursive = TRUE)
+  message(paste("Created output directory:", sw_in_450m_tile_dir))
 }
 
-# Target grid for aggregation
-twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
+# Load target raster, and save the target resolution
 twi <- rast(twi_450m_mosaic_clean_path)
 res_tar <- res(twi)
 rm(twi); gc()
@@ -59,27 +61,30 @@ dem_files_all <- fs::dir_ls(
 message(sprintf("Found %d DEM tiles", length(dem_files_all)))
 
 # ---- Processing info ----
-# start_idx <- 2000
-# end_idx   <- 7500
-# dem_files <- dem_files_all[start_idx:end_idx]
-# message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
+start_idx <- 1
+end_idx   <- 2
+dem_files <- dem_files_all[start_idx:end_idx]
+message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
 
-dem_files <- dem_files_all[c(1883, 9748, 9749, 9750, 9773, 9842, 9937)]
-message(sprintf("Start processing specific indices: 1883, 9748, 9749, 9750, 9773, 9842, 9937 (total %d DEMs)",
-                length(dem_files)))
+# Re-process missing tiles
+# dem_files <- dem_files_all[c(1883, 9748, 9749, 9750, 9773, 9842, 9937)]
+# message(sprintf("Start processing specific indices: 1883, 9748, 9749, 9750, 9773, 9842, 9937 (total %d DEMs)",
+                # length(dem_files)))
 
 # ---- Core configuration ----
-# 内层核数
+
+# numbers of inner core
 INNER_CORES <- 4
 
-# 在 SLURM 中使用分配的 CPU 核数，如果没有 SLURM 环境则使用 detectCores()
-available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores()))
-total_cores <- parallel::detectCores()  # 节点总核心数
+# Use the number of allocated CPU cores in SLURM, or detectCores() if there is no SLURM environment
+# available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores()))
+available_cores <- 8 # test on workstation2
+total_cores <- parallel::detectCores()  # Total number of cores on the node
 
-# 外层 worker 数量
+# numbers of outer core
 outer_cores <- max(1, floor(available_cores / INNER_CORES))
 
-# 打印核心信息
+# Print the info of cores
 message(sprintf("Node total cores: %d", total_cores))
 message(sprintf("Available cores for this job: %d", available_cores))
 message(sprintf("Using %d outer workers, each with %d inner cores", outer_cores, INNER_CORES))
@@ -88,18 +93,20 @@ message(sprintf("Total parallel threads: %d", outer_cores * INNER_CORES))
 # ---- Outer parallel plan ----
 plan(multisession, workers = outer_cores)
 t0 <- Sys.time()
+message(paste0("Calculation on DEM Start:", format(t0, "%Y-%m-%d %H:%M:%S")))
 
 process_one_tile <- function(file) {
+
   # Output file path
   base_name <- fs::path_ext_remove(fs::path_file(file))
-  output_path_sw_in <- file.path(sw_in_450m_tiles_dir, paste0(base_name, "_to_sw_in_450m.nc"))
-  output_path_sw_in_flat <- file.path(sw_in_450m_tiles_dir, paste0(base_name, "_to_sw_in_flat_450m.nc"))
+  output_path_sw_in_uneven <- file.path(sw_in_450m_tile_dir, paste0(base_name, "_to_sw_in_uneven_450m.nc"))
+  output_path_sw_in_flat <- file.path(sw_in_450m_tile_dir, paste0(base_name, "_to_sw_in_flat_450m.nc"))
 
   # Check if it has been processed
-  if (fs::file_exists(output_path_sw_in) && fs::file_exists(output_path_sw_in_flat)) {
+  if (fs::file_exists(output_path_sw_in_uneven) && fs::file_exists(output_path_sw_in_flat)) {
     return(list(success = TRUE,
                 file = file,
-                out_file_sw_in = output_path_sw_in,
+                out_file_sw_in_uneven = output_path_sw_in_uneven,
                 out_file_sw_in_flat = output_path_sw_in_flat,
                 skipped = TRUE,
                 error = NULL))
@@ -110,13 +117,9 @@ process_one_tile <- function(file) {
     # Read DEM
     dem <- terra::rast(file)
 
-    # Compute slope/aspect
-    slope  <- terra::terrain(dem, v = "slope", unit = "degrees")
-    aspect <- terra::terrain(dem, v = "aspect", unit = "degrees")
-
-    # Aggregate to ~450m
-    aligned <- batch_process_rasters(
-      list(dem = dem, slope = slope, aspect = aspect),
+    # Get slope and aspect and Aggregate to ~450m
+    aligned <- aggregate_topography(
+      dem,
       res_tar = res_tar,
       if_resample = FALSE
     )
@@ -127,14 +130,13 @@ process_one_tile <- function(file) {
       left_join(as.data.frame(aligned[["aspect"]], xy = TRUE), by = c("x", "y")) |>
       tibble::as_tibble() |>
       drop_na()
-
     names(df) <- c("lon", "lat", "dem", "slope", "aspect")
 
     if (nrow(df) == 0) {
       warning(sprintf("No valid cells after drop_na for %s", file))
       return(list(success = FALSE,
                   file = file,
-                  out_file_sw_in = NULL,
+                  out_file_sw_in_uneven = NULL,
                   out_file_sw_in_flat = NULL,
                   skipped = FALSE,
                   error = "no_valid_cells"))
@@ -144,51 +146,48 @@ process_one_tile <- function(file) {
     cl <- makeCluster(INNER_CORES)
     registerDoParallel(cl)
 
-    df_calc <- foreach(i = 1:nrow(df), .combine = bind_rows,
-                       .packages = c("dplyr", "purrr", "meteoland"),
-                       .export = "compute_annual_radiation") %dopar% {
-                         row <- df[i, ]
+    # Chunk Processing
+    chunk_size <- 5000  # rows per chunk, adjust based on memory
+    chunks <- split(df, ceiling(seq_len(nrow(df)) / chunk_size))
 
-                         sw_in_value <- compute_annual_radiation(
-                           lat_deg = row$lat,
-                           slope_deg = row$slope,
-                           aspect_deg = row$aspect,
-                           year = 2020
-                         )
+    # Parallel Calculation for Each Chunk - Direct assignment
+    df_calc <- foreach(
+      chunk = chunks,
+      .combine = bind_rows,
+      .packages = c("dplyr"),
+      .export   = c("calc_sw_in_daily", "calc_sw_in", "julian_day",
+                    "berger_tls", "dcos", "dsin")
+    ) %dopar% {
 
-                         sw_in_flat <- compute_annual_radiation(
-                           lat_deg = row$lat,
-                           slope_deg = 0,
-                           aspect_deg = 0,
-                           year = 2020
-                         )
+      # Calculate sw_in_uneven and sw_in_flat for entire chunk
+      sw_in_uneven <- calc_sw_in(chunk$lat, chunk$slope, chunk$aspect, year = 2020)
+      sw_in_flat <- calc_sw_in(chunk$lat, rep(0, nrow(chunk)), rep(0, nrow(chunk)), year = 2020)
 
-                         data.frame(
-                           lon = row$lon,
-                           lat = row$lat,
-                           sw_in = sw_in_value,
-                           sw_in_flat = sw_in_flat
-                         )
-                       }
+      # Combine results back to dataframe
+      chunk |>
+        mutate(sw_in_uneven = sw_in_uneven,
+               sw_in_flat = sw_in_flat,
+               index_terrain = sw_in_uneven / sw_in_flat)
+    }
 
     stopCluster(cl)
     registerDoSEQ()
 
     # Build rasters
     crs_out <- terra::crs(aligned[["dem"]])
-    sw_in      <- terra::rast(df_calc[, c("lon", "lat", "sw_in")],      type = "xyz", crs = crs_out)
+    sw_in_uneven <- terra::rast(df_calc[, c("lon", "lat", "sw_in_uneven")], type = "xyz", crs = crs_out)
     sw_in_flat <- terra::rast(df_calc[, c("lon", "lat", "sw_in_flat")], type = "xyz", crs = crs_out)
 
     # Write two separate NetCDFs
-    terra::writeCDF(sw_in,      output_path_sw_in,      varname = "sw_in",      overwrite = TRUE)
+    terra::writeCDF(sw_in_uneven,output_path_sw_in_uneven,varname = "sw_in_uneven", overwrite = TRUE)
     terra::writeCDF(sw_in_flat, output_path_sw_in_flat, varname = "sw_in_flat", overwrite = TRUE)
 
-    rm(dem, slope, aspect, aligned, df, df_calc, sw_in, sw_in_flat)
+    rm(chunks, dem, aligned, df, df_calc, sw_in_uneven, sw_in_flat)
     gc(full = TRUE)
 
     list(success = TRUE,
          file = file,
-         out_file_sw_in = output_path_sw_in,
+         out_file_sw_in_uneven = output_path_sw_in_uneven,
          out_file_sw_in_flat = output_path_sw_in_flat,
          skipped = FALSE,
          error = NULL)
@@ -196,7 +195,7 @@ process_one_tile <- function(file) {
   }, error = function(e) {
     list(success = FALSE,
          file = file,
-         out_file_sw_in = NULL,
+         out_file_sw_in_uneven = NULL,
          out_file_sw_in_flat = NULL,
          skipped = FALSE,
          error = conditionMessage(e))
@@ -210,8 +209,10 @@ results <- furrr::future_map(
   .progress = FALSE,
   .options = furrr::furrr_options(
     seed = TRUE,
-    globals = c("process_raster", "batch_process_rasters", "compute_annual_radiation",
-                "res_tar", "sw_in_450m_tiles_dir", "INNER_CORES"),
+    globals = c("raster_preprocess_save", "aggregate_topography",
+                "calc_sw_in_daily", "calc_sw_in",
+                "julian_day", "berger_tls", "dcos", "dsin",
+                "res_tar", "sw_in_450m_tile_dir", "INNER_CORES"),
     packages = c("terra", "dplyr", "tidyr", "purrr", "doParallel", "foreach", "parallel")
   )
 )
@@ -220,9 +221,9 @@ plan(sequential)
 elapsed <- as.numeric(difftime(Sys.time(), t0, units = "mins"))
 message(sprintf("done [%.1f mins]", elapsed))
 
-# 递归统计文件数量
-file_count <- length(list.files(path = sw_in_450m_tiles_dir, recursive = TRUE, all.files = TRUE))
-message(sprintf("Total number of files in %s: %d", sw_in_450m_tiles_dir, file_count))
+# Recursive file count
+file_count <- length(list.files(path = sw_in_450m_tile_dir, recursive = TRUE, all.files = TRUE))
+message(sprintf("Total number of files in %s: %d", sw_in_450m_tile_dir, file_count))
 
 # ---- Summary ----
 failed_results <- keep(results, ~ !.x$success)
@@ -251,50 +252,3 @@ if (length(failed_results) > 0) {
 }
 
 
-# ----- check the processed file -----
-
-dem_base_names <- dem_files_all |>
-  fs::path_file() |>
-  fs::path_ext_remove()
-
-sw_in_base_names <- fs::dir_ls(
-  path = sw_in_450m_tiles_dir,
-  glob = "*_to_sw_in_450m.nc",
-  recurse = TRUE
-) |>
-  fs::path_file() |>
-  fs::path_ext_remove() |>
-  (\(x) gsub("_to_sw_in_450m$", "", x))()
-
-sw_in_flat_base_names <- fs::dir_ls(
-  path = sw_in_450m_tiles_dir,
-  glob = "*_to_sw_in_flat_450m.nc",
-  recurse = TRUE
-)|>
-  fs::path_file() |>
-  fs::path_ext_remove() |>
-  (\(x) gsub("_to_sw_in_flat_450m$", "", x))()
-
-missing_sw_in <- setdiff(dem_base_names, sw_in_base_names)
-missing_sw_in_flat <- setdiff(dem_base_names, sw_in_flat_base_names)
-
-missing_sw_in_idx <- which(dem_base_names %in% missing_sw_in)
-missing_sw_in_flat_idx <- which(dem_base_names %in% missing_sw_in_flat)
-
-missing_sw_in_idx
-
-
-# check
-dem <- dem_files_all[1199]
-r1 <- rast(dem)
-plot(r1)
-
-dem_base_name <- fs::path_ext_remove(fs::path_file(dem))
-sw_in <- file.path(sw_in_450m_tiles_dir, paste0(dem_base_name, "_to_sw_in_450m.nc"))
-sw_in_flat <- file.path(sw_in_450m_tiles_dir, paste0(dem_base_name, "_to_sw_in_flat_450m.nc"))
-
-r2 <- rast(sw_in)
-plot(r2)
-
-r3 <- rast(sw_in_flat)
-plot(r3)
