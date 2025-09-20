@@ -60,7 +60,7 @@ dem_files_all <- fs::dir_ls(
 message(sprintf("Found %d DEM tiles", length(dem_files_all)))
 
 # ---- Processing info ----
-start_idx <- 2601
+start_idx <- 12001
 end_idx   <- 26450
 dem_files <- dem_files_all[start_idx:end_idx]
 message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
@@ -94,6 +94,10 @@ plan(multisession, workers = outer_cores)
 t0 <- Sys.time()
 message(paste0("Calculation on DEM Start:", format(t0, "%Y-%m-%d %H:%M:%S")))
 
+# ---- Inner cluster ----
+cl <- makeCluster(INNER_CORES)
+registerDoParallel(cl)
+
 process_one_tile <- function(file) {
 
   # Output file path
@@ -105,8 +109,8 @@ process_one_tile <- function(file) {
   if (fs::file_exists(output_path_sw_in_uneven) && fs::file_exists(output_path_sw_in_flat)) {
     return(list(success = TRUE,
                 file = file,
-                out_file_sw_in_uneven = output_path_sw_in_uneven,
-                out_file_sw_in_flat = output_path_sw_in_flat,
+                # out_file_sw_in_uneven = output_path_sw_in_uneven,
+                # out_file_sw_in_flat = output_path_sw_in_flat,
                 skipped = TRUE,
                 error = NULL))
   }
@@ -135,15 +139,15 @@ process_one_tile <- function(file) {
       warning(sprintf("No valid cells after drop_na for %s", file))
       return(list(success = FALSE,
                   file = file,
-                  out_file_sw_in_uneven = NULL,
-                  out_file_sw_in_flat = NULL,
+                  # out_file_sw_in_uneven = NULL,
+                  # out_file_sw_in_flat = NULL,
                   skipped = FALSE,
                   error = "no_valid_cells"))
     }
 
-    # Inner parallelism
-    cl <- makeCluster(INNER_CORES)
-    registerDoParallel(cl)
+    # # Inner parallelism
+    # cl <- makeCluster(INNER_CORES)
+    # registerDoParallel(cl)
 
     # Chunk Processing
     chunk_size <- 5000  # rows per chunk, adjust based on memory
@@ -165,12 +169,12 @@ process_one_tile <- function(file) {
       # Combine results back to dataframe
       chunk |>
         mutate(sw_in_uneven = sw_in_uneven,
-               sw_in_flat = sw_in_flat,
-               index_terrain = sw_in_uneven / sw_in_flat)
+               sw_in_flat = sw_in_flat)
+
     }
 
-    stopCluster(cl)
-    registerDoSEQ()
+    # stopCluster(cl)
+    # registerDoSEQ()
 
     # Build rasters
     crs_out <- terra::crs(aligned[["dem"]])
@@ -186,23 +190,26 @@ process_one_tile <- function(file) {
 
     list(success = TRUE,
          file = file,
-         out_file_sw_in_uneven = output_path_sw_in_uneven,
-         out_file_sw_in_flat = output_path_sw_in_flat,
+         # out_file_sw_in_uneven = output_path_sw_in_uneven,
+         # out_file_sw_in_flat = output_path_sw_in_flat,
          skipped = FALSE,
          error = NULL)
 
   }, error = function(e) {
     list(success = FALSE,
          file = file,
-         out_file_sw_in_uneven = NULL,
-         out_file_sw_in_flat = NULL,
+         # out_file_sw_in_uneven = NULL,
+         # out_file_sw_in_flat = NULL,
          skipped = FALSE,
          error = conditionMessage(e))
+  }, finally = {
+    rm(dem, aligned, df, df_calc, chunks)
+    gc(full = TRUE)
   })
 }
 
-# Run in parallel over tiles
-results <- furrr::future_map(
+# ---- processing ----
+all_results <- furrr::future_map(
   dem_files,
   process_one_tile,
   .progress = FALSE,
@@ -212,28 +219,35 @@ results <- furrr::future_map(
                 "calc_sw_in_daily", "calc_sw_in",
                 "julian_day", "berger_tls", "dcos", "dsin",
                 "res_tar", "sw_in_450m_tile_dir", "INNER_CORES"),
-    packages = c("terra", "dplyr", "tidyr", "purrr", "doParallel", "foreach", "parallel")
+    packages = c("terra", "dplyr", "tidyr", "purrr",
+                 "doParallel", "foreach", "parallel")
   )
 )
 
+# stop cluster
+stopCluster(cl)
+registerDoSEQ()
+
+# Switch back to sequential execution
 plan(sequential)
+
 elapsed <- as.numeric(difftime(Sys.time(), t0, units = "mins"))
-message(sprintf("done [%.1f mins]", elapsed))
+message(sprintf("Processing done [%.1f mins]", elapsed))
 
 # Recursive file count
 file_count <- length(list.files(path = sw_in_450m_tile_dir, recursive = TRUE, all.files = TRUE))
 message(sprintf("Total number of files in %s: %d", sw_in_450m_tile_dir, file_count))
 
 # ---- Summary ----
-failed_results <- keep(results, ~ !.x$success)
-success_count <- sum(map_lgl(results, ~ .x$success))
+failed_results <- keep(all_results, ~ !.x$success)
+success_count <- sum(map_lgl(all_results, ~ .x$success))
 failed_count <- length(failed_results)
 
 message("\n=== FINAL SUMMARY ===")
-message(sprintf("Total processed: %d", length(results)))
+message(sprintf("Total processed: %d", length(all_results)))
 message(sprintf("Success: %d", success_count))
 message(sprintf("Failed: %d", failed_count))
-message(sprintf("Success rate: %.1f%%", (success_count / length(results)) * 100))
+message(sprintf("Success rate: %.1f%%", (success_count / length(all_results)) * 100))
 
 if (length(failed_results) > 0) {
   message("\n=== FAILED FILES SUMMARY ===")
