@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="plot_global_sw_in_450m_map"
-#SBATCH --time=2:00:00
-#SBATCH --ntasks=1
+#SBATCH --time=2:00:00 # ~ 6.5 min
+#SBATCH --ntasks=4
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=20G  # 500比较合适
+#SBATCH --mem=50G  # 50G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -13,6 +13,7 @@
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4
 
 # Load modules
+module purge
 module load foss/2024a
 module load PROJ/9.4.1-GCCcore-13.3.0
 module load GDAL/3.10.0-foss-2024a
