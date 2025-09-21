@@ -1,9 +1,10 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="global_sw_in_terrain_effect_450m"
-#SBATCH --time=2:00:00
+#SBATCH --time=2:00:00 # 10 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=16
+#SBATCH --mem=256G  # 256G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
