@@ -13,7 +13,7 @@ twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global
 
 # Output file paths
 output_dir <- fs::path_dir(sw_in_450m_tile_dir)
-sw_in_450m_path <- file.path(output_dir, "sw_in_450m.nc")
+sw_in_450m_path <- file.path(output_dir, "sw_in_uneven_450m.nc")
 sw_in_flat_450m_path <- file.path(output_dir, "sw_in_flat_450m.nc")
 sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc")
 
@@ -28,7 +28,7 @@ message("Starting mosaicing...")
 sw_in_mosaic <- mosaic_tiles(
   input_dir   = sw_in_450m_tile_dir,
   output_file = NULL,
-  pattern = "*_to_sw_in_450m.nc",
+  pattern = "*_to_sw_in_uneven_450m.nc",
   varname = "sw_in")
 
 # 检查镶嵌是否成功
@@ -51,11 +51,12 @@ sw_in_resampled <- mask(sw_in_resampled, twi_450m_r)
 # Save Results ------------------------------------------------------------
 
 # Save output files
-terra::writeCDF(sw_in_resampled, sw_in_450m_path, overwrite = TRUE, varname = "sw_in")
+terra::writeCDF(sw_in_resampled, sw_in_450m_path, overwrite = TRUE, varname = "sw_in_uneven")
 if(file.exists(sw_in_450m_path)) message("✅ Saved: ", sw_in_450m_path)
 
 rm(list = ls())
 gc()
+
 # check result
 # sw_in <- rast(sw_in_450m_path)
 # plot(sw_in)

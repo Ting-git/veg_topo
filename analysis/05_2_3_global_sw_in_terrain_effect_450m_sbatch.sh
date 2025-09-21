@@ -30,7 +30,7 @@ echo "=================================================="
 # ---------------------------
 # Input files
 # ---------------------------
-sw_in_450m="/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_450m.nc"
+sw_in_450m="/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_uneven_450m.nc"
 sw_in_flat_450m="/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_flat_450m.nc"
 twi_mask="/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc"
 

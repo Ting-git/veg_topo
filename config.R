@@ -73,7 +73,7 @@ kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmean
 kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_7c.nc")
 
 sw_in_450m_tile_dir <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/1_1_deg_tiles")
-sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_450m.nc")
+sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_uneven_450m.nc")
 sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_flat_450m.nc")
 sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_terrain_effect_450m.nc")
 

@@ -13,7 +13,7 @@ twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global
 
 # Output file paths
 output_dir <- fs::path_dir(sw_in_450m_tile_dir)
-sw_in_450m_path <- file.path(output_dir, "sw_in_450m.nc")
+sw_in_450m_path <- file.path(output_dir, "sw_in_uneven_450m.nc")
 sw_in_flat_450m_path <- file.path(output_dir, "sw_in_flat_450m.nc")
 sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc")
 

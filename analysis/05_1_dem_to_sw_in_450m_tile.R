@@ -94,9 +94,9 @@ plan(multisession, workers = outer_cores)
 t0 <- Sys.time()
 message(paste0("Calculation on DEM Start:", format(t0, "%Y-%m-%d %H:%M:%S")))
 
-# ---- Inner cluster ----
-cl <- makeCluster(INNER_CORES)
-registerDoParallel(cl)
+# # ---- Inner cluster ----
+# cl <- makeCluster(INNER_CORES)
+# registerDoParallel(cl)
 
 process_one_tile <- function(file) {
 
@@ -145,9 +145,9 @@ process_one_tile <- function(file) {
                   error = "no_valid_cells"))
     }
 
-    # # Inner parallelism
-    # cl <- makeCluster(INNER_CORES)
-    # registerDoParallel(cl)
+    # Inner parallelism
+    cl <- makeCluster(INNER_CORES)
+    registerDoParallel(cl)
 
     # Chunk Processing
     chunk_size <- 5000  # rows per chunk, adjust based on memory
@@ -173,8 +173,8 @@ process_one_tile <- function(file) {
 
     }
 
-    # stopCluster(cl)
-    # registerDoSEQ()
+    stopCluster(cl)
+    registerDoSEQ()
 
     # Build rasters
     crs_out <- terra::crs(aligned[["dem"]])
@@ -224,9 +224,9 @@ all_results <- furrr::future_map(
   )
 )
 
-# stop cluster
-stopCluster(cl)
-registerDoSEQ()
+# # stop cluster
+# stopCluster(cl)
+# registerDoSEQ()
 
 # Switch back to sequential execution
 plan(sequential)

@@ -13,7 +13,7 @@ source(here::here("R/plot_sw_in.R"))
 source(here::here("R/plot_terrain_effect.R"))
 
 # ---------- File Configuration on UBELIX----------------------------------------------------------
-sw_in_uneven_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_450m.nc")
+sw_in_uneven_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_uneven_450m.nc")
 sw_in_flat_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_flat_450m.nc")
 sw_in_terrain_effect_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_terrain_effect_450m.nc")
 

@@ -36,7 +36,7 @@
 raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target = NULL,
                               varname = "band", if_aggregate = TRUE,
                               if_resample = FALSE, if_mask = FALSE,
-                              na_value = NULL, fun = mean) {
+                              na_value = NULL, fun = mean, if_return_raster = TRUE) {
 
   # --- Load input raster ---
   r_in <- if (is.character(input)) terra::rast(input) else input
@@ -94,7 +94,7 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
       lyr <- r_out[[i]]
       out_i <- output[i]
       ext <- tools::file_ext(out_i)
-
+      # if named list, then set the varnames
       varname_i <- if (!is.null(names(r_out)[i]) && names(r_out)[i] != "") {
         names(r_out)[i]
       } else {
@@ -112,5 +112,5 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
     for (f in output) message("  ", f)
   }
 
-  return(r_out)
+ if (if_return_raster) return(r_out) else return(output)
 }
