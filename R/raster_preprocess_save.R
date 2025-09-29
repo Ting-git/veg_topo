@@ -112,5 +112,10 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
     for (f in output) message("  ", f)
   }
 
+  # Clean up
+  rm(r_in, r_out)
+  if (exists("r_tar")) rm(r_tar)
+  gc()
+
  if (if_return_raster) return(r_out) else return(output)
 }

@@ -9,7 +9,7 @@ ext_global <- ext(-180, 180, -60, 85)
 
 # -----------------------Data Raw and Data Clean--------------------------------
 
-# Vegtation height
+# Vegetation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/vegh_450m_2020_mosaic.nc")
 fvegh_55km_path <- file.path(veg_topo_extr_dir, "data/global_fvegh_55km/fvegh_55km.nc")
