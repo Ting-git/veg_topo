@@ -12,7 +12,7 @@ library(dplyr)        # data manipulation
 library(ggplot2)      # plotting
 library(patchwork)    # combine multiple plots
 library(tidyterra)    # ggplot-friendly terra functions
-library(RColorBrewer) # color palettes
+# library(RColorBrewer) # color palettes
 
 # Load custom config and plotting functions
 source(here::here("config.R"))
@@ -34,8 +34,8 @@ colnames(df) <- c("lon", "lat", "cor", "fused", "mi", "cluster8c", "BIOME_NUM")
 rm(mi_5km_r, fused_5km_r, cor_twi_vegh_5km_r, kmeans_8c_r, ecoregion_r, stacked); gc()
 
 # ---- 3. Rename Clusters ----
-df_summary <- df %>%
-  group_by(cluster8c) %>%
+df_summary <- df |>
+  group_by(cluster8c) |>
   summarise(
     Q1_mi = quantile(mi, 0.25),
     median_mi = median(mi),
@@ -47,21 +47,28 @@ df_summary <- df %>%
     median_fused = median(fused),
     Q3_fused = quantile(fused, 0.75),
     .groups = "drop"
-  ) %>%
+  ) |>
   arrange(median_mi)
 
-cluster_values <- c(4, 8, 2, 6, 7, 5, 1, 3)
+df_summary$median_mi
+df_summary$cluster8c
 
+# Manually set the cluster labels according to their median_mi value
+cluster_values <- df_summary$cluster8c
 cluster_labels <- c(
-  "Arid\nN\nLowLU",
+  "Arid\nW-\nLowLU",
   "Semi-arid\nS+\nLowLU",
   "Semi-arid\n+\nHighLU",
-  "Dry-sub-humid\nW-\nLowLU",
+  "Dry-sub-humid\nN\nLowLU",
   "Humid\n-\nHighLU",
   "Humid\nS-\nLowLU",
   "Humid\n+\nLowLU",
   "Humid\nW-\nLowLU"
 )
+
+# Save the cluster name and value for following global mapping
+names(cluster_labels) = cluster_values
+save(cluster_values, cluster_labels, file = here::here("data/cluster_data.RData"))
 
 # Assign descriptive labels and order for clusters
 df$cluster8c <- factor(df$cluster8c,
@@ -69,11 +76,23 @@ df$cluster8c <- factor(df$cluster8c,
                        labels = cluster_labels)
 
 # ---- 4. Cluster Box/Violin Plots ----
-set2_colors <- RColorBrewer::brewer.pal(8, "Set2")
-cluster_num_for_colors <- cluster_values
-fill_colors <- setNames(set2_colors[cluster_num_for_colors], cluster_labels)
 
-pbox_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "boxplot", "Correlation", fill_colors, show_legend = FALSE)
+# fill_color for dry to wet cluster
+fill_colors <- setNames(
+  c(
+    "#E78AC3", # Pink - Arid
+    "#FC8D62", # Orange - Semi-arid
+    "#FFD92F", # Yellow - Semi-arid
+    "#E5C494", # Light brown - Dry-sub-humid
+    "#B3B3B3", # Gray - Humid
+    "#66C2A5", # Blue-green - Humid
+    "#8DA0CB", # Blue - Humid
+    "#A6D854"   # Green - Humid
+  ),
+  cluster_labels)
+
+# sub-plotting
+pbox_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "boxplot", "r(TWI~H)", fill_colors, show_legend = FALSE)
 pvio_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "violin",  NULL, fill_colors, show_legend = TRUE)
 pbox_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "boxplot", "MI", fill_colors, show_legend = FALSE)
 pvio_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "violin",  NULL, fill_colors, show_legend = TRUE)
@@ -102,27 +121,27 @@ ggsave(
 # ---- 5. Cluster Biome Composition (Absolute Counts) ----
 # Load biome info
 ecoregion <- vect(ecoregion_path)
-biomes_info <- ecoregion %>%
-  as.data.frame() %>%
-  select(BIOME_NUM, BIOME_NAME, COLOR_BIO) %>%
-  distinct() %>%
+biomes_info <- ecoregion |>
+  as.data.frame() |>
+  select(BIOME_NUM, BIOME_NAME, COLOR_BIO) |>
+  distinct() |>
   arrange(BIOME_NUM)
 
 # Summarize absolute counts per cluster × biome
-df_biome_summary_counts <- df %>%
-  group_by(cluster8c, BIOME_NUM) %>%
-  summarise(count = n(), .groups = "drop") %>%
+df_biome_summary_counts <- df |>
+  group_by(cluster8c, BIOME_NUM) |>
+  summarise(count = n(), .groups = "drop") |>
   left_join(
-    biomes_info %>% distinct(BIOME_NUM, .keep_all = TRUE) %>% select(BIOME_NUM, BIOME_NAME, COLOR_BIO),
+    biomes_info |> distinct(BIOME_NUM, .keep_all = TRUE) |> select(BIOME_NUM, BIOME_NAME, COLOR_BIO),
     by = "BIOME_NUM"
-  ) %>%
+  ) |>
   # Order factors for consistent plotting
   mutate(
     cluster8c = factor(cluster8c, levels = levels(df$cluster8c))
-  ) %>%
-  group_by(cluster8c) %>%
-  arrange(cluster8c, desc(count)) %>%
-  mutate(BIOME_NAME = factor(BIOME_NAME, levels = unique(BIOME_NAME))) %>%
+  ) |>
+  group_by(cluster8c) |>
+  arrange(cluster8c, desc(count)) |>
+  mutate(BIOME_NAME = factor(BIOME_NAME, levels = unique(BIOME_NAME))) |>
   ungroup()
 
 # Plot stacked bar chart using absolute counts
@@ -155,3 +174,4 @@ ggsave(
   height = 10,
   dpi = 300
 )
+

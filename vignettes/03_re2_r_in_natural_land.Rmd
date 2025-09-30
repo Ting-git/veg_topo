@@ -252,5 +252,5 @@ The biome-level patterns can be summarized as follows:
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/03_re3_r_in_natural_land.Rmd"))
+rmarkdown::render(here::here("vignettes/03_re2_r_in_natural_land.Rmd"))
 ```

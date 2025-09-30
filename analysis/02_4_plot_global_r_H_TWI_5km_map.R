@@ -16,13 +16,12 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 # load correlation data, raster data
 cor_r <- terra::rast(cor_twi_vegh_mosaic_file)
-ext <- terra::ext(-180, 180, -60, 85)
 
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
 
 p_cor <- plot_cor_twi_vegh(
   input = cor_r[[1]],
-  extent = ext,
+  extent = ext_global,
   title = "VEGH-TWI Pearson Correlation Map",
   text_size = 16,
   x_breaks = 30,
@@ -36,16 +35,17 @@ p_cor <- plot_cor_twi_vegh(
 ggsave(
   filename = file.path(project_root, "data/figures/02_cor_twi_vegh_map.png"),
   plot = p_cor,
-  width = 24,
-  height = 11.5,
+  width = 30,
+  height = 15,
   dpi = 300,
   units = "in"
 )
+
 # --------- plot P value ----------------------------
 
 p_pval <-  plot_cor_pval(
   input = pval_cor_twi_vegh_mosaic_file,
-  extent = ext
+  extent = ext_global
 ) +
   geom_sf(data = coast,
           colour = 'black',
@@ -55,8 +55,8 @@ p_pval <-  plot_cor_pval(
 ggsave(
   filename = file.path(project_root, "data/figures/02_cor_p_val_twi_vegh_map.png"),
   plot = p_pval,
-  width = 24,
-  height = 11.5,
+  width = 30,
+  height = 15,
   dpi = 300,
   units = "in"
 )
