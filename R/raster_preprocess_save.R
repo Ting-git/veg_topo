@@ -113,7 +113,7 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
   }
 
   # Clean up
-  rm(r_in, r_out)
+  rm(r_in)
   if (exists("r_tar")) rm(r_tar)
   gc()
 
