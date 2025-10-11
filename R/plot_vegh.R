@@ -5,12 +5,12 @@
 #'   If provided and smaller than the input raster extent,
 #'   the raster will be cropped to their intersecting area.
 #' @param text_size Font size
-#' @param x_breaks Number of x-axis breaks
-#' @param y_breaks Number of y-axis breaks
+#' @param x_step Number of x-axis breaks
+#' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (H, 2020)",
-                      text_size = 6, x_breaks = 5, y_breaks = 5) {
+plot_vegh <- function(input, extent = NULL, title_text = "2020 Vegetation Height (m)",
+                      text_size = 6, x_step = 5, y_step = 5) {
 
   if (is.character(input)) {
     input <- terra::rast(input)
@@ -55,8 +55,8 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (H, 
       palette = "batlow",
       direction = -1,
       limits = c(vmin, vmax),
-      na.value = NA,
-      name = "VEGH"
+      # name = "VEGH",
+      na.value = NA
     ) +
     ggplot2::labs(
       title = title_text,
@@ -65,12 +65,12 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (H, 
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_breaks),
+      breaks = seq(xmin, xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_breaks),
+      breaks = seq(ymin, ymax, by = y_step),
       expand = c(0, 0)
     ) +
     ggplot2::theme_bw(base_size = text_size) +

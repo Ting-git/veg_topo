@@ -1,16 +1,5 @@
-#' Plot Correlation between VEGH and R (Radiation)
-#'
-#' @param input A SpatRaster object or a raster file path
-#' @param extent Optional terra::ext() extent.
-#'   If provided and smaller than the input raster extent,
-#'   the raster will be cropped to their intersecting area.
-#' @param text_size Font size
-#' @param x_step Number of x-axis step
-#' @param y_step Number of y-axis step
-#' @return A ggplot2 object
-#' @export
-plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
-                              text_size = 6, x_step = 5, y_step = 5) {
+plot_slope <- function(input, extent = NULL, title_text = "Slope (°)",
+                     text_size = 6, x_step = 5, y_step = 5) {
 
   if (is.character(input)) {
     input <- terra::rast(input)
@@ -20,19 +9,17 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
     stop("Input must be a SpatRaster object or a valid raster file path.")
   }
 
+  # Handle extent and cropping
   if (is.null(extent)) {
     extent <- terra::ext(input)
   } else if (!inherits(extent, "SpatExtent")) {
     stop("`extent` must be a SpatExtent object created by terra::ext().")
   } else {
-
-    # crop the input raster if the plot area is smaller than the original raster
+    # crop if extent smaller than raster
     area_in <- (xmax(input) - xmin(input)) * (ymax(input) - ymin(input))
     area_ex <- (xmax(extent) - xmin(extent)) * (ymax(extent) - ymin(extent))
-
     if (area_ex < area_in) {
       cropped <- terra::crop(input, extent)
-
       if (all(is.na(values(cropped)))) {
         stop("The specified extent does not intersect with the raster. No plot will be generated.")
       } else {
@@ -49,21 +36,12 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
 
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scico::scale_fill_scico(
-      palette = "vik",
-      direction = 1,
-      limits = c(-1, 1),
-      breaks = seq(-1, 1, by = 0.5),
-      midpoint = 0,
-      # name = expression(r[H*","*R]),
-      na.value = NA
-    ) +
+    scale_fill_viridis_c() +
     ggplot2::labs(
       title = title_text,
-      x = NULL,
-      y = NULL
-      # x = "Longitude",
-      # y = "Latitude"
+      x = "Longitude",
+      y = "Latitude",
+      fill = NULL
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
@@ -77,7 +55,7 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
+      legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),
