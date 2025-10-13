@@ -5,12 +5,12 @@
 #'   If provided and smaller than the input raster extent,
 #'   the raster will be cropped to their intersecting area.
 #' @param text_size Font size
-#' @param x_breaks Number of x-axis breaks
-#' @param y_breaks Number of y-axis breaks
+#' @param x_step Number of x-axis breaks
+#' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_terrain_effect <- function(input, extent = NULL, title_text = "Spatial Distribution of Terrain-Induced Solar Radiation Variation",
-                      text_size = 6, x_breaks = 5, y_breaks = 5) {
+plot_terrain_effect <- function(input, extent = NULL, title_text = "Radiation index",
+                      text_size = 6, x_step = 5, y_step = 5) {
 
 
   if (is.character(input)) {
@@ -56,27 +56,28 @@ plot_terrain_effect <- function(input, extent = NULL, title_text = "Spatial Dist
       # limits = c(-1, 1),
       # breaks = seq(-1, 1, by = 0.5),
       midpoint = 1,
-      name = "Ratio",
+      # name = "Ratio",
       na.value = NA
     ) +
     ggplot2::labs(
       title = title_text,
       x = "Longitude",
-      y = "Latitude"
+      y = "Latitude",
+      fill = NULL
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_breaks),
+      breaks = seq(xmin, xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
       limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_breaks),
+      breaks = seq(ymin, ymax, by = y_step),
       expand = c(0, 0)
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
+      legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),

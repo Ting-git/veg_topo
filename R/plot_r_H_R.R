@@ -60,10 +60,9 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
     ) +
     ggplot2::labs(
       title = title_text,
-      x = NULL,
-      y = NULL
-      # x = "Longitude",
-      # y = "Latitude"
+      fill = NULL,
+      x = "Longitude",
+      y = "Latitude"
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
@@ -77,7 +76,7 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
+      legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size),
       legend.title = ggplot2::element_text(size = text_size, face = "bold"),
       axis.title = ggplot2::element_text(size = text_size),

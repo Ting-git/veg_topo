@@ -9,7 +9,7 @@
 #' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_vegh <- function(input, extent = NULL, title_text = "2020 Vegetation Height (m)",
+plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)",
                       text_size = 6, x_step = 5, y_step = 5) {
 
   if (is.character(input)) {
@@ -61,7 +61,8 @@ plot_vegh <- function(input, extent = NULL, title_text = "2020 Vegetation Height
     ggplot2::labs(
       title = title_text,
       x = "Longitude",
-      y = "Latitude"
+      y = "Latitude",
+      fill = NULL
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),

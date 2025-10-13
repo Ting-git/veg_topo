@@ -5,17 +5,197 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-library(terra)      
-library(ggplot2)
-library(patchwork)
-# library(tidyr)
 
+```{r SetUp, include=FALSE, eval=TRUE}
+
+library(terra)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(gridExtra)
+library(patchwork)
+
+# Load configuration and functions
 source(here::here("config.R"))
 ```
 
-## Task
+---
+
+## Introduction
+
+Vegetation height patterns are primarily shaped by topography and hydroclimatic conditions, but human activities such as agriculture, irrigation, and urbanization can modify these natural patterns. For instance:
+
+* **Land clearing** in valley bottoms or flat areas—where trees naturally grow taller due to higher water availability—can **amplify negative deviations** from natural vegetation height patterns.
+* **Irrigation or artificial water management** can **amplify positive deviations** in dry regions.
+* **Large-scale agriculture, forest management, and urbanization** may **dampen the natural topographic influence** on vegetation height.
+
+The main objective of this analysis is to **quantify how land-use intensity alters the natural correlation between r(H~R) and aridity index (MI)**. We focus on near-natural vegetation by masking strongly human-impacted areas (fused > 0.05) and then analyze how r(H~R) varies across land-use intensity bins.
+
+> To obtain the complete resources for this R Markdown file, the analysis should be executed up to `"~/veg_topo/analysis/03_2_r_H_R_maskby_0.05fused.R"`.
+
+---
+
+## Analysis Workflow
+
+1. **Data preparation:** Load raster datasets for correlation (r(H~R)), MI, and fused land-use values. Convert rasters to a data frame for analysis.
+2. **Masking human-impacted areas:** Exclude areas with fused > 0.05 to focus on near-natural conditions.
+3. **Visualization:** Display correlation maps before and after masking to inspect the spatial impact of land-use.
+4. **Binning by land-use intensity:** Divide the fused values into 0.1 intervals to create discrete bins representing different levels of human impact.
+5. **r(MI) relationship analysis:** For each bin:
+   * Plot hexbin scatterplots of MI vs. r(H~R).
+   * Fit linear models to quantify the slope and intercept, reflecting the strength and direction of the natural relationship.
+6. **Comparison across bins:** Examine trends in slope and variability to identify how human activity modifies the natural relationship.
 
 
-```{r mapprint}
+---
+
+## Data Pre
+
+```{r datapre}
+# Load rasters
+fused_5km_r <- rast(fused_5km_file)[[1]]
+mi_5km_r <- rast(mi_5km_file) * 0.0001
+r_H_R <- rast(r_H_R_5km_path)
+
+# Stack and convert to data frame
+df <- as.data.frame(c(r_H_R, fused_5km_r, mi_5km_r), xy = TRUE, na.rm = TRUE)
+colnames(df) <- c("lon", "lat", "r_H_R", "fused", "mi")
+```
+
+---
+
+## Original vs. Masked r(H~R) Maps
+
+The figure below shows the correlation between topography (R) and vegetation height (r(H~R)) before masking. 
+
+After masking areas with fused > 0.05, we focus on near-natural vegetation patterns, allowing us to visualize how human activity alters the topography–vegetation relationship.
+
+### Original map
+
+```{r}
+# Print the firgure comes from Rscript "~/veg_topo/analysis/02_3_1_plot_global_r_H_R.R"
+# knitr::include_graphics(here::here("data/figures/02_r_H_R_map.png"))
+```
+
+### Map after mask
+
+```{r}
+# Print the firgure comes from Rscript "~/veg_topo/analysis/03_2_r_H_R_maskby_0.05fused.R"
+# knitr::include_graphics(here::here("data/figures/03_r_H_R_map_within_0.05fused.png"))
+```
+
+### Data comparison
+
+From the figure below, the human activity does not change the vagetation patterns, 
+
+```{r}
+# knitr::include_graphics(here::here("data/figures/03_r_H_R_comparison_fused_mask.png"))
+```
+
+---
+
+## r(H~R) Across Land-Use Intensity Bins
+
+We bin the data by fused values into 0.1 intervals representing different levels of human impact. 
+
+Within each bin, the relationship between r(H~R) and MI is examined using hexbin plots and linear models. The slope of each model quantifies the natural topography–climate–vegetation interaction under varying levels of human influence.
+
+```{r dfbin}
+
+# Create 0.1 interval bins for 'fused'
+
+df_binned <- df %>%
+  filter(!is.na(fused)) %>%
+  mutate(
+    fused_bin = cut(
+      fused,
+      breaks = seq(0, 1, by = 0.1),
+      include.lowest = TRUE,
+      right = FALSE,
+      labels = paste0(
+        sprintf("%.1f", seq(0.0, 0.9, by = 0.1)),
+        "–",
+        sprintf("%.1f", seq(0.1, 1.0, by = 0.1))
+      ),
+      ordered_result = TRUE 
+    )
+  )
+
+bins <- levels(df_binned$fused_bin)
+```
+
+
+```{r binsplot}
+# Initialize an empty data frame in long format
+slope_df <- data.frame(
+  fused_bin = character(),
+  Coefficient = character(),
+  Value = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through bins to create plots and store regression results
+plot_list <- lapply(bins, function(bin_label) {
+  df_sub <- df_binned %>% filter(fused_bin == bin_label)
+
+  # Fit linear model
+  lm_fit <- lm(r_H_R ~ mi, data = df_sub)
+  slope <- round(coef(lm_fit)[2], 3)
+  intercept <- round(coef(lm_fit)[1], 3)
+
+  # Save results in long format
+  slope_df <<- rbind(
+    slope_df,
+    data.frame(fused_bin = bin_label, Coefficient = "slope", Value = slope),
+    data.frame(fused_bin = bin_label, Coefficient = "intercept", Value = intercept)
+  )
+
+  # Create hexbin plot
+  ggplot(df_sub, aes(x = mi, y = r_H_R)) +
+    geom_hex(bins = 40) +
+    scale_fill_viridis_c(option = "C", trans = "log1p") +
+    suppressMessages(geom_smooth(method = "lm", color = "red", se = FALSE, linewidth = 1)) +
+    coord_cartesian(xlim = c(0, 7), ylim = c(-1, 1)) +
+    annotate("text", x = 6.5, y = 0.9, label = paste0("Slope: ", slope), size = 4, hjust = 1, color = "red") +
+    labs(title = paste("Fused:", bin_label), x = "Aridity Index (MI)", y = "Correlation r(H~R)", fill = "Count") +
+    theme_bw() +
+    theme(legend.position = "none")
+})
+
+```
+
+
+```{r plot_coe}
+# Add combined slope/intercept plot as an extra element
+slope_df$fused_bin <- factor(slope_df$fused_bin, levels = bins, ordered = TRUE)
+
+slope_intercept_plot <- ggplot(slope_df, aes(x = fused_bin, y = Value, color = Coefficient, group = Coefficient)) +
+  geom_point(size = 3) +
+  geom_line(size = 1) +
+  labs(
+    x = "Fused Bin (Land-Use Intensity)",
+    y = "Coefficient Value",
+    color = "Coefficient"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Append the combined plot to plot_list
+plot_list <- c(plot_list, list(slope_intercept_plot))
+```
+
+```{r print-plot,fig.width=15,fig.height=15}
+grid.arrange(grobs = plot_list, ncol = 3)
+```
+
+
+
+```{r cleanup}
+rm(list = ls())
+gc()
+```
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/03_re1_land_use_analysis.Rmd"))
 ```

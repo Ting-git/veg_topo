@@ -37,7 +37,7 @@ source(here::here("config.R"))
 
 ## **Introduction**
 
-Topography redistributes subsurface water, producing wetter valleys that often support higher vegetation productivity and drier hilltops where growth is constrained. Conversely, excessive subsurface water (e.g., shallow water tables) can suppress vegetation via waterlogging and oxygen stress. Topographic position—commonly summarized by the Topographic Wetness Index (TWI)—is therefore a key control on vegetation patterns through its regulation of subsurface moisture. The strength and sign of this control, however, depend strongly on hydroclimatic context. Global analyses show that the correlation between TWI and vegetation height exhibits spatial structure that aligns with aridity gradients and plant functional types. Human activities (land use, irrigation, logging, etc.) can substantially alter or mask these natural relationships.
+Topography redistributes subsurface water, producing wetter valleys that often support higher vegetation productivity and drier hilltops where growth is constrained. Conversely, excessive subsurface water (e.g., shallow water tables) can suppress vegetation via waterlogging and oxygen stress. Topographic position—commonly summarized by the Topographic Wetness Index (TWI)—is therefore a key control on vegetation patterns through its regulation of subsurface moisture. The strength and sign of this control, however, depend strongly on hydroclimatic context. Global analyses show that the correlation between TWI and vegetation height exhibits spatial structure that aligns with Moisture gradients and plant functional types. Human activities (land use, irrigation, logging, etc.) can substantially alter or mask these natural relationships.
 
 Topography also produces strong aspect-driven contrasts (sunny versus shady slopes), which modify the local energy and water balance and thus vegetation productivity. The magnitude and seasonal timing of aspect effects are modulated by latitude and relief: the same slope aspect produces very different insolation regimes in the tropics versus high latitudes, and in gentle versus rugged terrain.
 
@@ -83,7 +83,7 @@ Two complementary control sets are used for site selection and testing:
 
 We use globally resampled raster datasets at 55 km resolution, including:
 
-* **Aridity Index (AI)** – scaled to original values.
+* **Moisture Index (MI)** – scaled to original values.
 * **Fused human influence index** (fused) – measures combined human footprint.
 * **Fraction of water/ice (FWI)** – to exclude non‐vegetated or cold regions.
 * **Relief (standard deviation of elevation)** and **elevation range** from DEM.
@@ -94,9 +94,9 @@ We use globally resampled raster datasets at 55 km resolution, including:
 These datasets are stacked into a single `SpatRaster`, masked to land areas using `rnaturalearth` polygons, and converted into a tidy data frame with longitude, latitude, and variables of interest.
 
 ```{r DataPre}
-# Load resampled raster datasets (AI, TWI, fused)
+# Load resampled raster datasets (MI, TWI, fused)
 
-ai_55km_r <- terra::rast(ai_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
+mi_55km_r <- terra::rast(mi_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_55km_r <- terra::rast(fused_55km_file)
 fwi_55km_r <- terra::rast(fwi_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
@@ -106,7 +106,7 @@ fvegh_55km_r <- terra::rast(fvegh_55km_path)
 mat_55km_r <- terra::rast(mat_55km_file)
 
 # Stack rasters into a single SpatRaster
-stacked <- c(ai_55km_r,
+stacked <- c(mi_55km_r,
              fused_55km_r,
              fwi_55km_r,
              dem_sd_55km_r,
@@ -128,10 +128,10 @@ plot(stacked_masked)
 
 # Convert to data frame
 df <- as.data.frame(stacked_masked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "ai", "fused", "fwi", "relief", "dem_rg", "fpa", "fvegh", "mat")
+colnames(df) <- c("lon", "lat", "mi", "fused", "fwi", "relief", "dem_rg", "fpa", "fvegh", "mat")
 
 # Clean up
-rm(ai_55km_r, fused_55km_r, fwi_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r, fvegh_55km_r, mat_55km_r)
+rm(mi_55km_r, fused_55km_r, fwi_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r, fvegh_55km_r, mat_55km_r)
 gc()
 
 
@@ -164,13 +164,13 @@ ggsave(
 
 To classify the global landscape into meaningful categories, we create bins for key drivers:
 
-* **Aridity index (AI)**: split into five equal‐frequency bins (very dry → very humid).
+* **Moisture index (MI)**: split into five equal‐frequency bins (very dry → very humid).
 * **Relief**: split into three equal‐frequency bins (flat → rugged).
 * **Absolute latitude**: split into five equal‐frequency bins (low → high latitude).
 
 From these, we define two sets of strata:
 
-1. **Strata A** – combination of AI bin and relief bin (for lateral subsurface flow patterns).
+1. **Strata A** – combination of MI bin and relief bin (for lateral subsurface flow patterns).
 2. **Strata B** – combination of latitude bin and relief bin (for insolation‐driven patterns).
 
 Readable text labels (e.g., `"very_dry_flat_relief"`) are assigned for easier interpretation.
@@ -180,26 +180,28 @@ df_binned <- df |>
 
   # create bins
   mutate(
-    ai_bin = cut(ai, breaks = quantile(ai, probs = seq(0, 1, 1/5)), include.lowest = TRUE),
+    # mi_bin = cut(mi, breaks = quantile(mi, probs = seq(0, 1, 1/5)), include.lowest = TRUE),
+    mi_bin = cut(mi, breaks = c(0, 0.03, 0.2, 0.5, 0.65, 0.8, Inf), include.lowest = TRUE),
     relief_bin = cut(relief, breaks = quantile(relief, probs = seq(0, 1, 1/3)), include.lowest = TRUE),
     abs_lat = abs(lat),
     abs_lat_bin = cut(abs_lat, breaks = quantile(abs_lat, probs = seq(0, 1, 1/5)), include.lowest = TRUE)
   ) |>
 
   # Fig. 6 Down Valley drainage
-  mutate(strata_A = interaction(ai_bin, relief_bin, drop = TRUE)) |>
+  mutate(strata_A = interaction(mi_bin, relief_bin, drop = TRUE)) |>
 
   # Fig. 6 Aspect difference
   mutate(strata_B = interaction(abs_lat_bin, relief_bin, drop = TRUE)) |>
 
   # Assign readable labels to each bin
   mutate(
-    ai_label = case_when(
-      ai_bin == levels(ai_bin)[1] ~ "very_dry",
-      ai_bin == levels(ai_bin)[2] ~ "dry",
-      ai_bin == levels(ai_bin)[3] ~ "moderate",
-      ai_bin == levels(ai_bin)[4] ~ "humid",
-      ai_bin == levels(ai_bin)[5] ~ "very_humid"
+    mi_label = case_when(
+      mi_bin == levels(mi_bin)[1] ~ "hyper_arid",
+      mi_bin == levels(mi_bin)[2] ~ "semiarid",
+      mi_bin == levels(mi_bin)[3] ~ "dry_subhumid",
+      mi_bin == levels(mi_bin)[4] ~ "moist_subhumid",
+      mi_bin == levels(mi_bin)[5] ~ "humid",
+      mi_bin == levels(mi_bin)[6] ~ "perhumid"
     ),
     relief_label = case_when(
       relief_bin == levels(relief_bin)[1] ~ "flat_relief",
@@ -217,14 +219,14 @@ df_binned <- df |>
 
   # Combine text labels into new readable strata labels
   mutate(
-    strata_A_label = paste0(ai_label, "_", relief_label),
+    strata_A_label = paste0(mi_label, "_", relief_label),
     strata_B_label = paste0(lat_label, "_", relief_label)
   ) |>
 
-  select(-ai_label, -relief_label, -lat_label)
+  select(-mi_label, -relief_label, -lat_label)
 
 # check data
-table(df_binned$ai_bin)
+table(df_binned$mi_bin)
 table(df_binned$abs_lat_bin)
 table(df_binned$relief_bin)
 
@@ -240,7 +242,7 @@ table(df_binned$strata_B_label)
 
 We retain only regions that meet all of the following:
 
-* AI in very dry, moderate, or very humid categories.
+* MI in very dry, moderate, or very humid categories.
 * Relief in flat or rugged categories.
 * Low human footprint (`fused < 0.05`) and minimal water/ice cover (`fwi < 0.1`).
 * Sufficient vegetation height data (`fVegH > 0.1`).
@@ -252,18 +254,18 @@ We retain only regions that meet all of the following:
 
 df_filt_A <- df_binned |>
   
-  filter(ai_bin %in% levels(ai_bin)[c(1, 3, 5)],
+  filter(mi_bin %in% levels(mi_bin)[c(1, 2, 3, 4, 5, 6)],
          relief_bin %in% levels(relief_bin)[c(1, 3)],) |>
   
   filter(fused < 0.05, fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
   
   filter(fvegh > 0.1) |> # avoid poor data from vegh data of Lang et.al (2023)
   
-  filter(fpa > 0.5) |> # slect regions with 90% protected areas
+  filter(fpa > 0.5) |> # select regions with 50% protected areas
   
   filter(mat > 10) |>       # avoid cold regions for hydrology-specific analysis
   
-  filter(dem_rg < 500)   # consider only gridcells where the range of elevation is less than 500 m.
+  filter(dem_rg < 500)   # # avoid strong influence of elevation differences
 
 # print the numbers of possible region
 table(df_filt_A$strata_A_label)
@@ -280,14 +282,20 @@ We retain only regions with:
 ```{r FilterB, echo = TRUE}
 
 df_filt_B <- df_binned |>
-
-  filter(fused < 0.05, fpa > 0.5, fwi < 0.1 ) |>
   
   filter(
     relief_bin %in% levels(relief_bin)[c(1, 3)],
-    abs_lat_bin %in% levels(abs_lat_bin)[c(1, 3, 5)]
-  )
-
+    abs_lat_bin %in% levels(abs_lat_bin)[c(1, 2, 3, 4, 5)]
+  ) |>
+  
+  filter(fused < 0.05, fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
+  
+  filter(fvegh > 0.1) |> # avoid poor data with very limited vegetated ratio from vegh data of Lang et.al (2023)
+  
+  filter(fpa > 0.5) |> # select regions with 50% protected areas
+  
+  filter(dem_rg < 500)   # avoid strong influence of elevation differences
+  
 # print the numbers of possible region
 table(df_filt_B$strata_B_label)
 ```
@@ -298,8 +306,8 @@ table(df_filt_B$strata_B_label)
 
 From each set of filtered strata, we randomly select **one coarse grid cell** to represent each category combination. This yields:
 
-* **6 samples** for lateral subsurface flow analysis (Strata A).
-* **6 samples** for insolation‐driven analysis (Strata B).
+* **12*3 samples** for lateral subsurface flow analysis (Strata A).
+* **10*3 samples** for insolation‐driven analysis (Strata B).
 
 For each sample, we define a bounding box (±0.25° in both latitude and longitude) and record the central coordinates.
 
@@ -312,7 +320,7 @@ set.seed(2222)
 # for Fig. 6 Down Valley drainage
 df_samples_A <- df_filt_A |>
   group_by(strata_A) |>
-  sample_n(size = 3, replace = FALSE) |>
+  group_modify(~ slice_sample(.x, n = min(3, nrow(.x)))) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,
@@ -328,7 +336,7 @@ df_samples_A <- df_filt_A |>
 # for Fig. 6 Aspect difference
 df_samples_B <- df_filt_B |>
   group_by(strata_B) |>
-  sample_n(size = 3, replace = FALSE) |>
+  group_modify(~ slice_sample(.x, n = min(3, nrow(.x)))) |>
   mutate(
     xmin = lon - 0.25,
     xmax = lon + 0.25,

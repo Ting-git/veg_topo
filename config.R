@@ -20,7 +20,7 @@ twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_
 twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")
 
 # Digital Terrain Model
-dem_30m_copernicus_dir <- "/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m"
+dem_30m_copernicus_dir <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m")
 
 dem_sd_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
 dem_max_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMma_GMTEDma.tif")
@@ -56,7 +56,6 @@ pval_cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"pval
 
 cor_twi_vegh_mask_fused0.05_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mask_fused0.05.nc")
 
-regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regA_cor_twi_vegh")
 
 # fraction of used land
 # flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
@@ -77,8 +76,13 @@ sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/s
 sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_flat_450m.nc")
 sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_terrain_effect_450m.nc")
 
+r_H_R_tiles_dir <-  file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/30_30_deg")
 r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/r_H_R_5km.nc")
 pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/pval_r_H_R_5km.nc")
+
+
+regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regA_cor_twi_vegh_500m")
+regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "data/regB_r_R_H_500m")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")

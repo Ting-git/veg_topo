@@ -1,8 +1,8 @@
 plot_hex_scatter <- function(df,
                              x_var = "twi",
                              y_var = "vegh",
-                             x_text = "Topographic Wetness Index (TWI, unitless)",
-                             y_text = "Vegetation Height (H, m)",
+                             x_text = "Topographic Wetness Index ",
+                             y_text = "Vegetation Height (m)",
                              text_size = 6,
                              bins = 50,
                              add_lm = TRUE) {

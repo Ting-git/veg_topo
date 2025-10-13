@@ -64,6 +64,7 @@ extent <- ext(7, 8, 46, 47) # Aletsch glacier
 dem_crop <- extent_to_tile_ids(extent, tile_size = 1,  return_raster = TRUE, source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
 names(dem_crop) = "dem"
 
+dem_crop 
 # plot(dem_crop)
 ```
 
@@ -274,15 +275,39 @@ ggplot(df_long, aes(x = radiation, fill = source, color = source)) +
 
 ## Spatial Visualization
 
-```{r, fig.width=12,fig.height=6}
-p_splash <- ggplot(df, aes(x = lon, y = lat, fill = splash_rad)) +
+```{r, fig.width=12,fig.height=9}
+p_splash <- ggplot(df, aes(x = lon, y = lat, fill = sw_in_uneven)) +
   geom_tile() +
   scale_fill_viridis_c() +
   labs(
     x = "Longitude",
     y = "Latitude",
-    fill = "SPLASH Radiation",
-    title = "Spatial Distribution of SPLASH Radiation"
+    fill = "SPLASH Surface Radiation",
+    title = "Spatial Distribution of SPLASH Surface Radiation"
+  ) +
+  coord_fixed() +
+  theme_bw()
+
+p_splash_flat <- ggplot(df, aes(x = lon, y = lat, fill = sw_in_flat)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    fill = "SPLASH Flat Surface Radiation",
+    title = "Spatial Distribution of SPLASH Falt Surface Radiation"
+  ) +
+  coord_fixed() +
+  theme_bw()
+
+p_splash_in <- ggplot(df, aes(x = lon, y = lat, fill = index_terrain)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    fill = "SPLASH Radiation Index",
+    title = "Spatial Distribution of SPLASH Radiation Index"
   ) +
   coord_fixed() +
   theme_bw()
@@ -300,7 +325,9 @@ p_meteoland <- ggplot(df, aes(x = lon, y = lat, fill = meteoland_rad)) +
   theme_bw()
 
 # print
-p_dem + p_vegh + p_splash + p_meteoland
+p_dem + p_vegh 
+p_splash + p_meteoland
+p_splash_flat + p_splash_in
 ```
 
 # Calculate r(R~H)
@@ -314,12 +341,13 @@ gc()
 dwin <- 0.05  # ~500m window at equator
 df_win <- create_spatial_windows(df, 
                                  coord_vars = c("lon", "lat"),
-                                 value_vars = c( "dem", "slope", "aspect", "splash_rad", "meteoland_rad", "vegh"),
+                                 value_vars = c( "dem", "slope", "aspect","sw_in_uneven", "sw_in_flat", 
+                                                 "splash_rad", "meteoland_rad","index_terrain","id", "vegh"),
                                  dwin = dwin)  
 colnames(df_win)
 
 df_cor <- calculate_correlation_bywin(df_win, 
-                                      x = "splash_rad",
+                                      x = "index_terrain",
                                       y = "vegh")            
 
 colnames(df_cor)

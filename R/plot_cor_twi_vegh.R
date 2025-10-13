@@ -9,7 +9,7 @@
 #' @param y_breaks Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "r (H ~ TWI)",
+plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H~TWI)",
                               text_size = 6, x_breaks = 5, y_breaks = 5) {
 
   if (is.character(input)) {
@@ -54,13 +54,13 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "r (H ~ TWI)",
       limits = c(-1, 1),
       breaks = seq(-1, 1, by = 0.5),
       midpoint = 0,
-      name = expression(r[H*","*TWI]),
       na.value = NA
     ) +
     ggplot2::labs(
       title = title_text,
       x = "Longitude",
-      y = "Latitude"
+      y = "Latitude",
+      fill = NULL
     ) +
     ggplot2::scale_x_continuous(
       limits = c(xmin, xmax),
