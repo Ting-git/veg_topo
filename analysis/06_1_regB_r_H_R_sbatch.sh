@@ -1,13 +1,14 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="global_r_R_H_5km"
+#SBATCH --job-name="region_r_H_R_500m"
 #SBATCH --time=2:00:00 # ~6.5 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=20
-#SBATCH --mem=500G
+#SBATCH --cpus-per-task=50
+#SBATCH --mem=400G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
+
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4
@@ -38,8 +39,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 05_4_global_r_H_R_5km.R\n");
-source("05_4_global_r_H_R_5km.R")'
+cat("\nRunning script: 06_1_regB_r_H_R.R\n");
+source("06_1_regB_r_H_R.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

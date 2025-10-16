@@ -15,47 +15,33 @@ library(viridis)
 library(gridExtra)
 library(patchwork)
 
-# Load configuration and functions
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
 ```
 
 ---
 
-## Introduction
+## Task
 
-Vegetation height patterns are primarily shaped by topography and hydroclimatic conditions, but human activities such as agriculture, irrigation, and urbanization can modify these natural patterns. For instance:
+The Pearson correlation analysis between vegetation height and topographic wetness index for all 49 tiles has been completed in `~/veg_topo/analysis/05_4_global_r_H_R_5km.R` and `~/veg_topo/analysis/05_5_plot_global_r_H_R_map.R`.
 
-* **Land clearing** in valley bottoms or flat areas—where trees naturally grow taller due to higher water availability—can **amplify negative deviations** from natural vegetation height patterns.
-* **Irrigation or artificial water management** can **amplify positive deviations** in dry regions.
-* **Large-scale agriculture, forest management, and urbanization** may **dampen the natural topographic influence** on vegetation height.
-
-The main objective of this analysis is to **quantify how land-use intensity alters the natural correlation between r(H~R) and aridity index (MI)**. We focus on near-natural vegetation by masking strongly human-impacted areas (fused > 0.05) and then analyze how r(H~R) varies across land-use intensity bins.
-
-> To obtain the complete resources for this R Markdown file, the analysis should be executed up to `"~/veg_topo/analysis/03_2_r_H_R_maskby_0.05fused.R"`.
-
----
-
-## Analysis Workflow
-
-1. **Data preparation:** Load raster datasets for correlation (r(H~R)), MI, and fused land-use values. Convert rasters to a data frame for analysis.
-2. **Masking human-impacted areas:** Exclude areas with fused > 0.05 to focus on near-natural conditions.
-3. **Visualization:** Display correlation maps before and after masking to inspect the spatial impact of land-use.
-4. **Binning by land-use intensity:** Divide the fused values into 0.1 intervals to create discrete bins representing different levels of human impact.
-5. **r(MI) relationship analysis:** For each bin:
-   * Plot hexbin scatterplots of MI vs. r(H~R).
-   * Fit linear models to quantify the slope and intercept, reflecting the strength and direction of the natural relationship.
-6. **Comparison across bins:** Examine trends in slope and variability to identify how human activity modifies the natural relationship.
-
-
+This markdown file focuses on visualizing the plots from scripts.
 ---
 
 ## Data Pre
 
 ```{r datapre}
 # Load rasters
-fused_5km_r <- rast(fused_5km_file)[[1]]
-mi_5km_r <- rast(mi_5km_file) * 0.0001
 r_H_R <- rast(r_H_R_5km_path)
+fused_5km_r <- rast(fused_5km_file)
+mi_5km_r <- rast(mi_5km_file) * 0.0001
 
 # Stack and convert to data frame
 df <- as.data.frame(c(r_H_R, fused_5km_r, mi_5km_r), xy = TRUE, na.rm = TRUE)
@@ -64,32 +50,11 @@ colnames(df) <- c("lon", "lat", "r_H_R", "fused", "mi")
 
 ---
 
-## Original vs. Masked r(H~R) Maps
-
-The figure below shows the correlation between topography (R) and vegetation height (r(H~R)) before masking. 
-
-After masking areas with fused > 0.05, we focus on near-natural vegetation patterns, allowing us to visualize how human activity alters the topography–vegetation relationship.
-
 ### Original map
 
 ```{r}
-# Print the firgure comes from Rscript "~/veg_topo/analysis/02_3_1_plot_global_r_H_R.R"
-# knitr::include_graphics(here::here("data/figures/02_r_H_R_map.png"))
-```
-
-### Map after mask
-
-```{r}
-# Print the firgure comes from Rscript "~/veg_topo/analysis/03_2_r_H_R_maskby_0.05fused.R"
-# knitr::include_graphics(here::here("data/figures/03_r_H_R_map_within_0.05fused.png"))
-```
-
-### Data comparison
-
-From the figure below, the human activity does not change the vagetation patterns, 
-
-```{r}
-# knitr::include_graphics(here::here("data/figures/03_r_H_R_comparison_fused_mask.png"))
+# knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_map.png"))
+# knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_pval.png"))
 ```
 
 ---
@@ -104,8 +69,8 @@ Within each bin, the relationship between r(H~R) and MI is examined using hexbin
 
 # Create 0.1 interval bins for 'fused'
 
-df_binned <- df %>%
-  filter(!is.na(fused)) %>%
+df_binned <- df |>
+  filter(!is.na(fused)) |>
   mutate(
     fused_bin = cut(
       fused,
@@ -189,13 +154,22 @@ grid.arrange(grobs = plot_list, ncol = 3)
 ```
 
 
+## Pearson Correlation (H~R) for 49 Tiles
 
-```{r cleanup}
-rm(list = ls())
-gc()
+```{r ls-figures}
+# list all figures of global correlation (H~TWI) for all 49 tiles
+files <- list.files(path = here::here("data/figures"), pattern = "^05_tile.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+# print(files)
+```
+
+```{r print}
+knitr::include_graphics(files)
 ```
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/03_re1_land_use_analysis.Rmd"))
+rmarkdown::render(here::here("vignettes/05_re5_r_H_R_results.Rmd"))
 ```

@@ -1,6 +1,6 @@
 plot_cci_land_cover <- function(cci_landcover_path, extent = NULL,
                                 title_text = "Land Cover Type",
-                                text_size = 6, x_step = 5, y_step = 5) {
+                                text_size = 12, x_step = 10, y_step = 10) {
 
   # Load raster
   lc <- terra::rast(cci_landcover_path)
@@ -75,10 +75,10 @@ plot_cci_land_cover <- function(cci_landcover_path, extent = NULL,
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
       legend.position = "none",
-      legend.text = ggplot2::element_text(size = text_size),
-      legend.title = ggplot2::element_text(size = text_size, face = "bold"),
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )

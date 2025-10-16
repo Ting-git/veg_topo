@@ -1,23 +1,38 @@
-# plot Google satellite imagine by ext
-plot_google_img <- function(extent = NULL) {
+
+plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
+                            text_size = 12) {
+
+  # ---- Register Google API key ----
   api_key <- Sys.getenv("GOOGLE_API_KEY")
   register_google(key = api_key)
 
-  earth_circumference <- 40075017  # 赤道周长（米）
-  map_width_pixels <- 640 * 2  # Google Maps 默认高清尺寸（size=640, scale=2）
-  region_width <- xmax(extent) - xmin(extent)  # 单位：度
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
+
+  # ----Compute zoom ----
+  earth_circumference <- 40075017
+  region_width <- xmax - xmin
   region_width_meters <- region_width * 111000
+  zoom_level <- ceiling(log2(earth_circumference / region_width_meters))
+  zoom_level <- max(1, min(zoom_level, 21))
 
-  required_zoom <- log2(earth_circumference / region_width_meters)
-  zm <- ceiling(required_zoom)
-  zm <- max(1, min(zm, 21))  # 限制范围
+  # ---- Fetch map ----
+  bbox <- c(left = xmin, bottom = ymin, right = xmax, top = ymax)
+  satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zoom_level)
 
-  bbox <- c(left = xmin(extent), bottom = ymin(extent), right = xmax(extent), top = ymax(extent))
+  # ---- Plot ----
+  p <- ggmap(satellite_map) +
+    labs(title = title, x = "Longitude", y = "Latitude") +
+    theme(
+      axis.title = ggplot2::element_text(size = text_size),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
+      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+    )
 
-  satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zm)
-  p <- ggmap(satellite_map)
+  rm(satellite_map); gc()
 
-  rm(satellite_map)
-  gc()
   return(p)
 }

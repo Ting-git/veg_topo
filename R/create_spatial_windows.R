@@ -15,7 +15,7 @@ create_spatial_windows <- function(input,
   # Convert raster to dataframe if needed
   if (inherits(input, "Raster") || inherits(input, "SpatRaster")) {
     suppressWarnings({
-      df <- as.data.frame(input, xy = TRUE, na.rm = TRUE)
+      df <- as.data.frame(input, xy = TRUE, na.rm = FALSE)
     })
     colnames(df) <- c(coord_vars, value_vars)
   } else if (is.data.frame(input)) {

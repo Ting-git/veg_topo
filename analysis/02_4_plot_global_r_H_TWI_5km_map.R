@@ -6,7 +6,16 @@ library(scico)
 library(rnaturalearth)
 library(sf)
 
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
 source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_cor_pval.R"))
 
@@ -14,18 +23,16 @@ source(here::here("R/plot_cor_pval.R"))
 # load coast outline, vector data
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
-# load correlation data, raster data
-cor_r <- terra::rast(cor_twi_vegh_mosaic_file)
-
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
 
 p_cor <- plot_cor_twi_vegh(
-  input = cor_r[[1]],
+  input = cor_twi_vegh_mosaic_file,
   extent = ext_global,
   title = "VEGH-TWI Pearson Correlation Map",
-  text_size = 16,
-  x_breaks = 30,
-  y_breaks = 30
+  text_size = 12,
+  x_step = 30,
+  y_step = 30,
+  fix_aspect = FALSE
 ) +
   geom_sf(data = coast,
           colour = 'black',
@@ -33,11 +40,11 @@ p_cor <- plot_cor_twi_vegh(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/02_cor_twi_vegh_map.png"),
+  filename = file.path(project_root, "data/figures/02_r_H_TWI_5km_map.png"),
   plot = p_cor,
-  width = 30,
-  height = 15,
-  dpi = 300,
+  width = 14,
+  height = 7,
+  dpi = 600,
   units = "in"
 )
 
@@ -45,7 +52,11 @@ ggsave(
 
 p_pval <-  plot_cor_pval(
   input = pval_cor_twi_vegh_mosaic_file,
-  extent = ext_global
+  extent = ext_global,
+  text_size = 14,
+  x_step = 30,
+  y_step = 30,
+  fix_aspect = FALSE
 ) +
   geom_sf(data = coast,
           colour = 'black',
@@ -53,10 +64,10 @@ p_pval <-  plot_cor_pval(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/02_cor_p_val_twi_vegh_map.png"),
+  filename = file.path(project_root, "data/figures/02_r_H_TWI_5km_pval.png"),
   plot = p_pval,
-  width = 30,
-  height = 15,
-  dpi = 300,
+  width = 14,
+  height = 7,
+  dpi = 600,
   units = "in"
 )

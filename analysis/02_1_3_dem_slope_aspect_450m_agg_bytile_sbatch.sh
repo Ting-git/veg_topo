@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="global_r_R_H_5km"
-#SBATCH --time=2:00:00 # ~6.5 min
+#SBATCH --job-name="DEM_26450"
+#SBATCH --time=4:00:00
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=20
-#SBATCH --mem=500G
+#SBATCH --cpus-per-task=110
+#SBATCH --mem=200G  # set 880G on first running, but don't need so much
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -26,8 +26,6 @@ echo "Job name: $SLURM_JOB_NAME"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
-echo "CPU cores allocated: $SLURM_CPUS_PER_TASK"
-echo "Memory allocated: $SLURM_MEM_PER_NODE"
 echo "=================================================="
 
 # Force Rscript to use the same library paths as RStudio Server
@@ -35,11 +33,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-));
-cat("Session info:\n");
-sessionInfo();
-cat("\nRunning script: 05_4_global_r_H_R_5km.R\n");
-source("05_4_global_r_H_R_5km.R")'
+)); cat("Running script: 02_1_3_dem_slope_aspect_450m_agg_bytile.R\n"); source("02_1_3_dem_slope_aspect_450m_agg_bytile.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
@@ -47,9 +41,7 @@ echo "=================================================="
 echo "Job finished on: $(date --rfc-3339=seconds)"
 echo "Exit status: $EXIT_STATUS"
 echo "Job name: $SLURM_JOB_NAME"
-echo "Job ID: $SLURM_JOB_ID"
 echo "=================================================="
 
 # Exit with the same status as the R script
 exit $EXIT_STATUS
-

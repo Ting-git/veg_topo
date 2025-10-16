@@ -36,14 +36,27 @@
 #' }
 #'
 #' @export
-plot_kmeans_map <- function(raster, fill_colors, title_text = NULL,
-                            highlight_cluster = NULL, cluster_labels = NULL) {
+plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster map (k=8)",
+                            highlight_cluster = NULL, cluster_labels = NULL,
+                            text_size = 12, x_step = 30, y_step = 30) {
 
   # Remove names from colors
   fill_colors <- unname(fill_colors)
 
+  # ---- Load raster ----
+  if (is.character(input)) input <- terra::rast(input)
+  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
+
+  # ---- Extract extent boundaries ----
+  # ext_global from `config.R`
+  xmin <- terra::xmin(ext_global)
+  xmax <- terra::xmax(ext_global)
+  ymin <- terra::ymin(ext_global)
+  ymax <- terra::ymax(ext_global)
+
   # Determine final cluster levels
-  raster <- as.factor(raster)
+  raster <- as.factor(input)
+
   if (!is.null(cluster_labels)) {
     # Assign sorted levels using user-provided labels
     levels_df <- data.frame(value = as.numeric(names(cluster_labels)),   # must be numeric
@@ -72,10 +85,8 @@ plot_kmeans_map <- function(raster, fill_colors, title_text = NULL,
     final_levels
   }
 
-  text_size = 18
-
   # Create ggplot
-  ggplot() +
+  p <- ggplot() +
     tidyterra::geom_spatraster(
       data = raster,
       aes(fill = after_stat(as.factor(value)), alpha = after_stat(as.factor(value))),
@@ -92,20 +103,30 @@ plot_kmeans_map <- function(raster, fill_colors, title_text = NULL,
         nrow = 1
       )
     ) +
+    guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     scale_alpha_manual(values = alpha_values, guide = "none") +
     labs(title = title_text) +
-    scale_x_continuous(expand = c(0, 0), breaks = seq(-180, 180, by = 30)) +
-    scale_y_continuous(expand = c(0, 0), limits = c(-60, 85), breaks = seq(-60, 90, by = 30)) +
-    theme_bw(base_size = text_size) +
-    theme(
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
-      plot.title.position = "panel",
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+    ggplot2::scale_x_continuous(
+      limits = c(xmin, xmax),
+      breaks = seq(xmin, xmax, by = x_step),
+      expand = c(0, 0)
+    ) +
+    ggplot2::scale_y_continuous(
+      limits = c(ymin, ymax),
+      breaks = seq(ymin, ymax, by = y_step),
+      expand = c(0, 0)
+    ) +
+    ggplot2::theme_bw(base_size = text_size) +
+    ggplot2::theme(
       legend.position = "bottom",
       legend.box = "horizontal",
-      legend.text = ggplot2::element_text(size = text_size),
-      legend.title = ggplot2::element_text(size = text_size, face = "bold")
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      axis.title = ggplot2::element_text(size = text_size),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
+      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      plot.title.position = "panel"
     )
 
+  return(p)
 }

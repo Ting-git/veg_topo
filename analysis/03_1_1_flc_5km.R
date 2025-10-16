@@ -37,7 +37,7 @@ source(here::here("R/mosaic_tiles.R"))
 tiles_info <- readRDS(valid_tiles_info_path)
 
 # ------------------------- Set output directory -------------------------------
-tile_output_dir <- file.path(veg_topo_extr_dir, "data/global_flc_5km/30_30_deg_tiles")
+tile_output_dir <- file.path(veg_topo_extr_dir, "data/global_flc_5km/30_30_deg")
 if (!dir.exists(tile_output_dir)) {
   dir.create(tile_output_dir, recursive = TRUE)
 }

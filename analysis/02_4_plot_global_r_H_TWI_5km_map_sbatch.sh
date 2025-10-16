@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="global_r_R_H_5km"
-#SBATCH --time=2:00:00 # ~6.5 min
+#SBATCH --job-name="map_r_H_TWI_5km"
+#SBATCH --time=2:00:00 # ~ 2.5 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=20
-#SBATCH --mem=500G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=200G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -38,8 +38,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 05_4_global_r_H_R_5km.R\n");
-source("05_4_global_r_H_R_5km.R")'
+cat("\nRunning script: 02_4_plot_global_r_H_TWI_5km_map.R\n");
+source("02_4_plot_global_r_H_TWI_5km_map.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
@@ -53,3 +53,4 @@ echo "=================================================="
 # Exit with the same status as the R script
 exit $EXIT_STATUS
 
+#

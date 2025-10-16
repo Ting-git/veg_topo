@@ -1,0 +1,160 @@
+---
+title: "Pearson's r (H~TWI) Calculation in Sample Regions"
+author: "Ting Tan"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Task
+
+The Pearson correlation analysis between vegetation height and topographic wetness index for all automaticlly selected region has been completed in `~/veg_topo/analysis/04_3_regional_twi_vegh_cor.R`.
+
+This markdown file focuses on visualizing the results, generating plots for each tile for easier inspection and interpretation.
+
+### hyper_arid_flat_relief
+
+```{r}
+
+# list all figures of global correlation (H~TWI) for all 49 tiles
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_hyper_arid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### hyper_arid_rugged_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_hyper_arid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### semiarid_flat_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_semiarid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### semiarid_rugged_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_semiarid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### dry_subhumid_flat_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_dry_subhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### dry_subhumid_rugged_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_dry_subhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### moist_subhumid_flat_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_moist_subhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+
+### moist_subhumid_rugged_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_moist_subhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### perhumid_flat_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_perhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### perhumid_rugged_relief
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^04_perhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+
+```{r, include=FALSE, eval=FALSE}
+# This code will neither run nor show in the output
+rmarkdown::render(here::here("vignettes/04_re3.Rmd"))
+```
+

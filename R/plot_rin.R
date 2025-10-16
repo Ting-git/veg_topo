@@ -9,45 +9,39 @@
 #' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_terrain_effect <- function(input, extent = NULL, title_text = "Radiation index",
-                      text_size = 6, x_step = 5, y_step = 5) {
+plot_rin <- function(input, extent = NULL, title_text = "Radiation index",
+                     text_size = 12, x_step = 10, y_step = 10) {
 
 
-  if (is.character(input)) {
-    input <- terra::rast(input)
-  }
+  # ---- Load raster ----
+  if (is.character(input)) input <- terra::rast(input)
+  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
 
-  if (!inherits(input, "SpatRaster")) {
-    stop("Input must be a SpatRaster object or a valid raster file path.")
-  }
-
+  # ---- Handle extent and optional cropping ----
   if (is.null(extent)) {
     extent <- terra::ext(input)
   } else if (!inherits(extent, "SpatExtent")) {
-    stop("`extent` must be a SpatExtent object created by terra::ext().")
+    stop("`extent` must be a SpatExtent object from terra::ext().")
   } else {
-
-    # crop the input raster if the plot area is smaller than the original raster
-    area_in <- (xmax(input) - xmin(input)) * (ymax(input) - ymin(input))
-    area_ex <- (xmax(extent) - xmin(extent)) * (ymax(extent) - ymin(extent))
+    # Crop raster if extent is smaller
+    area_in <- (terra::xmax(input) - terra::xmin(input)) * (terra::ymax(input) - terra::ymin(input))
+    area_ex <- (terra::xmax(extent) - terra::xmin(extent)) * (terra::ymax(extent) - terra::ymin(extent))
 
     if (area_ex < area_in) {
       cropped <- terra::crop(input, extent)
-
-      if (all(is.na(values(cropped)))) {
-        stop("The specified extent does not intersect with the raster. No plot will be generated.")
-      } else {
-        input <- cropped
-        message("Raster has been cropped to the intersecting area of the extent.")
-      }
+      if (all(is.na(terra::values(cropped)))) stop("Extent does not intersect raster.")
+      input <- cropped
+      message("Raster cropped to specified extent.")
     }
   }
 
-  xmin <- extent$xmin
-  xmax <- extent$xmax
-  ymin <- extent$ymin
-  ymax <- extent$ymax
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
 
+  # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
@@ -56,9 +50,9 @@ plot_terrain_effect <- function(input, extent = NULL, title_text = "Radiation in
       # limits = c(-1, 1),
       # breaks = seq(-1, 1, by = 0.5),
       midpoint = 1,
-      # name = "Ratio",
       na.value = NA
     ) +
+    guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
       x = "Longitude",
@@ -78,10 +72,10 @@ plot_terrain_effect <- function(input, extent = NULL, title_text = "Radiation in
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
       legend.position = "right",
-      legend.text = ggplot2::element_text(size = text_size),
-      legend.title = ggplot2::element_text(size = text_size, face = "bold"),
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )

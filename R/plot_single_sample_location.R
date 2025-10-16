@@ -17,18 +17,20 @@ get_region_bounds <- function(lon, lat) {
   }
 }
 
-plot_single_sample_location <- function(x, y, tile_id, text_size = 6) {
-
-  # load word map
+plot_single_sample_location <- function(x, y, tile_id, text_size = 12) {
+  # Load world map
   world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 
-  # get display extend
+  # Get display extent based on coordinates
   bounds <- get_region_bounds(x, y)
 
-  # create dataframe
+  # Create tile dataframe
   tile <- data.frame(xmid = x, ymid = y)
 
-  # plot
+  xmin <- bounds$xlim[1]; xmax <- bounds$xlim[2]
+  ymin <- bounds$ylim[1]; ymax <- bounds$ylim[2]
+
+  # Plot
   p <- ggplot2::ggplot(data = world) +
     ggplot2::geom_sf(fill = "gray95", color = "gray70") +
     ggplot2::geom_point(data = tile, aes(x = xmid, y = ymid), color = "red", size = 3) +
@@ -43,16 +45,29 @@ plot_single_sample_location <- function(x, y, tile_id, text_size = 6) {
       y = "Latitude",
       fill = NULL
     ) +
+    ggplot2::scale_x_continuous(
+      limits = c(xmin, xmax),
+      breaks = seq(ceiling(ymin/30)*30, floor(ymax/30)*30, by = 30),
+      expand = c(0, 0)
+    ) +
+    ggplot2::scale_y_continuous(
+      limits = c(ymin, ymax),
+      breaks = seq(ceiling(ymin/30)*30, floor(ymax/30)*30, by = 30),
+      expand = c(0, 0)
+    ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      # legend.position = "right",
-      # legend.text = ggplot2::element_text(size = text_size),
-      # legend.title = ggplot2::element_text(size = text_size, face = "bold"),
+      legend.position = "none",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
-      plot.title.position = "panel"
+      plot.title.position = "panel",
+      panel.grid.major = ggplot2::element_line(color = "gray80", linewidth = 0.5),
+      panel.grid.minor = ggplot2::element_line(color = "gray90", linewidth = 0.25)
     )
 
   return(p)
 }
+
