@@ -1,6 +1,6 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="global_r_R_H_5km"
-#SBATCH --time=2:00:00 # ~6.5 min
+#SBATCH --time=4:00:00 # ~84 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=20

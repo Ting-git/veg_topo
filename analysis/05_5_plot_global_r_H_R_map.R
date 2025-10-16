@@ -34,7 +34,7 @@ p_r <- plot_r_H_R(
   y_step = 30
 ) + guides(fill = guide_colorbar(
   title.position = "left",
-  barwidth = grid::unit(0.2, "in"),
+  barwidth = grid::unit(0.1, "in"),
   barheight = grid::unit(5, "in")
 )) +
   geom_sf(data = coast,
@@ -67,7 +67,7 @@ p_pval <-  plot_cor_pval(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/05_pval_r_H_R_5km_map.png"),
+  filename = file.path(project_root, "data/figures/05_r_H_R_5km_pval.png"),
   plot = p_pval,
   width = 14,
   height = 7,

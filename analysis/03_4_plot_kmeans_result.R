@@ -115,7 +115,7 @@ combined_plot <- (
 ggsave(
   filename = here::here("data/figures/03_kmeans_8c_data_distribution.png"),
   plot = combined_plot,
-  width = 8, height = 6, dpi = 300
+  width = 14, height = 10, dpi = 600
 )
 
 # ---- 5. Cluster Biome Composition (Absolute Counts) ----
@@ -170,8 +170,8 @@ p_8c_biome_counts <- ggplot(df_biome_summary_counts, aes(x = cluster8c, y = coun
 ggsave(
   filename = here::here("data/figures/03_kmeans_8c_biome_counts.png"),
   plot = p_8c_biome_counts,
-  width = 8,
+  width = 14,
   height = 10,
-  dpi = 300
+  dpi = 600
 )
 

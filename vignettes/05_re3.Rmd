@@ -25,7 +25,17 @@ library(sf)
 
 # ------Load configuration and helper functions---------------------------------
 
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+  workers = 16 # don't do it on worksation
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+  workers = 100
+}
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/mosaic_tiles.R"))
@@ -41,6 +51,8 @@ source(here::here("R/plot_single_sample_location.R"))
 source(here::here("R/plot_google_img.R"))
 # source(here::here("R/plot_cci_land_cover.R"))
 source(here::here("R/plot_fused.R"))
+source(here::here("R/plot_cor_pval.R"))
+source(here::here("R/plot_cor_twi_vegh.R"))
 
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
@@ -81,164 +93,210 @@ tiles_info <- data.frame(
     "3e_high_latitude_southwest_Yukon",
     "3f_boreal_forest_Alaska"
   ),
-  ymin = c(46, 31.5, 37.5, 43, 43.8, 61.5, 64),
+  ymin = c(46.8, 31.5, 37.5, 43, 43.8, 61.5, 64),
   ymax = c(47, 32.5, 38.5, 44, 44.1, 62.5, 65),
-  xmin = c(7, -105, -120.5, -115.8, -115.5, -138.5, -148),
+  xmin = c(7.8, -105, -120.5, -115.8, -115.5, -138.5, -148),
   xmax = c(8, -104.5, -119.5, -114.8, -114.5, -137.5, -147)
 )
 
-# center location
-tiles_info$xmid <- (tiles_info$xmax + tiles_info$xmin) / 2
-tiles_info$ymid <- (tiles_info$ymax + tiles_info$ymin) / 2
+```
+
+```{r, eval=FALSE}
+regB_row <- tiles_info[1, ]
+output_dir = tempdir()
+text_size = 12
+fig_width = 14
+fig_height = 18
+
 ```
 
 ---
 
 ## Global analysis on validation regions
 
-```{r, eval=FALSE}
-process_tile_win_5km <- function(tile_row,
-                         # sw_in_terrain_effect_450m_path = sw_in_terrain_effect_450m_path,
-                         # vegh_450m_mosaic_path = vegh_450m_mosaic_path,
-                         # dem_30m_copernicus_dir = dem_30m_copernicus_dir,
-                         # r_H_R_5km_path = r_H_R_5km_path,
-                         out_dir = "data/figures",
-                         text_size = 12,
-                         fig_width = 14,
-                         fig_height = 20
-) {
-  
-  # tile info
-  tile_id <- tile_row$tile_id
-  tile_extent <- terra::ext(tile_row$xmin,
-                            tile_row$xmax,
-                            tile_row$ymin,
-                            tile_row$ymax)
-  tile_xmid <- (tile_row$xmin + tile_row$xmax) / 2
-  tile_ymid <- (tile_row$ymin + tile_row$ymax) / 2
+```{r res1, eval=FALSE}
+process_r_H_R_5km <- function(tile_row, output_dir = tempdir(),
+                                text_size = 12, fig_width = 14, fig_height = 18) {
 
-  tictoc::tic(paste0("Processing tile: ", tile_id))
-  
-  # ---- Load rasters ----
-  terrain_effect_r <- terra::rast(sw_in_terrain_effect_450m_path)
-  terrain_effect_rc <- terra::crop(terrain_effect_r, tile_extent)
-  
-  vegh_r <- terra::rast(vegh_450m_mosaic_path)
-  vegh_rc <- terra::crop(vegh_r, tile_extent)
-  
-  # Stack and name layers
-  stacked <- c(terrain_effect_rc, vegh_rc)
-  names(stacked) <- c("rin", "vegh")
-  
-  # Load DEM
-  dem_crop <- extent_to_tile_ids(
-    tile_extent,
-    tile_size = 1,
-    return_raster = TRUE,
-    source = "copernicus_dem_30m",
-    tiles_dir = dem_30m_copernicus_dir
-  )
-  names(dem_crop) <- "dem"
-  
-  # ---- Aggregate DEM and calculate slope/aspect ----
-  aligned <- aggregate_topography(dem_crop,
-                                  res_tar = NULL,
-                                  target = vegh_rc,
-                                  if_resample = TRUE)
-  
-  # ---- Spatial windows and correlation ----
-  df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"))
-  df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
-  cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
-  
-  # ---- Generate plots ----
-  p_dem <- plot_dem(aligned[["dem"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_slope <- plot_slope(aligned[["slope"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_aspect <- plot_aspect(aligned[["aspect"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_rin <- plot_rin(terrain_effect_rc, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = tile_extent, title_text = "Pre. Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_google <- plot_google_img(extent = tile_extent)
-  p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
+  tryCatch({
 
-  p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh",
-                                x_text = "Radiation index", y_text = "Vegetation height (m)",
-                                text_size = text_size)
-  p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size)
-  # ---- Combine plots ----
-  final_plot <- ((p_dem + p_slope + p_aspect) /
-                 (p_r_H_R + p_vegh + p_rin) /
-                 (p_r_H_R2 + p_location + p_scatter))  /
-                 (p_google + p_fused) +
-                 plot_annotation(title = tile_id) +
-                 plot_layout(heights = c(1, 1, 1, 1))
-  
-  # ---- Save plot ----
-  out_file <- here::here(file.path(out_dir, paste0("05_", tile_id, "_win_5km_plots.png")))
-  ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
-  
-  # ---- Memory cleanup ----
-  rm(terrain_effect_r, terrain_effect_rc, vegh_r, vegh_rc, stacked,
-     dem_crop, aligned, df_win, df_cor, cor_r,
-     p_dem, p_slope, p_aspect, p_vegh, p_rin, p_fused, p_google, p_r_H_R, p_r_H_R2, p_scatter, p_location, final_plot)
-  gc(verbose = FALSE)
-  
-  tictoc::toc()
-  return(out_file)
+
+    # --- Tile info ---
+    tile_id <- tile_row$tile_id
+    tile_extent <- terra::ext(tile_row$xmin, tile_row$xmax, tile_row$ymin, tile_row$ymax)
+    tile_xmid <- (tile_row$xmin + tile_row$xmax)/2
+    tile_ymid <- (tile_row$ymin + tile_row$ymax)/2
+
+    tictoc::tic(paste0("Processing tile: ", tile_id))
+    t0 <- Sys.time()
+
+    # --- TWI Raster ---
+    twi_rc <- terra::rast(twi_450m_mosaic_clean_path) |> terra::crop(tile_extent)
+    twi_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_twi_450m.nc"))
+    terra::writeCDF(twi_rc, twi_tmp_path, varnames = "twi", overwrite = TRUE)
+    rm(twi_rc); gc()
+    twi_rc <- terra::rast(twi_tmp_path)
+    names(twi_rc) <- "twi"
+    message("Saved temporary TWI raster: ", twi_tmp_path)
+
+
+    # --- Vegetation Height Raster ---
+    vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(tile_extent)
+    vegh_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_vegh_450m.nc"))
+    terra::writeCDF(vegh_rc, vegh_tmp_path, varnames = "vegh",overwrite = TRUE)
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(vegh_tmp_path)
+    names(vegh_rc) <- "vegh"
+    message("Saved temporary vegetation height raster: ", vegh_tmp_path)
+
+    # --- Radiation index of terrain effect ---
+    rin_rc <- terra::rast(sw_in_terrain_effect_450m_path) |> terra::crop(tile_extent)
+    terrain_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_terrain_effect_450m.nc"))
+    terra::writeCDF(rin_rc, terrain_tmp_path, varnames = "rin", overwrite = TRUE)
+    rm(rin_rc); gc()
+    rin_rc <- terra::rast(terrain_tmp_path)
+    names(rin_rc) <- "rin"
+    message("Saved temporary radiation index raster: ", terrain_tmp_path)
+
+    # # --- Elevation and radiation Raster ---
+    # dem_rc <- extent_to_tile_ids(tile_extent, tile_size = 1, return_raster = TRUE,
+    #                              source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
+    #
+    # # Aggregate DEM and calculate slope/aspect
+    # aligned <- aggregate_topography(
+    #   dem_rc,
+    #   res_tar = NULL,
+    #   target = twi_rc,
+    #   if_resample = TRUE
+    # )
+    # rm(dem_rc); gc()
+
+    # --- Stack and correlation ---
+    stacked <- c(rin_rc, vegh_rc)
+    df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.05)
+    df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
+
+    # --- Save correlation ---
+    cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
+    names(cor_r) <- "r_H_R"
+    cor_nc_path <- file.path(output_dir, paste0("tile_", tile_id, "_r_H_R_5km_map.nc"))
+    terra::writeCDF(cor_r, cor_nc_path, overwrite = TRUE)
+    message("Saved: ", cor_nc_path)
+
+    # --- Save p-value ---
+    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type="xyz", crs="EPSG:4326")
+    names(pval_r) <- "pval_r_H_R"
+    pval_nc_path <- file.path(output_dir, paste0("tile_", tile_id, "_r_H_R_5km_pval.nc"))
+    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
+    message("Saved: ", pval_nc_path)
+
+    # ---- Generate plots ----
+    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_slope <- plot_slope(slope_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_aspect <- plot_aspect(aspect_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+    p_rin <- plot_rin(rin_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+    p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, title_text = "5km: Pearson's r (H~R)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+    p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~R)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_r_H_TWI <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+    p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
+    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    # ---- Combine plots ----
+    final_plot <- (
+      (p_dem + p_slope + p_aspect) /
+        (p_rin + p_vegh + p_fused) /
+        (p_r_H_R + p_p + p_r_H_TWI )  /
+        (p_google + p_location + p_scatter)) +
+      plot_annotation(title = tile_id) +
+      plot_layout(heights = c( 1, 1, 1, 1))
+
+    # ---- Save plot ----
+    out_file <- here::here(file.path(paste0("data/figures/05_validate_", tile_id, "_win_5km_plots.png")))
+    ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
+
+    # ---- Memory cleanup ----
+    # list all objects need to be remove
+    rm(
+      p_dem, p_slope, p_aspect, p_p,
+      twi_rc, vegh_rc, rin_rc,
+      stacked, df_win, df_cor, cor_r,pval_r,
+      p_vegh, p_rin, p_r_H_R,
+      p_r_H_TWI, p_google, p_fused, p_scatter, p_location,
+      final_plot)
+    gc(verbose = FALSE)
+
+    # --- Print proccessed time ---
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
+    tictoc::toc()
+
+    return(TRUE)
+
+
+  }, error = function(e) {
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("❌ Tile %s failed after %.1f mins: %s", tile_row$tile_id, elapsed_mins, e$message))
+    return(FALSE)
+  })
 }
 
 
 for (i in seq_len(nrow(tiles_info))) {
-  process_tile_win_5km(tiles_info[i, ])
+  process_r_H_R_5km(tiles_info[i, ])
 }
 ```
 
 ---
 
+
 ## Regional Analysis on validation regions
 
-```{r, eval=FALSE}
-process_tile_win_500m <- function(tile_row,
-                         # sw_in_terrain_effect_450m_path = sw_in_terrain_effect_450m_path,
-                         # vegh_450m_mosaic_path = vegh_450m_mosaic_path,
-                         # dem_30m_copernicus_dir = dem_30m_copernicus_dir,
-                         # r_H_R_5km_path = r_H_R_5km_path,
-                         out_dir = "data/figures",
-                         text_size = 12,
-                         fig_width = 14,
-                         fig_height = 20
-) {
-  
-    # tile info
-  tile_id <- tile_row$tile_id
-  tile_extent <- terra::ext(tile_row$xmin,
-                            tile_row$xmax,
-                            tile_row$ymin,
-                            tile_row$ymax)
-  tile_xmid <- (tile_row$xmin + tile_row$xmax) / 2
-  tile_ymid <- (tile_row$ymin + tile_row$ymax) / 2
+```{r res2, eval=TRUE}
+process_regB_500m <- function(regB_row,
+                              output_dir = tempdir(),
+                              text_size = 12,
+                              fig_width = 14,
+                              fig_height = 18) {
+  tryCatch({
 
-  tictoc::tic(paste0("Processing tile: ", tile_id))
-  
-   # Load TWI Raster ---
-    twi_r <- terra::rast(twi_30m_path)
-    twi_rc <- crop(twi_r, tile_extent, snap = "out")
+    # --- reg info ---
+
+    regB_id <- regB_row$tile_id
+    regB_extent <- terra::ext(regB_row$xmin, regB_row$xmax, regB_row$ymin, regB_row$ymax)
+    regB_xmid <- (regB_row$xmin +regB_row$xmax) / 2
+    regB_ymid <- (regB_row$ymin +regB_row$ymax) / 2
+
+    # Start Processing
+    tictoc::tic(paste0("Processing tile: ", regB_id))
+    t0 <- Sys.time()
+
+    # --- TWI Raster ---
+    twi_rc <- terra::rast(twi_30m_path) |> terra::crop(regB_extent)
+    twi_nc_path <- file.path(output_dir, paste0("regB_tile_", regB_id, "_twi_450m.nc"))
+    terra::writeRaster(twi_rc, twi_nc_path, overwrite = TRUE, 
+                   wopt = list(gdal = c("COMPRESS=LZW")))
+    rm(twi_rc); gc()
+    twi_rc <- terra::rast(twi_nc_path)
     names(twi_rc) <- "twi"
-    
-    twi_rc
+    message("Saved: ", twi_nc_path)
 
-    rm(twi_r);gc()
-
-    # Load and Prepare Vegetation Height Raster ---
-    vegh_rc <- extent_to_tile_ids(tile_extent, tile_size = 3, return_raster = TRUE,
+    # --- Vegetation Height Raster ---
+    vegh_rc <- extent_to_tile_ids(regB_extent, tile_size = 3, return_raster = TRUE,
                                   source = "lang_vegh_10m", tiles_dir = vegh_10m_tiles_dir)
+
+    # Vegetation Height Raster: crop and store in temporary file
+    tmp_vegh <- tempfile(fileext = ".tif")
+    terra::writeRaster(vegh_rc, tmp_vegh, overwrite = TRUE,
+                   wopt = list(gdal = c("COMPRESS=LZW")))
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(tmp_vegh)
     names(vegh_rc) <- "vegh"
 
     # Set 0 as NA value (0m canopy height represents not vegetated or water according to Lang et al. (2019))
-    # Aggregates using TWI data from Ho et al. (2015)
-    # Return the saved path
-    vegh_rr <- raster_preprocess_save(
+    # Aggregate and resample using TWI data from Ho et al. (2025)
+    vegh_rc <- raster_preprocess_save(
       input = vegh_rc,
       target = twi_rc,
       na_value = 0,
@@ -250,23 +308,21 @@ process_tile_win_500m <- function(tile_row,
       if_return_raster = TRUE
     )
 
-  # Load DEM
-  dem_crop <- extent_to_tile_ids(
-    tile_extent,
-    tile_size = 1,
-    return_raster = TRUE,
-    source = "copernicus_dem_30m",
-    tiles_dir = dem_30m_copernicus_dir
-  )
-  names(dem_crop) <- "dem"
-  
-  # ---- Aggregate DEM and calculate slope/aspect ----
-  aligned <- aggregate_topography(dem_crop,
-                                  res_tar = NULL,
-                                  target = twi_rc,
-                                  if_resample = TRUE)
-  
-  # Extract + join
+    # --- Elevation and radiation Raster ---
+    dem_rc <- extent_to_tile_ids(regB_extent, tile_size = 1, return_raster = TRUE,
+                                 source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
+
+    # Aggregate DEM and calculate slope/aspect
+    aligned <- aggregate_topography(
+      dem_rc,
+      res_tar = NULL,
+      target = twi_rc,
+      if_resample = TRUE
+    )
+
+    # --- Data frame Prepare ---
+
+    # Extract + join
     df <- as.data.frame(aligned[["dem"]], xy = TRUE) |>
       left_join(as.data.frame(aligned[["slope"]], xy = TRUE), by = c("x", "y")) |>
       left_join(as.data.frame(aligned[["aspect"]], xy = TRUE), by = c("x", "y")) |>
@@ -274,20 +330,21 @@ process_tile_win_500m <- function(tile_row,
       drop_na()
     names(df) <- c("lon", "lat", "dem", "slope", "aspect")
 
-   if (nrow(df) == 0) {
+    if (nrow(df) == 0) {
       warning(sprintf("No valid cells after drop_na for %s", file))
       return(FALSE)
     }
-    
-    
+
+    # --- Inner Paralell ---
+
     # clean old cluster
     try({
       if (exists("cl")) stopCluster(cl)
       closeAllConnections()
     }, silent = TRUE)
-    
+
     # Inner parallelism
-    num_cores <- 8
+    num_cores <- wokers
     cl <- makeCluster(num_cores)
     registerDoParallel(cl)
 
@@ -300,93 +357,228 @@ process_tile_win_500m <- function(tile_row,
       chunk = chunks,
       .combine = bind_rows,
       .packages = c("dplyr"),
-      .export   = c("calc_sw_in_daily", "calc_sw_in", "julian_day",
-                    "berger_tls", "dcos", "dsin")
+      .export   = c(
+        "calc_sw_in_daily",
+        "calc_sw_in",
+        "julian_day",
+        "berger_tls",
+        "dcos",
+        "dsin"
+      )
     ) %dopar% {
-
       # Calculate sw_in_uneven and sw_in_flat for entire chunk
       sw_in_uneven <- calc_sw_in(chunk$lat, chunk$slope, chunk$aspect, year = 2020)
       sw_in_flat <- calc_sw_in(chunk$lat, rep(0, nrow(chunk)), rep(0, nrow(chunk)), year = 2020)
 
       # Combine results back to dataframe
       chunk |>
-        mutate(sw_in_uneven = sw_in_uneven,
-         sw_in_flat = sw_in_flat,
-         rin = sw_in_uneven / sw_in_flat)
+        mutate(
+          sw_in_uneven = sw_in_uneven,
+          sw_in_flat = sw_in_flat,
+          rin = sw_in_uneven / sw_in_flat
+        )
 
     }
 
+    # Stop cluster
     stopCluster(cl)
     registerDoSEQ()
-    
-    # Build rasters
+
+    # --- Build rasters ---
     crs_out <- terra::crs(aligned[["dem"]])
     sw_in_uneven <- terra::rast(df_calc[, c("lon", "lat", "sw_in_uneven")], type = "xyz", crs = crs_out)
     sw_in_flat <- terra::rast(df_calc[, c("lon", "lat", "sw_in_flat")], type = "xyz", crs = crs_out)
     rin <- terra::rast(df_calc[, c("lon", "lat", "rin")], type = "xyz", crs = crs_out)
     rin <- terra::resample(rin, twi_rc, method = "near")
-  # --- Stack Rasters ---
-    stacked <- c(rin, vegh_rr)
+
+    # --- Stack and Correalation---
+    stacked <- c(rin, vegh_rc)
     names(stacked) <- c("rin", "vegh")
-    
-  # ---- Spatial windows and correlation ----
-  df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.005)
-  df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
-  cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
-  
-  # ---- Generate plots ----
-  p_dem <- plot_dem(aligned[["dem"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_slope <- plot_slope(aligned[["slope"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_aspect <- plot_aspect(aligned[["aspect"]], extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_vegh <- plot_vegh(vegh_rr, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_rin <- plot_rin(rin, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent,  title_text = "500m: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = tile_extent, title_text = "5km: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5)
-  p_google <- plot_google_img(extent = tile_extent)
-  p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)
+    df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.005)
+    df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
 
-  p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh",
-                                x_text = "Radiation index", y_text = "Vegetation height (m)",
-                                text_size = text_size)
-  p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size)
-  # ---- Combine plots ----
-  final_plot <- ((p_dem + p_slope + p_aspect) /
-                 (p_r_H_R + p_vegh + p_rin) /
-                 (p_r_H_R2 + p_location + p_scatter))  /
-                 (p_google + p_fused) +
-                 plot_annotation(title = tile_id) +
-                 plot_layout(heights = c(1, 1, 1, 1))
-  
-  # ---- Save plot ----
-  out_file <- here::here(file.path(out_dir, paste0("05_", tile_id, "_win_500m_plots.png")))
-  ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
-  
-  # ---- Memory cleanup ----
-  # list all objects need to be remove
-  cleanup_vars <- c(
-   "twi_r", "twi_rc",
-   "vegh_rc", "vegh_rr",
-   "dem_crop", "aligned",
-    "df", "chunks", "df_calc",
-   "stacked_r", "df_win", "df_cor", "cor_r",
-    "p_dem", "p_slope", "p_aspect", "p_vegh", "p_rin",
-    "p_r_H_R", "p_r_H_R2", "p_google", "p_fused",
-   "p_scatter", "p_location", "final_plot"
-  )
+    # --- Save correlation ---
+    cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
+    names(cor_r) <- "r_H_R"
 
-  # remove existed variables
-  cleanup_vars <- cleanup_vars[cleanup_vars %in% ls()]
+    # --- Save p-value ---
+    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type = "xyz", crs = "EPSG:4326")
+    names(pval_r) <- "pval_r_H_R"
 
-  rm(list = cleanup_vars)
-  gc(verbose = FALSE)
-  
-  tictoc::toc()
-  return(out_file)
+    # ---- Generate plots ----
+    p_dem <- plot_dem(aligned[["dem"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_slope <- plot_slope(aligned[["slope"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_aspect <- plot_aspect(aligned[["aspect"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_vegh <- plot_vegh(vegh_rc, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_rin <- plot_rin(rin, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_r_H_R <- plot_r_H_R(cor_r, extent = regB_extent, title_text = "500m: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = regB_extent, title_text = "5km: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_google <- plot_google_img(extent = regB_extent) + ggplot2::theme(aspect.ratio = 1)
+    p_fused <- plot_fused(fused_5km_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_location <- plot_single_sample_location(regB_xmid, regB_ymid, regB_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    # ---- Combine plots ----
+    final_plot <- ((p_dem + p_slope + p_aspect) /
+                     (p_r_H_R + p_vegh + p_rin) /
+                     (p_r_H_R2 + p_location + p_scatter) /
+                     (p_google + p_fused)) +
+      plot_annotation(title = regB_id) +
+      plot_layout(heights = c(1, 1, 1, 1))
+
+    # ---- Save plot ----
+    out_file <- here::here(file.path(paste0("data/figures/05_validate_", regB_id, "_win_500m_plots.png")))
+    ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
+
+    # ---- Memory cleanup ----
+    # list all objects need to be remove
+    rm(twi_rc, vegh_rc, dem_rc, aligned,
+       df, chunks, df_calc, stacked, df_win, df_cor, cor_r,pval_r,
+       p_dem, p_slope, p_aspect, p_vegh, p_rin, p_r_H_R,
+       p_r_H_R2, p_google, p_fused, p_scatter, p_location,
+       final_plot)
+    gc(verbose = FALSE)
+
+    # --- Print proccessed time ---
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("Region %s completed [%.1f mins]", regB_id, elapsed_mins))
+    tictoc::toc()
+
+    return(TRUE)
+
+  }, error = function(e) {
+    regB_id <- paste0(regB_row$strata_B_label, "_", regB_row$sample_id)
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("❌ Tile %s failed after %.1f mins: %s", regB_id, elapsed_mins, e$message))
+    return(FALSE)
+  })
 }
 
 for (i in seq_len(nrow(tiles_info))) {
-  process_tile_win_500m(tiles_info[i, ])
+  process_regB_500m(tiles_info[i, ])
 }
+```
+
+---
+### Aletsch Glacier
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_Aletsch.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3a_arid_western_Texas
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3a_arid_western_Texas.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3b_seasonal_arid_California
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3b_seasonal_arid_California.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3c_seasonal_arid_Idaho
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3c_seasonal_arid_Idaho.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3d_winter_snowpacks_Mount_Cramer
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3d_winter_snowpacks_Mount_Cramer.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3e_high_latitude_southwest_Yukon
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3e_high_latitude_southwest_Yukon.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+### 3f_boreal_forest_Alaska
+5km vs 500m
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3f_boreal_forest_Alaska.*\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
+###  5km vs 500m
+```{r}
+# # list all figures
+# # files <- list.files(path = here::here("data/figures"), pattern = "05_validate.*5km_.*\\.png$", full.names = TRUE)
+# 
+# # Print 
+# cat("Found", length(files), "figures:\n")
+# 
+# # print
+# knitr::include_graphics(files)
+```
+
+```{r}
+# 
+# # list all figures
+# files <- list.files(path = here::here("data/figures"), pattern = "05_validate_.*500m_.*\\.png$", full.names = TRUE)
+# 
+# # Print 
+# cat("Found", length(files), "figures:\n")
+# 
+# # print
+# knitr::include_graphics(files)
 ```
 
 

@@ -26,6 +26,7 @@ r_resampled <- terra::resample(r_rasterized, r_tar, method = "bilinear")
 # Write output raster to NetCDF format
 terra::writeCDF(r_resampled, ecoregion_5km_path, overwrite = TRUE, varname = "BIOME_NUM")
 
+if(file.exists(ecoregion_5km_path)) message("Saved: ", ecoregion_5km_path)
 # ---- Check Raster -------------------------------------------------------------------
 
 plot(r_tar)

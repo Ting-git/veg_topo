@@ -2,17 +2,18 @@
 library(terra)
 
 source(here::here("config.R"))
-source(here::here("R/aggregate_byfile.R"))
+source(here::here("R/raster_preprocess_save.R"))
 
 # ------ Aggregation -----------------------------------------------------------
 
-aggregate_byfile(
-  input_path = mi_950m_file,
-  output_path = mi_5km_file,
-  target_path = cor_twi_vegh_mosaic_file,
+raster_preprocess_save(
+  input = mi_950m_file,
+  output = mi_5km_file,
+  target = cor_twi_vegh_mosaic_file,
   varname = "moisture_index",
   if_resample = TRUE,
-  na_value = 0
+  na_value = 0,
+  if_return_raster = FALSE
 )
 
 # check the output

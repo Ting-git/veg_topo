@@ -1,4 +1,5 @@
 
+# ~98 min : UBELIX, 50 cores
 # ------Load required libraries-------------------------------------------------
 
 library(terra)     # For handling raster data
@@ -81,7 +82,7 @@ process_regB_500m <- function(regB_row,
 
     # --- TWI Raster ---
     twi_rc <- terra::rast(twi_30m_path) |> terra::crop(regB_extent)
-    twi_nc_path <- file.path(output_dir, paste0("tile_", regB_id, "_twi_450m.nc"))
+    twi_nc_path <- file.path(output_dir, paste0("regB_tile_", regB_id, "_twi_450m.nc"))
     terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
     rm(twi_rc); gc()
     twi_rc <- terra::rast(twi_nc_path)
@@ -112,7 +113,7 @@ process_regB_500m <- function(regB_row,
       if_mask = TRUE,
       if_return_raster = TRUE
     )
-    vegh_nc_path <- file.path(output_dir, paste0("tile_", regB_id, "_vegh_450m.nc"))
+    vegh_nc_path <- file.path(output_dir, paste0("regB_tile_", regB_id, "_vegh_450m.nc"))
     terra::writeCDF(vegh_rc, vegh_nc_path, varnames="vegh", overwrite = TRUE)
     rm(vegh_rc); gc()
     vegh_rc <- terra::rast(vegh_nc_path)

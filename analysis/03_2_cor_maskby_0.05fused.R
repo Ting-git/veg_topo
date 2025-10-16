@@ -54,17 +54,17 @@ if (file.exists(cor_twi_vegh_mask_fused0.05_file)) {
 p_cor <- plot_cor_twi_vegh(
   input = cor_rm,
   extent = ext_global,
-  title = "VEGH-TWI Pearson Correlation Map (fused < 0.05)",
-  text_size = 14,
-  x_breaks = 30,
-  y_breaks = 30
+  title = "Pearson's r (H~TWI) (fused < 0.05)",
+  text_size = 12,
+  x_step = 30,
+  y_step = 30
 ) +
   geom_sf(data = coast, colour = "black", linewidth = 0.1)
 
 # Save global correlation map
 ggsave(
   filename = file.path(project_root, "data/figures/03_cor_map_within_0.05fused.png"),
-  plot = p_cor, width = 24, height = 11.5, dpi = 300, units = "in"
+  plot = p_cor, width = 14, height = 7, dpi = 600, units = "in"
 )
 
 # ------------------------- Comparison: Before vs After Mask -------------------
@@ -87,9 +87,9 @@ my_colors <- c(
 )
 
 # Density comparison plot
-text_size <- 10
+text_size <- 12
 p_vs <- ggplot(df_all, aes(x = value, fill = source, color = source)) +
-  geom_density(alpha = 0.5, linewidth = 0.8) +
+  geom_density(alpha = 0.5, linewidth = 0.5) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red", linwidth = 1) +
   labs(
     title = "r Value Distribution Before and After Mask (fused < 0.05)",
@@ -114,5 +114,5 @@ p_vs <- ggplot(df_all, aes(x = value, fill = source, color = source)) +
 # Save comparison plot
 ggsave(
   filename = file.path(project_root, "data/figures/03_cor_comparison_fused_mask.png"),
-  plot = p_vs, width = 6, height = 4, dpi = 300, units = "in"
+  plot = p_vs, width = 14, height = 7, dpi = 600, units = "in"
 )

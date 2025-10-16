@@ -21,6 +21,9 @@ twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v2024
 
 # Digital Terrain Model
 dem_30m_copernicus_dir <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m")
+dem_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/dem_450m1.nc")
+slope_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/slope_450m1.nc")
+aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/aspect_450m1.nc")
 
 dem_sd_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
 dem_max_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMma_GMTEDma.tif")

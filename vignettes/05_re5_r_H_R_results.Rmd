@@ -43,6 +43,10 @@ r_H_R <- rast(r_H_R_5km_path)
 fused_5km_r <- rast(fused_5km_file)
 mi_5km_r <- rast(mi_5km_file) * 0.0001
 
+# r_H_R
+# fused_5km_r
+# mi_5km_r
+
 # Stack and convert to data frame
 df <- as.data.frame(c(r_H_R, fused_5km_r, mi_5km_r), xy = TRUE, na.rm = TRUE)
 colnames(df) <- c("lon", "lat", "r_H_R", "fused", "mi")
@@ -53,8 +57,8 @@ colnames(df) <- c("lon", "lat", "r_H_R", "fused", "mi")
 ### Original map
 
 ```{r}
-# knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_map.png"))
-# knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_pval.png"))
+knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_map.png"))
+knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_pval.png"))
 ```
 
 ---

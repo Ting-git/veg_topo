@@ -48,7 +48,7 @@ p_8c  <- plot_kmeans_map(
   kmeans_8c_r,
   fill_colors = fill_colors,
   cluster_labels = cluster_labels,
-  title_text = "K-means Classification Map (K=8)"
+  title_text = "K-means Cluster Map (K=8)"
 ) +
   geom_sf(data = coast, colour = 'black', linewidth = 0.1)
 
@@ -79,9 +79,9 @@ for (i in 1:length(cluster_labels)) {
   ggsave(
     filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", i, ".png")),
     plot = p,
-    width = 30,
-    height = 15,
-    dpi = 300,
+    width = 14,
+    height = 7,
+    dpi = 600,
     units = "in"
   )
 }

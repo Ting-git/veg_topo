@@ -4,7 +4,7 @@ library(terra)
 
 # Load configuration and functions
 source(here::here("config.R"))
-source(here::here("R/aggregate_byfile.R"))
+source(here::here("R/raster_preprocess_save.R"))
 
 # ------ Load Data and MAT calculateion ---------------------------------------------
 
@@ -31,14 +31,15 @@ writeRaster(annual_mean_temp, filename = temp_path, overwrite = TRUE)
 # ------ Aggregation -----------------------------------------------------------
 
 # Aggregation
-aggregate_byfile(
-  input_path = temp_path,
-  output_path = mat_5km_file,
-  target_path = cor_twi_vegh_mosaic_file,
+raster_preprocess_save(
+  input = temp_path,
+  output = mat_5km_file,
+  target = cor_twi_vegh_mosaic_file,
   varname = "mat",
   if_resample = TRUE
 )
 
+if(file.exists(mat_5km_file)) message("Saved: ", mat_5km_file)
 
 # # check the output
 # r2 <- rast(mat_5km_file)

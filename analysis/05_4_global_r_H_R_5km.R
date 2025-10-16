@@ -1,4 +1,4 @@
-# UBELIX: 20 cores, 400G, done [40 min]
+# ~84 min: UBELIX, 20 cores, 500G
 
 # ------Load required libraries-------------------------------------------------
 
