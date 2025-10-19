@@ -34,7 +34,7 @@ colnames(df) <- c("lon", "lat", "cor", "fused", "mi")
 
 # save crs for write NetCDF document
 tar_crs = terra::crs(mi_5km_r)
-rm(mi_5km_r, fused_5km_r, cor_twi_vegh_5km_r, stacked); gc()
+rm(mi_5km_r, fused_5km_r, stacked); gc()
 
 # ----Data-Raw-Density----
 
@@ -74,8 +74,8 @@ plot_density_grid(
   cols,
   main_title = "Standardized variables density distribution",
   nrow = 1,
-  width = 6,
-  height = 2,
+  width = 7,
+  height = 2.5,
   save_path = here::here("data/figures/03_4_kmeans_data_pre_ds.png")
 )
 
@@ -101,17 +101,25 @@ rm(mb_km, df_k); gc()
 
 # ----Save-Cluster-Raster----
 
-colnames(df)
-# Convert clustering results back to raster
-kmeans_8c_r  <- terra::rast(df[, c("lon", "lat", "cluster8c")],
-                            type = "xyz",
-                            crs = tar_crs)
+# Reload an original raster as template
+template_raster <- terra::rast(cor_twi_vegh_5km_r)
 
-# Define output path and write to NetCDF
-terra::writeCDF(kmeans_8c_r ,
+# Create empty raster with same properties as template
+kmeans_8c_r <- terra::rast(template_raster)
+values(kmeans_8c_r) <- NA  # Initialize with NA
+
+# Convert clustering results to spatial points
+df_sf <- sf::st_as_sf(df[, c("lon", "lat", "cluster8c")],
+                      coords = c("lon", "lat"),
+                      crs = tar_crs)
+
+# Rasterize the points
+kmeans_8c_r <- terra::rasterize(df_sf, template_raster, field = "cluster8c")
+
+# Write to NetCDF
+terra::writeCDF(kmeans_8c_r,
                 filename = kmeans_map_8c_path,
                 names = "cluster8c",
                 overwrite = TRUE)
 
 message(paste0("Cluster map saved to: ", kmeans_map_8c_path))
-

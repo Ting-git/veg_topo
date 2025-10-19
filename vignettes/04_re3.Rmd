@@ -16,7 +16,7 @@ This markdown file focuses on visualizing the results, generating plots for each
 ```{r}
 
 # list all figures of global correlation (H~TWI) for all 49 tiles
-files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_hyper_arid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_hyper_arid_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -30,7 +30,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_hyper_arid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_hyper_arid_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -44,7 +44,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_semiarid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_semiarid_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -58,7 +58,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_semiarid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_semiarid_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -72,7 +72,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_dry_subhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_dry_subhumid_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -86,7 +86,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_dry_subhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_dry_subhumid_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -100,7 +100,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_moist_subhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_moist_subhumid_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -115,7 +115,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_moist_subhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_moist_subhumid_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -129,7 +129,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_perhumid_flat_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_perhumid_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -143,7 +143,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^04_perhumid_rugged_relief.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regA_perhumid_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")

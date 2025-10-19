@@ -7,12 +7,9 @@ output: html_document
 
 ## Task
 
-## Task
-
 The Pearson correlation analysis between vegetation height and topographic wetness index for all automaticlly selected regions has been completed in `~/veg_topo/analysis/06_1_regB_r_H_R.R`.
 
 This markdown file focuses on visualizing the plots from the script.
----
 
 ```{r}
 # Automatically select configuration file
@@ -26,7 +23,7 @@ if (hostname == "dash") {
 }
 ```
 
-### low_latitude_flat_relief 
+### low_latitude_flat_relief
 
 ```{r}
 
@@ -40,7 +37,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### low_latitude_rugged_relief 
+### low_latitude_rugged_relief
 
 ```{r}
 
@@ -54,7 +51,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### relatively_low_latitude_flat_relief 
+### relatively_low_latitude_flat_relief
 
 ```{r}
 
@@ -68,7 +65,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### relatively_low_latitude_rugged_relief 
+### relatively_low_latitude_rugged_relief
 
 ```{r}
 
@@ -82,7 +79,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### mid_latitude_flat_relief 
+### mid_latitude_flat_relief
 
 ```{r}
 
@@ -96,7 +93,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### mid_latitude_rugged_relief 
+### mid_latitude_rugged_relief
 
 ```{r}
 
@@ -110,20 +107,21 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-
 ### relatively_high_latitude_flat_relief
 
-```{r}
+{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_high_latitude_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
 
-# Print 
-cat("Found", length(files), "figures:\n")
+files \<- list.files(path = here::here("data/figures"), pattern = "\^06_regB_relatively_high_latitude_flat_relief.\*\_win_500m_plots\\\\.png\$", full.names = TRUE)
+
+# Print
+
+cat("Found", length(files), "figures:\\n")
 
 # print
+
 knitr::include_graphics(files)
-```
 
 ### relatively_high_latitude_rugged_relief
 
@@ -139,7 +137,7 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-### high_latitude_flat_relief 
+### high_latitude_flat_relief
 
 ```{r}
 
@@ -170,4 +168,3 @@ knitr::include_graphics(files)
 # This code will neither run nor show in the output
 rmarkdown::render(here::here("vignettes/06_re1.Rmd"))
 ```
-

@@ -35,19 +35,9 @@ source(here::here("config.R"))
 
 ---
 
-## **Introduction**
+## Task
 
-Topography redistributes subsurface water, producing wetter valleys that often support higher vegetation productivity and drier hilltops where growth is constrained. Conversely, excessive subsurface water (e.g., shallow water tables) can suppress vegetation via waterlogging and oxygen stress. Topographic position—commonly summarized by the Topographic Wetness Index (TWI)—is therefore a key control on vegetation patterns through its regulation of subsurface moisture. The strength and sign of this control, however, depend strongly on hydroclimatic context. Global analyses show that the correlation between TWI and vegetation height exhibits spatial structure that aligns with Moisture gradients and plant functional types. Human activities (land use, irrigation, logging, etc.) can substantially alter or mask these natural relationships.
-
-Topography also produces strong aspect-driven contrasts (sunny versus shady slopes), which modify the local energy and water balance and thus vegetation productivity. The magnitude and seasonal timing of aspect effects are modulated by latitude and relief: the same slope aspect produces very different insolation regimes in the tropics versus high latitudes, and in gentle versus rugged terrain.
-
-To isolate the natural topography–vegetation relationships at fine spatial scales, and to validate the framework of Fan et al. (2019), we focus on regions with minimal human management where vegetation patterns most clearly reflect topographic hydrological and insolation controls. Specifically, we examine how climate–terrain combinations shape down-valley drainage and hydrological isolation (TWI-driven effects), and how latitude–terrain combinations modulate slope-aspect (insolation-driven) effects.
-
----
-
-## **Objective**
-
-Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework. This requires masking or excluding areas where vegetation is primarily controlled by non-topographic drivers, including intensive human management, extreme temperatures, persistent snow or ice, very high wind exposure, coastal or tidal effects, and locations with poor or unreliable data.
+Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework.
 
 ## Pattern taxonomy
 
@@ -79,40 +69,28 @@ Two complementary control sets are used for site selection and testing:
 
 ## Implementation
 
-### Available Data
-
-We use globally resampled raster datasets at 55 km resolution, including:
-
-* **Moisture Index (MI)** – scaled to original values.
-* **Fused human influence index** (fused) – measures combined human footprint.
-* **Fraction of water/ice (FWI)** – to exclude non‐vegetated or cold regions.
-* **Relief (standard deviation of elevation)** and **elevation range** from DEM.
-* **Fraction of protected area (FPA)** – to select minimally disturbed regions.
-* **Fractional vegetation height (fVegH)** from Lang et al. (2023).
-* **Mean annual temperature (MAT)** – to avoid cold‐limited regions.
-
-These datasets are stacked into a single `SpatRaster`, masked to land areas using `rnaturalearth` polygons, and converted into a tidy data frame with longitude, latitude, and variables of interest.
-
 ```{r DataPre}
 # Load resampled raster datasets (MI, TWI, fused)
 
 mi_55km_r <- terra::rast(mi_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_55km_r <- terra::rast(fused_55km_file)
-fwi_55km_r <- terra::rast(fwi_55km_file)
+fbare_55km_r <- terra::rast(fbare_55km_file)
+fwater_55km_r <- terra::rast(fbare_55km_file)
+fsnow_55km_r <- terra::rast(fsnow_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
 dem_rg_55km_r <- terra::rast(dem_rg_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
-fvegh_55km_r <- terra::rast(fvegh_55km_path)
 mat_55km_r <- terra::rast(mat_55km_file)
 
 # Stack rasters into a single SpatRaster
 stacked <- c(mi_55km_r,
              fused_55km_r,
-             fwi_55km_r,
+             fbare_55km_r,
+             fwater_55km_r,
+             fsnow_55km_r,
              dem_sd_55km_r,
              dem_rg_55km_r,
              fpa_55km_r,
-             fvegh_55km_r,
              mat_55km_r)
 
 # Use land polygons to remove ocean area with NA
@@ -124,20 +102,28 @@ land_vect <- vect(land)
 # Crop and mask raster to land
 stacked_masked <- mask(crop(stacked, land_vect), land_vect)
 
-plot(stacked_masked)
-
 # Convert to data frame
 df <- as.data.frame(stacked_masked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "mi", "fused", "fwi", "relief", "dem_rg", "fpa", "fvegh", "mat")
+colnames(df) <- c("lon", "lat", "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg", "fpa", "mat")
 
 # Clean up
-rm(mi_55km_r, fused_55km_r, fwi_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r, fvegh_55km_r, mat_55km_r)
+rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwaetr_55km_r, fsnow_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r,  mat_55km_r)
 gc()
 
 
 # load coast outline, vector data for plotting
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
+```
+```{r}
+# list all figures of input data 
+files <- list.files(path = here::here("data/figures"), pattern = "^04_regional_grid_.*_55km\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
 ```
 
 
@@ -152,7 +138,7 @@ cp_hg <- patchwork::wrap_plots(p_hg)
 ggsave(
   filename = here::here("data/figures/04_variables_hg.png"),
   plot = cp_hg,
-  width = 8,
+  width = 7,
   height = 6,
   dpi = 300,
   units = "in"
@@ -240,16 +226,6 @@ table(df_binned$strata_B_label)
 
 #### For Lateral Subsurface Flow–Dominated Analysis (Strata A)
 
-We retain only regions that meet all of the following:
-
-* MI in very dry, moderate, or very humid categories.
-* Relief in flat or rugged categories.
-* Low human footprint (`fused < 0.05`) and minimal water/ice cover (`fwi < 0.1`).
-* Sufficient vegetation height data (`fVegH > 0.1`).
-* High protection status (`FPA > 0.9`).
-* Warm climate (`MAT > 10 °C`).
-* Moderate elevation range (< 500 m).
-
 ```{r FilterA, echo = TRUE}
 
 df_filt_A <- df_binned |>
@@ -257,11 +233,9 @@ df_filt_A <- df_binned |>
   filter(mi_bin %in% levels(mi_bin)[c(1, 2, 3, 4, 5, 6)],
          relief_bin %in% levels(relief_bin)[c(1, 3)],) |>
   
-  filter(fused < 0.05, fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
+  filter(fused < 0.05, fwater < 0.3, fbare < 0.9, fsnow < 0.1) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, bare land, ice, and snow).
   
-  filter(fvegh > 0.1) |> # avoid poor data from vegh data of Lang et.al (2023)
-  
-  filter(fpa > 0.5) |> # select regions with 50% protected areas
+  # filter(fpa > 0.3) |> # select regions with 50% protected areas
   
   filter(mat > 10) |>       # avoid cold regions for hydrology-specific analysis
   
@@ -288,11 +262,9 @@ df_filt_B <- df_binned |>
     abs_lat_bin %in% levels(abs_lat_bin)[c(1, 2, 3, 4, 5)]
   ) |>
   
-  filter(fused < 0.05, fwi < 0.1, ) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, ice, or snow).
+  filter(fused < 0.05, fwater < 0.3, fbare < 0.9, fsnow < 0.1) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, bare land, ice, and snow).
   
-  filter(fvegh > 0.1) |> # avoid poor data with very limited vegetated ratio from vegh data of Lang et.al (2023)
-  
-  filter(fpa > 0.5) |> # select regions with 50% protected areas
+  # filter(fpa > 0.3) |> # select regions with 50% protected areas
   
   filter(dem_rg < 500)   # avoid strong influence of elevation differences
   
@@ -303,13 +275,6 @@ table(df_filt_B$strata_B_label)
 ---
 
 ### Sampling Representative Locations
-
-From each set of filtered strata, we randomly select **one coarse grid cell** to represent each category combination. This yields:
-
-* **12*3 samples** for lateral subsurface flow analysis (Strata A).
-* **10*3 samples** for insolation‐driven analysis (Strata B).
-
-For each sample, we define a bounding box (±0.25° in both latitude and longitude) and record the central coordinates.
 
 ```{r Sampling}
 # Pick one region (coarse gridcell) representing all combination of bins.

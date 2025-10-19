@@ -25,6 +25,12 @@ cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)
 kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
 ecoregion_r <- terra::rast(ecoregion_5km_path)
 
+mi_5km_r
+fused_5km_r
+cor_twi_vegh_5km_r
+kmeans_8c_r
+ecoregion_r
+
 # Stack rasters and convert to dataframe
 stacked <- c(cor_twi_vegh_5km_r, fused_5km_r, mi_5km_r, kmeans_8c_r, ecoregion_r)
 df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
@@ -115,7 +121,7 @@ combined_plot <- (
 ggsave(
   filename = here::here("data/figures/03_kmeans_8c_data_distribution.png"),
   plot = combined_plot,
-  width = 14, height = 10, dpi = 600
+  width = 14, height = 10, dpi = 300
 )
 
 # ---- 5. Cluster Biome Composition (Absolute Counts) ----

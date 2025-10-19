@@ -65,6 +65,7 @@ results <- future_map(
         fun = mean,
         varname = "vegh",
         if_aggregate = TRUE,
+        if_round_fact = TRUE,
         if_resample = FALSE,
         if_mask = FALSE,
         if_return_raster = FALSE

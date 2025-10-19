@@ -1,5 +1,5 @@
 
-plot_fused <- function(input, extent = NULL, title_text = "fraction of used land",
+plot_fused <- function(input, extent = NULL, title_text = "Land use fraction",
                        text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----

@@ -55,7 +55,7 @@ p_8c  <- plot_kmeans_map(
 # Save plot
 ggsave(
   filename = here::here("data/figures/03_kmeans_gl_map_8c.png"),
-  plot = p_8c, width = 30, height = 15, dpi = 300, units = "in"
+  plot = p_8c, width = 14, height = 7, dpi = 600, units = "in"
 )
 tictoc::toc()
 

@@ -103,7 +103,6 @@ plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster ma
         nrow = 1
       )
     ) +
-    guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     scale_alpha_manual(values = alpha_values, guide = "none") +
     labs(title = title_text) +
     ggplot2::scale_x_continuous(

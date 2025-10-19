@@ -1,46 +1,51 @@
 # ==============================================================================
-# land_use_fraction_pipeline.R
+# 03_1_1_flc_5km.R
 #
-# Processes global land cover tiles to calculate land use fractions (used, bare, water)
-# at 5km resolution. Steps:
-#   1. Setup environment and directories
-#   2. Load tile info and helper functions
-#   3. Parallel process tiles to compute fractions
-#   4. Save tile-level results
-#   5. Mosaic all tiles to global map
-#   6. Resample to target raster
-#   7. Clean intermediate files
-#   8. Save final global outputs as NetCDF
+# Purpose:
+#   Process global land cover tiles to calculate fractions of:
+#     - Vegetation cover (fused)
+#     - Bare ground (fbare)
+#     - Water (fwater)
+#     - Snow/ice (fsnow)
+#   at 5km resolution. Steps:
+#     1. Setup environment and directories
+#     2. Load tile information and helper functions
+#     3. Parallel process each tile to compute fractions
+#     4. Save tile-level results
+#     5. Mosaic all tiles into a global map
+#     6. Resample to reference raster and Save final global outputs as NetCDF
+#     7. Clean intermediate files
 #
-# Dependencies: terra, tidyr, dplyr, purrr, furrr, fs
+# Dependencies: terra, dplyr, tidyr, purrr, furrr, fs
 # ==============================================================================
 
-# Load packages
+# -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-library(tidyr)
 library(dplyr)
+library(tidyr)
 library(purrr)
 library(furrr)
+library(fs)
 
-# Load config and helpers
 source(here::here("config.R"))
 source(here::here("R/create_spatial_windows.R"))
-source(here::here("R/calculate_fraction_land_use.R"))
+source(here::here("R/calculate_fraction_land_cover.R"))
 source(here::here("R/mosaic_tiles.R"))
+source(here::here("R/raster_preprocess_save.R"))
 
-# Read tile information
+message("🌍 Starting land-cover fraction pipeline...")
+
+# -------------------- 2. Load Tile Information --------------------------------
 tiles_info <- readRDS(valid_tiles_info_path)
-
-# Set output directory
 tile_output_dir <- file.path(veg_topo_extr_dir, "data/global_flc_5km/30_30_deg")
 if (!dir.exists(tile_output_dir)) dir.create(tile_output_dir, recursive = TRUE)
+message("✅ Tile output directory: ", tile_output_dir)
 
-# Calculate fraction of land use - parallel processing
+# -------------------- 3. Parallel Tile Processing -----------------------------
 gc()
 plan(multisession, workers = 8)
-
-t00 <- Sys.time()
-message(paste0("Start processing: ", format(t00, "%Y-%m-%d %H:%M:%S")))
+t_start <- Sys.time()
+message("⏱ Pipeline started at: ", format(t_start, "%Y-%m-%d %H:%M:%S"))
 
 results <- future_pmap(
   tiles_info,
@@ -48,26 +53,28 @@ results <- future_pmap(
     args <- list(...)
     tryCatch({
       tile_id <- args$tile_id
+      message("🔹 Processing tile: ", tile_id)
 
-      # Define tile extent and crop landcover data
+      # Define tile extent and crop land cover raster
       ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
       lc_r <- terra::rast(cci_landcover_path, lyrs = "lccs_class")
-      rc <- terra::crop(lc_r, ext)
+      rc   <- terra::crop(lc_r, ext)
 
-      # Track processing time
-      t0 <- Sys.time()
-      print(t0)
+      # Record tile processing start
+      t_tile_start <- Sys.time()
 
       # Create spatial windows and calculate fractions
       df_win <- create_spatial_windows(rc, value_vars = "lccs_class", dwin = 0.05)
       output_file <- file.path(tile_output_dir, paste0("flc_5km_", tile_id, ".nc"))
-      df_flc <- calculate_fraction_land_use(df_win, output_file = output_file)
+      df_flc <- calculate_fraction_land_cover(df_win, output_file = output_file)
 
+      # Log tile completion
       if (file.exists(output_file)) {
-        message(sprintf("Tile %s done [%.1f mins]", tile_id,
-                        difftime(Sys.time(), t0, units = "mins")))
+        elapsed_tile <- difftime(Sys.time(), t_tile_start, units = "mins")
+        message(sprintf("✅ Tile %s completed [%.1f mins]", tile_id, elapsed_tile))
       }
 
+      # Clean tile variables
       rm(lc_r, rc, df_win, df_flc); gc()
       return(list(success = TRUE, error = NULL))
 
@@ -82,29 +89,39 @@ results <- future_pmap(
 
 plan(sequential)
 gc()
+elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
+message(sprintf("📦 All tiles processed [%.1f mins]", elapsed_total))
 
-elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
-message(sprintf("All tiles done [%.1f mins]", elapsed))
+# -------------------- 4. Mosaic All Tiles -------------------------------------
+message("🗺 Mosaicing all tiles into global raster...")
 
-# Mosaic all tiles
 mosaic_r <- mosaic_tiles(input_dir = tile_output_dir)
+message("✅ Mosaic created successfully.")
 
-# Resample mosaic to match reference raster
-cor_r <- terra::rast(cor_twi_vegh_mosaic_file)
-mosaic_rr <- terra::resample(mosaic_r, cor_r, method = "bilinear")
+# -------------------- 5. Resample to Reference Raster -------------------------
+# Set output files and varnames for seperately saving
+output_files <- c(fused_5km_file, fbare_5km_file, fwater_5km_file, fsnow_5km_file)
+varnames     <- c("fused", "fbare", "fwater", "fsnow")
 
-# Clean up intermediate files
+message("🔧 Resampling mosaic to match reference raster...")
+raster_preprocess_save(
+  input            = mosaic_r,
+  output           = output_files,
+  target           = cor_twi_vegh_mosaic_file,
+  varname          = varnames,
+  if_aggregate     = FALSE,
+  if_resample      = TRUE,
+  if_return_raster = FALSE
+)
+message("✅ Resampling completed.")
+
+# -------------------- 6. Cleanup Intermediate Tiles ---------------------------
 tiles_path <- fs::dir_ls(path = tile_output_dir, glob = "*.nc")
-if(length(tiles_path) > 0) file.remove(tiles_path)
-
-# Save final outputs
-output_files <- c(fused_5km_file, fbare_5km_file, fwi_5km_file)
-varnames <- c("fused", "fbare", "fwi")
-
-for (i in 1:3) {
-  terra::writeCDF(mosaic_rr[[i]], output_files[i], varnames = varnames[i], overwrite = TRUE)
-  message("✅ saved: ", output_files[i])
+if (length(tiles_path) > 0) {
+  message("🧹 Cleaning intermediate tile files...")
+  file.remove(tiles_path)
+  message("✅ Intermediate files removed.")
 }
 
-elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
-message(sprintf("Mosaicing done [%.1f mins]", elapsed))
+elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
+message(sprintf("🎉 Pipeline completed successfully [%.1f mins]", elapsed_total))

@@ -59,7 +59,15 @@ p_cor <- plot_cor_twi_vegh(
   x_step = 30,
   y_step = 30
 ) +
-  geom_sf(data = coast, colour = "black", linewidth = 0.1)
+  guides(fill = guide_colorbar(
+    title.position = "left",
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(5, "in")
+  )) +
+  geom_sf(data = coast,
+          colour = 'black',
+          linewidth = 0.1)
+
 
 # Save global correlation map
 ggsave(
@@ -90,7 +98,7 @@ my_colors <- c(
 text_size <- 12
 p_vs <- ggplot(df_all, aes(x = value, fill = source, color = source)) +
   geom_density(alpha = 0.5, linewidth = 0.5) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red", linwidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 0.5) +
   labs(
     title = "r Value Distribution Before and After Mask (fused < 0.05)",
     x = "r(H~TWI)",

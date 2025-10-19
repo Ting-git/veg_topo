@@ -25,11 +25,13 @@ dem_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspe
 slope_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/slope_450m1.nc")
 aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/aspect_450m1.nc")
 
-dem_sd_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
-dem_max_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMma_GMTEDma.tif")
-dem_min_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_amatulli_2018/elevation_10KMmi_GMTEDmi.tif")
-dem_sd_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_sd_55km_resampled.nc")
-dem_rg_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_55km_resampled.nc") # range of elevation: max - min
+dem_sd_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_50km_amatulli_2018/elevation_10KMsd_GMTEDsd.tif")
+dem_max_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_50km_amatulli_2018/elevation_10KMma_GMTEDma.tif")
+dem_min_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_50km_amatulli_2018/elevation_10KMmi_GMTEDmi.tif")
+dem_sd_50km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_50km_amatulli_2018/elevation_50KMsd_GMTEDsd.tif")
+
+dem_sd_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_sd_55km.nc")
+dem_rg_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_55km.nc") # range of elevation: 95p - 05p
 
 # Protected area
 pa_shp0 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
@@ -60,19 +62,20 @@ pval_cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"pval
 cor_twi_vegh_mask_fused0.05_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mask_fused0.05.nc")
 
 
-# fraction of used land
+# fraction of land cover
 # flc_5km_mosacic_file <- file.path(veg_topo_extr_dir, "data/global_flc/flc_5km_mosaic.nc")
 fused_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fused_5km.nc")
-fbare_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fbare_5km.nc")
-fwi_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fwi_5km.nc") # fraction of water and ice
+fbare_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fbare_5km.nc") # fraction of bare area
+fwater_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fwater_5km.nc") # fraction of water body
+fsnow_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fsnow_5km.nc") # fraction of permanent snow and ice
 
 fused_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fused_55km.nc")
-fwi_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fwi_55km.nc") # fraction of water and ice
-fbare_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fbare_11km.nc")
-fwater_11km_file <- file.path(veg_topo_extr_dir, "data/global_flc_11km/fwater_11km.nc")
+fbare_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fbare_55km.nc") # fraction of bare area
+fwater_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fwater_55km.nc") # fraction of water body
+fsnow_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fsnow_55km.nc") # fraction of permanent snow and ice
 
-kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_8c.nc")
-kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_ai_5km_7c.nc")
+kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_mi_5km_8c.nc")
+# kmeans_map_7c_path <- file.path(veg_topo_extr_dir, "data/global_kmeans_5km/kmeans_corth_fused_mi_5km_7c.nc")
 
 sw_in_450m_tile_dir <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/1_1_deg_tiles")
 sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_uneven_450m.nc")

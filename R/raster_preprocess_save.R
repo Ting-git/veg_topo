@@ -1,3 +1,4 @@
+
 #' Preprocess Raster: Aggregate, Resample, Mask, and Save Multi-layer Rasters
 #'
 #' This function preprocesses raster data (single or multi-layer) by optionally:
@@ -21,8 +22,10 @@
 #' @param if_mask Logical, whether to mask raster to target raster extent (default FALSE).
 #' @param na_value Numeric value to treat as NA (optional).
 #' @param fun Aggregation function for downscaling (default: mean).
+#' @param if_round_fact Logical, whether to round aggregation factors to integer (default TRUE).
+#' @param if_return_raster Logical, whether to return the processed raster (default TRUE).
 #'
-#' @return A SpatRaster object (single or multi-layer).
+#' @return A SpatRaster object (single or multi-layer) or output file paths.
 #'
 #' @examples
 #' # Process without aggregation, only save layers
@@ -34,9 +37,11 @@
 #'                   if_aggregate = TRUE,
 #'                   if_resample = TRUE)
 raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target = NULL,
-                              varname = "band", if_aggregate = TRUE,
-                              if_resample = FALSE, if_mask = FALSE,
-                              na_value = NULL, fun = mean, if_return_raster = TRUE) {
+                                   varname = "band", if_aggregate = TRUE,
+                                   if_resample = FALSE, if_mask = FALSE,
+                                   na_value = NULL, fun = mean,
+                                   if_round_fact = TRUE,
+                                   if_return_raster = TRUE) {
 
   # --- Load input raster ---
   r_in <- if (is.character(input)) terra::rast(input) else input
@@ -52,13 +57,34 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
 
   # --- Aggregate if requested ---
   if (if_aggregate && !is.null(res_tar)) {
+    # Calculate aggregation factors
     fact_x <- res_tar[1] / terra::xres(r_in)
     fact_y <- res_tar[2] / terra::yres(r_in)
+
+    # Check if rounding is needed
+    if (if_round_fact) {
+      fact_x_rounded <- round(fact_x)
+      fact_y_rounded <- round(fact_y)
+      print(paste("Aggregation factors - X: from", fact_x, "rounded to", fact_x_rounded,
+                  "Y: from", fact_y, "rounded to", fact_y_rounded))
+      fact_x <- fact_x_rounded
+      fact_y <- fact_y_rounded
+    } else {
+      print(paste("Aggregation factors - X:", fact_x, "Y:", fact_y))
+    }
+
+    print(paste("Input raster dimensions:", dim(r_in)[1], "x", dim(r_in)[2]))
+
+    # Perform aggregation
     r_out <- if (fact_x >= 1 && fact_y >= 1) {
       terra::aggregate(r_in, fact = c(fact_x, fact_y), fun = fun, na.rm = TRUE)
     } else {
+      warning("Aggregation factors < 1 — skipping aggregation.")
       r_in
     }
+
+    print(paste("Output raster dimensions:", dim(r_out)[1], "x", dim(r_out)[2]))
+
   } else {
     r_out <- r_in
   }
@@ -71,9 +97,8 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
 
   # --- Output handling ---
   if (!is.null(output)) {
-    # Case: output is a folder path (auto-generate NetCDF filenames)
     if (length(output) == 1 && (dir.exists(output) || !grepl("\\.", basename(output)))) {
-      if (!dir.exists(output)) dir.create(output, recursive = TRUE)  # Create folder if not exist
+      if (!dir.exists(output)) dir.create(output, recursive = TRUE)
       output <- sapply(seq_len(n_layers), function(i) {
         fname <- if (!is.null(names(r_out)[i]) && names(r_out)[i] != "") {
           names(r_out)[i]
@@ -84,32 +109,26 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
       })
     }
 
-    # Ensure output length matches number of layers
-    if (length(output) != n_layers) {
-      stop("Length of 'output' must match number of layers in raster.")
-    }
+    if (length(output) != n_layers) stop("Length of 'output' must match number of layers in raster.")
 
-    # --- Save each layer ---
     for (i in seq_len(n_layers)) {
       lyr <- r_out[[i]]
       out_i <- output[i]
       ext <- tools::file_ext(out_i)
-      # if named list, then set the varnames
-      varname_i <- if (!is.null(names(r_out)[i]) && names(r_out)[i] != "") {
+      varname_i <- if (!is.null(names(r_out)[i]) && names(r_out)[i] != "" && names(r_out)[i] != "lyr.1") {
         names(r_out)[i]
       } else {
-        paste0(varname, "_", i)
+        if (n_layers == 1) varname else paste0(varname, "_", i)
       }
 
       if (tolower(ext) %in% c("nc", "cdf")) {
-        terra::writeCDF(lyr, out_i, overwrite = TRUE, varname = varname_i)  # Save as NetCDF
+        terra::writeCDF(lyr, out_i, overwrite = TRUE, varname = varname_i)
       } else {
-        terra::writeRaster(lyr, out_i, overwrite = TRUE)  # Save other formats
+        terra::writeRaster(lyr, out_i, overwrite = TRUE)
       }
     }
 
-    message("Saved files:")
-    for (f in output) message("  ", f)
+    if (all(file.exists(output))) message("Saved files:\n", paste("  ", output, collapse = "\n"))
   }
 
   # Clean up
@@ -117,5 +136,5 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
   if (exists("r_tar")) rm(r_tar)
   gc()
 
- if (if_return_raster) return(r_out) else return(output)
+  if (if_return_raster) return(r_out) else return(output)
 }
