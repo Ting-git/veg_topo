@@ -45,11 +45,12 @@ input_files <- c(mi_55km_file,
                  dem_sd_55km_path,
                  fpa_55km_path,
                  dem_rg_55km_path,
-                 mat_55km_file)
+                 mat_55km_file,
+                 fveg_55km_path)
 
 rasters <- lapply(input_files, rast)
 stacked <- rast(rasters)
-names(stacked) <- c("mi", "fused", "fbare", "fwater", "fsnow", "dem_sd", "fpa", "dem_rg", "mat")
+names(stacked) <- c("mi", "fused", "fbare", "fwater", "fsnow", "dem_sd", "fpa", "dem_rg", "mat", "fveg")
 
 # Mask to land extent
 stacked_masked <- mask(crop(stacked, land_vect), land_vect)
@@ -84,15 +85,17 @@ plot_map <- function(r_layer, title_text, output_file) {
 }
 
 # Plot each environmental variable
-plot_map(stacked_masked[["mi"]],     "Moisture Index", here::here("data/figures/04_regional_grid_mi_55km_map.png"))
-plot_map(stacked_masked[["fused"]],  "Land use fraction", here::here("data/figures/04_regional_grid_fused_55km_map.png"))
-plot_map(stacked_masked[["fbare"]],  "Bare land fraction", here::here("data/figures/04_regional_grid_fbare_55km_map.png"))
-plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/figures/04_regional_grid_fwater_55km_map.png"))
-plot_map(stacked_masked[["fsnow"]],  "Permanent snow & ice fraction", here::here("data/figures/04_regional_grid_fsnow_55km_map.png"))
-plot_map(stacked_masked[["dem_sd"]], "Elevation SD", here::here("data/figures/04_regional_grid_dem_sd_55km_map.png"))
-plot_map(stacked_masked[["fpa"]],    "Protected area fraction", here::here("data/figures/04_regional_grid_fpa_55km_map.png"))
-plot_map(stacked_masked[["dem_rg"]], "Elevation range (95p - 05p)", here::here("data/figures/04_regional_grid_dem_rg_55km_map.png"))
-plot_map(stacked_masked[["mat"]],    "Annual mean air temperature (℃)", here::here("data/figures/04_regional_grid_mat_55km_map.png"))
+plot_map(stacked_masked[["mi"]],     "Moisture Index", here::here("data/figures/04_region_grid_mi_55km_map.png"))
+plot_map(stacked_masked[["fused"]],  "Land use fraction", here::here("data/figures/04_region_grid_fused_55km_map.png"))
+plot_map(stacked_masked[["fbare"]],  "Bare land fraction", here::here("data/figures/04_region_grid_fbare_55km_map.png"))
+plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/figures/04_region_grid_fwater_55km_map.png"))
+plot_map(stacked_masked[["fsnow"]],  "Permanent snow & ice fraction", here::here("data/figures/04_region_grid_fsnow_55km_map.png"))
+plot_map(stacked_masked[["dem_sd"]], "Elevation SD", here::here("data/figures/04_region_grid_dem_sd_55km_map.png"))
+plot_map(stacked_masked[["fpa"]],    "Protected area fraction", here::here("data/figures/04_region_grid_fpa_55km_map.png"))
+plot_map(stacked_masked[["dem_rg"]], "Elevation range (95p - 05p)", here::here("data/figures/04_region_grid_dem_rg_55km_map.png"))
+plot_map(stacked_masked[["mat"]],    "Annual mean air temperature (℃)", here::here("data/figures/04_region_grid_mat_55km_map.png"))
+plot_map(stacked_masked[["fveg"]],    "Vegetated area fraction", here::here("data/figures/04_region_grid_fveg_55km_map.png"))
+
 
 # ------------------------- 4. Completion Message --------------------------------
 message("🎉 All 55-km environmental maps have been created and saved successfully!")

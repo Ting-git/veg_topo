@@ -12,7 +12,7 @@ ext_global <- ext(-180, 180, -60, 85)
 # Vegetation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/vegh_450m_2020_mosaic.nc")
-fvegh_55km_path <- file.path(veg_topo_extr_dir, "data/global_fvegh_55km/fvegh_55km.nc")
+fveg_55km_path <- file.path(veg_topo_extr_dir, "data/global_fveg_55km/fveg_55km.nc")
 
 # Topographic Wetness Index
 twi_450m_path <- file.path("/data/archive/gti_marthews_2015/data/ga2.nc")  # Target raster file path
@@ -86,6 +86,15 @@ r_H_R_tiles_dir <-  file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/30_30_de
 r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/r_H_R_5km.nc")
 pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/pval_r_H_R_5km.nc")
 
+
+
+reg_sample_dir <- file.path(veg_topo_extr_dir, "data/reg_sample")
+
+regA_sample_info_path <- file.path(reg_sample_dir, "regA_sample_info.rds")
+regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
+
+regA_sample_vect_path <- file.path(reg_sample_dir, "regA_sample_vect.gpkg")
+regB_sample_vect_path <- file.path(reg_sample_dir, "regB_sample_vect.gpkg")
 
 regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regA_cor_twi_vegh_500m")
 regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "data/regB_r_R_H_500m")

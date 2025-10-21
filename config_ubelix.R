@@ -52,8 +52,17 @@ r_H_R_5km_path <- file.path(veg_topo_extr_dir, "global_r_H_R_5km/r_H_R_5km.nc")
 pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "global_r_H_R_5km/pval_r_H_R_5km.nc")
 
 # Regional correlation
+reg_sample_dir <- file.path(veg_topo_extr_dir, "reg_sample")
+
+regA_sample_info_path <- file.path(reg_sample_dir, "regA_sample_info.rds")
+regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
+
+regA_sample_vect_path <- file.path(reg_sample_dir, "regA_sample_vect.gpkg")
+regA_sample_vect_path <- file.path(reg_sample_dir, "regB_sample_vect.gpkg")
+
 regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "regA_cor_twi_vegh_500m")
-regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "regB_r_R_H_500m2")
+regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "regB_r_R_H_500m")
+
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "ecoregion2017/Ecoregions2017/Ecoregions2017.shp")

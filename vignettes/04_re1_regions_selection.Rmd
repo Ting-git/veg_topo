@@ -29,8 +29,17 @@ library(RColorBrewer)
 library(rnaturalearth)
 library(sf)
 
+
 # Load configuration and functions
 source(here::here("config.R"))
+source(here::here("R/plot_density_grid.R"))
+source(here::here("R/extent_to_tile_ids.R"))
+source(here::here("R/plot_vegh.R"))
+
+
+if (!dir.exists(reg_sample_dir)) {
+  dir.create(reg_sample_dir, recursive = TRUE)
+}
 ```
 
 ---
@@ -38,34 +47,6 @@ source(here::here("config.R"))
 ## Task
 
 Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework.
-
-## Pattern taxonomy
-
-Two complementary control sets are used for site selection and testing:
-
-### **A. Lateral Subsurface Flow Patterns**
-
-(Defined by hydroclimate and relief conditions)
-
-1. Very dry hydroclimate + flat relief
-2. Very dry hydroclimate + rugged relief
-3. Moderate hydroclimate + flat relief
-4. Moderate hydroclimate + rugged relief
-5. Very wet hydroclimate + flat relief
-6. Very wet hydroclimate + rugged relief
-
-### **B. Insolation Patterns**
-
-(Defined by latitude and relief conditions)
-
-1. Very low latitude + flat relief
-2. Very low latitude + rugged relief
-3. Mid latitude + flat relief
-4. Mid latitude + rugged relief
-5. Very high latitude + flat relief
-6. Very high latitude + rugged relief
-
----
 
 ## Implementation
 
@@ -75,49 +56,49 @@ Two complementary control sets are used for site selection and testing:
 mi_55km_r <- terra::rast(mi_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_55km_r <- terra::rast(fused_55km_file)
 fbare_55km_r <- terra::rast(fbare_55km_file)
-fwater_55km_r <- terra::rast(fbare_55km_file)
+fwater_55km_r <- terra::rast(fwater_55km_file)
 fsnow_55km_r <- terra::rast(fsnow_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
 dem_rg_55km_r <- terra::rast(dem_rg_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
 mat_55km_r <- terra::rast(mat_55km_file)
+fveg_55km_r <- terra::rast(fveg_55km_path)
 
-# Stack rasters into a single SpatRaster
-stacked <- c(mi_55km_r,
-             fused_55km_r,
-             fbare_55km_r,
-             fwater_55km_r,
-             fsnow_55km_r,
-             dem_sd_55km_r,
-             dem_rg_55km_r,
-             fpa_55km_r,
-             mat_55km_r)
+# Stack rasters with explicit layer names
+stacked <- c(
+  mi_55km_r,
+  fused_55km_r,
+  fbare_55km_r,
+  fwater_55km_r,
+  fsnow_55km_r,
+  dem_sd_55km_r,
+  dem_rg_55km_r,
+  fpa_55km_r,
+  mat_55km_r,
+  fveg_55km_r
+)
 
-# Use land polygons to remove ocean area with NA
+# Convert to data.frame 
+df <- as.data.frame(stacked, xy = TRUE, na.rm = FALSE)
+df <- df[complete.cases(df), ]
 
-# Load land polygons
-land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
-land_vect <- vect(land)
-
-# Crop and mask raster to land
-stacked_masked <- mask(crop(stacked, land_vect), land_vect)
-
-# Convert to data frame
-df <- as.data.frame(stacked_masked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg", "fpa", "mat")
+# easy to make mistake here!
+colnames(df) <-  c("lon", "lat",
+                   "mi", "fused", "fbare", "fwater", "fsnow",
+                   "relief", "dem_rg", "fpa", "mat", "fveg")
 
 # Clean up
-rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwaetr_55km_r, fsnow_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r,  mat_55km_r)
+rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r, dem_sd_55km_r, dem_rg_55km_r, fpa_55km_r,  mat_55km_r, fveg_55km_r)
 gc()
 
 
 # load coast outline, vector data for plotting
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
-
 ```
+
 ```{r}
 # list all figures of input data 
-files <- list.files(path = here::here("data/figures"), pattern = "^04_regional_grid_.*_55km\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^04_region_grid_.*_55km_map\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -128,20 +109,16 @@ knitr::include_graphics(files)
 
 
 ```{r DataOverview}
-# Ploting
-p_hg <- DataExplorer::plot_histogram(df)
-
-# combine the plots
-cp_hg <- patchwork::wrap_plots(p_hg)
-
-# Save histogram plot
-ggsave(
-  filename = here::here("data/figures/04_variables_hg.png"),
-  plot = cp_hg,
-  width = 7,
-  height = 6,
-  dpi = 300,
-  units = "in"
+# Select columns for plot
+cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg", "fpa", "mat", "fveg")
+# plot input data density
+plot_density_grid(
+  df,
+  cols,
+  nrow = 3,
+  width = 14,
+  height = 3,
+  save_path = here::here("data/figures/04_region_selection_input_data_density.png")
 )
 ```
 ---
@@ -233,13 +210,20 @@ df_filt_A <- df_binned |>
   filter(mi_bin %in% levels(mi_bin)[c(1, 2, 3, 4, 5, 6)],
          relief_bin %in% levels(relief_bin)[c(1, 3)],) |>
   
-  filter(fused < 0.05, fwater < 0.3, fbare < 0.9, fsnow < 0.1) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, bare land, ice, and snow).
+  filter(fused < 0.05) |>  # Exclude the region with high human activity 
   
-  # filter(fpa > 0.3) |> # select regions with 50% protected areas
+  filter(fsnow < 0.1) |>  #  avoid high invalid or cold areas (permanent ice, and snow).
   
-  filter(mat > 10) |>       # avoid cold regions for hydrology-specific analysis
+  filter(fwater < 0.3) |> # avoid regions with high invalid areas ( water bodies)
   
-  filter(dem_rg < 500)   # # avoid strong influence of elevation differences
+  # filter(fbare < 0.9) |>  # avoid regions with high invalid areas ( bare land)
+  
+  filter(fveg > 0.1) |> # avoid regions with very limited vegetation
+  
+  # filter(fpa > 0.3) |> # select regions with 30% protected areas
+
+  filter(mat > 10)       # avoid cold regions for hydrology-specific analysis
+
 
 # print the numbers of possible region
 table(df_filt_A$strata_A_label)
@@ -262,14 +246,23 @@ df_filt_B <- df_binned |>
     abs_lat_bin %in% levels(abs_lat_bin)[c(1, 2, 3, 4, 5)]
   ) |>
   
-  filter(fused < 0.05, fwater < 0.3, fbare < 0.9, fsnow < 0.1) |>  # Exclude the region with high human activity and high invalid or cold areas (such as water, bare land, ice, and snow).
+  filter(fused < 0.05) |>  # Exclude the region with high human activity
   
-  # filter(fpa > 0.3) |> # select regions with 50% protected areas
+  filter(fsnow < 0.1) |>  #  avoid high invalid or cold areas (permanent ice, and snow).
+  
+  filter(fwater < 0.3) |> # avoid regions with high invalid areas ( water bodies)
+  # 
+  # filter(fbare < 0.9) |>  # avoid regions with high invalid areas ( bare land)
+  
+  filter(fveg > 0.1) |> # avoid regions with very limited vegetation, e.g. lined vegetation
+  
+  # filter(fpa > 0.3) |> # select regions with 30% protected areas
   
   filter(dem_rg < 500)   # avoid strong influence of elevation differences
   
 # print the numbers of possible region
 table(df_filt_B$strata_B_label)
+
 ```
 
 ---
@@ -287,10 +280,10 @@ df_samples_A <- df_filt_A |>
   group_by(strata_A) |>
   group_modify(~ slice_sample(.x, n = min(3, nrow(.x)))) |>
   mutate(
-    xmin = lon - 0.25,
-    xmax = lon + 0.25,
-    ymin = lat - 0.25,
-    ymax = lat + 0.25,
+    xmin = round(lon - 0.25, 1),
+    xmax = round(lon + 0.25, 1),
+    ymin = round(lat - 0.25, 1),
+    ymax = round(lat + 0.25, 1),
     xmid= (xmin + xmax)/2,
     ymid = (ymin + ymax)/2,
     sample_id = row_number()
@@ -303,10 +296,10 @@ df_samples_B <- df_filt_B |>
   group_by(strata_B) |>
   group_modify(~ slice_sample(.x, n = min(3, nrow(.x)))) |>
   mutate(
-    xmin = lon - 0.25,
-    xmax = lon + 0.25,
-    ymin = lat - 0.25,
-    ymax = lat + 0.25,
+    xmin = round(lon - 0.25, 1),
+    xmax = round(lon + 0.25, 1),
+    ymin = round(lat - 0.25, 1),
+    ymax = round(lat + 0.25, 1),
     xmid= (xmin + xmax)/2,
     ymid = (ymin + ymax)/2,
     sample_id = row_number()
@@ -316,8 +309,9 @@ df_samples_B <- df_filt_B |>
 
 
 # Save the two data frames as RDS files
-saveRDS(df_samples_A, here::here("data/df_samples_A.rds"))
-saveRDS(df_samples_B, here::here("data/df_samples_B.rds"))
+saveRDS(df_samples_A, regA_sample_info_path)
+saveRDS(df_samples_B, regB_sample_info_path)
+
 ```
 
 ---
@@ -330,13 +324,9 @@ saveRDS(df_samples_B, here::here("data/df_samples_B.rds"))
 
 ```{r loadinfo}
 # load region infos
-regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"), ends_with("mid"))
-regB_info <- readRDS(here::here("data/df_samples_B.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"), ends_with("mid"))
-```
+regA_info <- readRDS(regA_sample_info_path)
+regB_info <- readRDS(regB_sample_info_path) 
 
-```{r gpkg}
 # ---- regA
 regA_gpkg <- regA_info |>
   rowwise() |>
@@ -350,7 +340,7 @@ regA_gpkg <- regA_info |>
   st_as_sf(crs = 4326)
 
 # write gpkg document
-st_write(regA_gpkg, here::here("data/regionA_boxes.gpkg"), delete_layer = TRUE)
+st_write(regA_gpkg,regA_sample_vect_path, delete_layer = TRUE)
 
 # ---- regB
 regB_gpkg <- regB_info |>
@@ -365,10 +355,10 @@ regB_gpkg <- regB_info |>
   st_as_sf(crs = 4326)
 
 # write gpkg document
-st_write(regB_gpkg, here::here("data/regionB_boxes.gpkg"), delete_layer = TRUE)
+st_write(regB_gpkg,regB_sample_vect_path, delete_layer = TRUE)
 ```
 
-Lateral Subsurface Flow and location of selected regions 
+### region sample for lateral flow analysis
 
 ```{r plot_location}
 
@@ -380,7 +370,7 @@ ggplot(data = world) +
   geom_sf(fill = "antiquewhite") +
   geom_point(data = regA_info, aes(x = xmid, y = ymid, color = strata_A_label), size = 3) +
   coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) +
-  labs(title = "Locations of Six Regions on the World Map",
+  labs(title = "Sample regions for H~TWI",
        x = "Longitude",
        y = "Latitude",
        color = "Region") +
@@ -388,20 +378,92 @@ ggplot(data = world) +
   theme(legend.position = "right")
 ```
 
-Radiation and location of selected regions 
+```{r}
+# regA_info
+# regB_info
+plot_vegh_by_reg <- function(reg_row,
+                              text_size = 12,
+                              fig_width = 14,
+                              fig_height = 18) {
 
+    # --- reg info ---
+    reg_id <- paste0(reg_row$strata_A_label, "_", reg_row$sample_id)
+    reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
+    reg_xmid <- reg_row$lon
+    reg_ymid <- reg_row$lat
+
+    # --- Vegetation Height Raster ---
+    vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(reg_extent)
+    vegh_tmp_path <- file.path(tempdir(), paste0("tile_", reg_id, "_vegh_450m.nc"))
+    terra::writeCDF(vegh_rc, vegh_tmp_path, varnames = "vegh",overwrite = TRUE)
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(vegh_tmp_path)
+    names(vegh_rc) <- "vegh"
+    
+    p_vegh <- plot_vegh(vegh_rc, extent = reg_extent, title_text = reg_id, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    
+    return(p_vegh)
+    
+    rm(vegh_rc);gc()
+
+}
+
+for (i in seq_len(nrow(regA_info))) {
+  p <- plot_vegh_by_reg(regA_info[i, ])
+  print(p)
+}
+```
+
+
+### region sample for Radiation analysis
 ```{r}
 # ---- plot regB location ----
 ggplot(data = world) +
   geom_sf(fill = "antiquewhite") +
   geom_point(data = regB_info, aes(x = xmid, y = ymid, color = strata_B_label), size = 3) +
   coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) +
-  labs(title = "Locations of Six Regions on the World Map",
+  labs(title = "Sample regions for H~Rin",
        x = "Longitude",
        y = "Latitude",
        color = "Region") +
   theme_minimal() +
   theme(legend.position = "right")
+```
+
+```{r}
+# regA_info
+# regB_info
+plot_vegh_by_reg <- function(reg_row,
+                              text_size = 12,
+                              fig_width = 14,
+                              fig_height = 18) {
+
+    # --- reg info ---
+    reg_id <- paste0(reg_row$strata_B_label, "_", reg_row$sample_id)
+    reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
+    reg_xmid <- reg_row$lon
+    reg_ymid <- reg_row$lat
+
+    # --- Vegetation Height Raster ---
+    vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(reg_extent)
+    vegh_tmp_path <- file.path(tempdir(), paste0("tile_", reg_id, "_vegh_450m.nc"))
+    terra::writeCDF(vegh_rc, vegh_tmp_path, varnames = "vegh",overwrite = TRUE)
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(vegh_tmp_path)
+    names(vegh_rc) <- "vegh"
+    
+    p_vegh <- plot_vegh(vegh_rc, extent = reg_extent, title_text = reg_id, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    
+    return(p_vegh)
+    
+    rm(vegh_rc);gc()
+
+}
+
+for (i in seq_len(nrow(regB_info))) {
+  p <- plot_vegh_by_reg(regB_info[i, ])
+  print(p)
+}
 ```
 
 Additional plots
