@@ -11,7 +11,10 @@ ext_global <- ext(-180, 180, -60, 85)
 
 # Vegetation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
+
+vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir,"data/global_vegh_450m/3_3_deg")
 vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/vegh_450m_2020_mosaic.nc")
+
 fveg_55km_path <- file.path(veg_topo_extr_dir, "data/global_fveg_55km/fveg_55km.nc")
 
 # Topographic Wetness Index
@@ -21,6 +24,11 @@ twi_30m_path <- file.path("/data_2/archive/twi_ho_2025/data/twi_edtm_m_30m_v2024
 
 # Digital Terrain Model
 dem_30m_copernicus_dir <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/copernicus_dem_30m")
+
+dem_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/dem_1_1_deg")
+slope_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/slope_1_1_deg")
+aspect_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/aspect_1_1_deg")
+
 dem_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/dem_450m1.nc")
 slope_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/slope_450m1.nc")
 aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "data/global_dem_slope_aspect_450m/aspect_450m1.nc")
@@ -31,7 +39,8 @@ dem_min_10km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_
 dem_sd_50km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_10km_50km_amatulli_2018/elevation_50KMsd_GMTEDsd.tif")
 
 dem_sd_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_sd_55km.nc")
-dem_rg_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_55km.nc") # range of elevation: 95p - 05p
+dem_rg_max_min_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_max_min_55km.nc") # range of elevation: max - min
+dem_rg_95p_05p_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_95p_05p_55km.nc") # range of elevation: 95p - 05p
 
 # Protected area
 pa_shp0 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
