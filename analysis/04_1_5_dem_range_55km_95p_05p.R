@@ -64,7 +64,7 @@ plot(dem_rg, main = "Elevation Range (95p - 05p)")
 message("Resampling elevation range to 0.5° grid...")
 dem_rg <- raster_preprocess_save(
   input   = dem_rg,
-  output  = dem_rg_55km_path,
+  output  = dem_rg_95p_05p_55km_path,
   target  = mi,
   varname = "dem_rg",
   if_aggregate = FALSE,
@@ -73,7 +73,7 @@ dem_rg <- raster_preprocess_save(
 )
 
 message("✅ Elevation range computation completed.")
-message("Saved : ", dem_rg_55km_path)
+message("Saved : ", dem_rg_95p_05p_55km_path)
 
 # ---------------- 6 (optional ). Check the output ----------
 # r <- terra::rast(dem_rg_55km_path)

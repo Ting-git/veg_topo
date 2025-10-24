@@ -44,13 +44,15 @@ input_files <- c(mi_55km_file,
                  fsnow_55km_file,
                  dem_sd_55km_path,
                  fpa_55km_path,
-                 dem_rg_55km_path,
+                 dem_rg_95p_05p_55km_path,
+                 dem_rg_98p_02p_55km_path,
+                 dem_rg_max_min_55km_path,
                  mat_55km_file,
                  fveg_55km_path)
 
 rasters <- lapply(input_files, rast)
 stacked <- rast(rasters)
-names(stacked) <- c("mi", "fused", "fbare", "fwater", "fsnow", "dem_sd", "fpa", "dem_rg", "mat", "fveg")
+names(stacked) <- c("mi", "fused", "fbare", "fwater", "fsnow", "dem_sd", "fpa", "dem_rg_95p_05p", "dem_rg_98p_02p", "dem_rg_max_min",  "mat", "fveg")
 
 # Mask to land extent
 stacked_masked <- mask(crop(stacked, land_vect), land_vect)
@@ -92,7 +94,9 @@ plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/fig
 plot_map(stacked_masked[["fsnow"]],  "Permanent snow & ice fraction", here::here("data/figures/04_region_grid_fsnow_55km_map.png"))
 plot_map(stacked_masked[["dem_sd"]], "Elevation SD", here::here("data/figures/04_region_grid_dem_sd_55km_map.png"))
 plot_map(stacked_masked[["fpa"]],    "Protected area fraction", here::here("data/figures/04_region_grid_fpa_55km_map.png"))
-plot_map(stacked_masked[["dem_rg"]], "Elevation range (95p - 05p)", here::here("data/figures/04_region_grid_dem_rg_55km_map.png"))
+plot_map(stacked_masked[["dem_rg_95p_05p"]], "Elevation range (95p - 05p)", here::here("data/figures/04_region_grid_dem_rg_95p_05p_55km_map.png"))
+plot_map(stacked_masked[["dem_rg_98p_02p"]], "Elevation range (98p - 02p)", here::here("data/figures/04_region_grid_dem_rg_98p_02p_55km_map.png"))
+plot_map(stacked_masked[["dem_rg_max_min"]], "Elevation range (max - min)", here::here("data/figures/04_region_grid_dem_rg_max_min_55km_map.png"))
 plot_map(stacked_masked[["mat"]],    "Annual mean air temperature (℃)", here::here("data/figures/04_region_grid_mat_55km_map.png"))
 plot_map(stacked_masked[["fveg"]],    "Vegetated area fraction", here::here("data/figures/04_region_grid_fveg_55km_map.png"))
 
