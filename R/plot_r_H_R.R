@@ -9,7 +9,7 @@
 #' @param y_step Number of y-axis step
 #' @return A ggplot2 object
 #' @export
-plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H ~ R)",
+plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢₙ)",
                        text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----

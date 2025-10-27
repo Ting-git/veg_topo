@@ -7,7 +7,17 @@ library(terra)
 library(furrr)
 library(future)
 
-source(here::here("config_ubelix.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+  workers = 4
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+  workers = 16
+}
 source(here::here("R/raster_preprocess_save.R")) # Set Na value and aggregation
 
 # -------Configuration----------------------------------------------------------
@@ -17,7 +27,6 @@ vegh_10m_tiles_path <- fs::dir_ls(path = vegh_10m_tiles_dir, glob = "*_Map.tif")
 vegh_10m_tiles_path_sub <- vegh_10m_tiles_path[1:2651]  # for test
 
 # Output: 2651 tiles with 450m resolution
-vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_vegh_450m/3_3_deg")
 if (!dir.exists(vegh_450m_tiles_dir)) {
   dir.create(vegh_450m_tiles_dir, recursive = TRUE)
 }
@@ -30,7 +39,7 @@ res_tar <- res(twi_450m_r)
 rm(twi_450m_r ); gc()
 
 # Set up parallel processing (adjust based on available CPU cores)
-plan(multisession, workers = 16)
+plan(multisession, workers = workers)
 t0 <- Sys.time()
 
 # Parallel processing of raster files with error handling

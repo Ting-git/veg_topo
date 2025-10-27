@@ -68,7 +68,7 @@ plot_sw_in <- function(input, extent = NULL, title_text = "Flat Surface Solar Ra
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
+      legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),

@@ -1,6 +1,6 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="mosaic_vegh_450m"
-#SBATCH --time=4:00:00     # 增加时间预算
+#SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=64

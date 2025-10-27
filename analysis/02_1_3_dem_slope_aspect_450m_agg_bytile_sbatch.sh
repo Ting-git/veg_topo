@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=110
-#SBATCH --mem=200G  # set 880G on first running, but don't need so much
+#SBATCH --mem=880G  # set 880G on first running, but don't need so much
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis

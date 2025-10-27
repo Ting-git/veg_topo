@@ -152,6 +152,7 @@ process_regA_500m <- function(regA_row, output_dir = regA_cor_twi_vegh_dir,
     p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh",
                                   x_text = "Topographic Wetness Index", y_text = "Vegetation height (m)",
                                   text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+    source(here::here("R/plot_single_sample_location.R"))
     p_location <- plot_single_sample_location(regA_xmid, regA_ymid,  regA_id, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
 
     # ---- Combine plots ----
@@ -181,14 +182,14 @@ process_regA_500m <- function(regA_row, output_dir = regA_cor_twi_vegh_dir,
   }, error = function(e) {
     regA_id <- paste0(regA_row$strata_A_label, "_", regA_row$sample_id)
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
-    message(sprintf("❌ Tile %s failed after %.1f mins: %s", tregA_id, elapsed_mins, e$message))
+    message(sprintf("❌ Tile %s failed after %.1f mins: %s", regA_id, elapsed_mins, e$message))
     return(FALSE)
   })
 }
 
 # ----------------- Parallel execution -----------------
 # load sample regions info
-regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
+regA_info <- readRDS(regA_sample_info_path) |>
   select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
 
 # Set up cluster plan
@@ -217,7 +218,7 @@ message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fa
 # process_regA_500m(regA_info[1, ])
 
 
-# # ----------- Test on smaller regions -----------------------------
+# # # ----------- Test on smaller regions -----------------------------
 # regA_info <- data.frame(
 #   strata_A_label = c("Aletsch_glacier"),
 #   ymin = c(46.9),

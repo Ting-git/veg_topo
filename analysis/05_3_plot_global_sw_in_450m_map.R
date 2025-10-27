@@ -8,16 +8,18 @@ library(scico)
 library(rnaturalearth)
 library(sf)
 
-# source(here::here("config.R"))
+# Detect host and load configuration
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+
+if (hostname == "dash") {
+  message("💻 Workstation detected ('dash') → loading config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ HPC environment detected (", hostname, ") → loading config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
 source(here::here("R/plot_sw_in.R"))
-source(here::here("R/plot_terrain_effect.R"))
-
-# ---------- File Configuration on UBELIX----------------------------------------------------------
-sw_in_uneven_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_uneven_450m.nc")
-sw_in_flat_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_flat_450m.nc")
-sw_in_terrain_effect_450m_path <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_terrain_effect_450m.nc")
-
-ext_global <- ext(-180, 180, -60, 85)
+source(here::here("R/plot_rin.R"))
 
 # ---------- Load Data ----------------------------------------------------------
 # Load coastline vector data (for plotting reference only)
@@ -37,16 +39,16 @@ sw_in_terrain_effect_450m_agg <-  terra::aggregate(sw_in_terrain_effect_450m, fa
 p_flat <- plot_sw_in(
   input = sw_in_flat_450m_agg,
   extent = ext_global,
-  title = "Incident Solar Radiation: Flat Surface",
-  text_size = 16,
-  x_breaks = 30,
-  y_breaks = 30
+  title = "Flat Surface Solar Radiation",
+  text_size = 12,
+  x_step = 30,
+  y_step = 30
 ) +
   guides(fill = guide_colorbar(
-  title.position = "left",
-  barwidth = grid::unit(15, "in"),
-  barheight = grid::unit(0.3, "in")
-)) +
+    title.position = "left",
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(5, "in")
+  )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1)
@@ -55,9 +57,9 @@ p_flat <- plot_sw_in(
 ggsave(
   filename = file.path(here::here("data/figures/05_flat_surface_sw_in_map.png")),
   plot = p_flat,
-  width = 30,
-  height = 15,
-  dpi = 300,
+  width = 14,
+  height = 7,
+  dpi = 600,
   units = "in"
 )
 
@@ -66,16 +68,16 @@ ggsave(
 p_uneven <- plot_sw_in(
   input = sw_in_uneven_450m_agg,
   extent = ext_global,
-  title = "Incident Solar Radiation: Uneven Surface",
-  text_size = 16,
-  x_breaks = 30,
-  y_breaks = 30
+  title = "Surface Solar Radiation",
+  text_size = 12,
+  x_step = 30,
+  y_step = 30
 ) +
   guides(fill = guide_colorbar(
-  title.position = "left",
-  barwidth = grid::unit(15, "in"),
-  barheight = grid::unit(0.3, "in")
-)) +
+    title.position = "left",
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(5, "in")
+  )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1)
@@ -84,25 +86,25 @@ p_uneven <- plot_sw_in(
 ggsave(
   filename = file.path(here::here("data/figures/05_uneven_surface_sw_in_map.png")),
   plot = p_uneven,
-  width = 30,
-  height = 15,
-  dpi = 300,
+  width = 14,
+  height = 7,
+  dpi = 600,
   units = "in"
 )
 
 # ------- Plot Terrain Effect  ---------------------
 
-p_te <- plot_terrain_effect(
+p_te <- plot_rin(
   input = sw_in_terrain_effect_450m_agg,
   extent = ext_global,
-  text_size = 16,
-  x_breaks = 30,
-  y_breaks = 30
+  text_size = 12,
+  x_step = 30,
+  y_step = 30
 ) +
   guides(fill = guide_colorbar(
   title.position = "left",
-  barwidth = grid::unit(15, "in"),
-  barheight = grid::unit(0.3, "in")
+  barwidth = grid::unit(0.1, "in"),
+  barheight = grid::unit(5, "in")
 )) +
   geom_sf(data = coast,
           colour = 'black',
@@ -112,9 +114,9 @@ p_te <- plot_terrain_effect(
 ggsave(
   filename = file.path(here::here("data/figures/05_terrain_effect_sw_in_map.png")),
   plot = p_te,
-  width = 30,
-  height = 15,
-  dpi = 300,
+  width = 14,
+  height = 7,
+  dpi = 600,
   units = "in"
 )
 

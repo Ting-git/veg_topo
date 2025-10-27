@@ -48,10 +48,6 @@ dem_30m_tiles_path <- fs::dir_ls(path = dem_30m_copernicus_dir, glob = "*_DEM.ti
 # dem_30m_tiles_path_sub <- dem_30m_tiles_path[1:2000]  # optional subset for testing
 
 # Output directories for 450m tiles
-dem_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/dem_1_1_deg")
-slope_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/slope_1_1_deg")
-aspect_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/aspect_1_1_deg")
-
 dirs_to_create <- c(dem_450m_tiles_dir, slope_450m_tiles_dir, aspect_450m_tiles_dir)
 
 # Create directories if they do not exist
@@ -124,52 +120,27 @@ gc()
 message(sprintf("Processing completed [%.1fs]", difftime(Sys.time(), t0, units = "secs")))
 
 # ---------------------------- Mosaic Tiles -----------------------------------
-#
-# message("🗺️ Mosaicing DEM...")
-# dem_450m_mosaic <- mosaic_tiles(input_dir = dem_450m_tiles_dir,
-#                                 output_file = NULL,
-#                                 pattern = "*_DEM_to450m_dem.nc",
-#                                 varname = "dem")
-#
-# message("🗺️ Mosaicing slope...")
-# slope_450m_mosaic <- mosaic_tiles(input_dir = slope_450m_tiles_dir,
-#                                   output_file = NULL,
-#                                   pattern = "*_DEM_to450m_slope.nc",
-#                                   varname = "slope")
-#
-# message("🗺️ Mosaicing aspect...")
-# aspect_450m_mosaic <- mosaic_tiles(input_dir = aspect_450m_tiles_dir,
-#                                    output_file = NULL,
-#                                    pattern = "*_DEM_to450m_aspect.nc",
-#                                    varname = "aspect")
-#
-# gc()
 
 message("🗺️ Mosaicing DEM...")
-dem_450m_mosaic <- mosaic_tiles_gdal(input_dir =  dem_450m_tiles_dir,
-                                     output_file = NULL,
-                                     pattern = "*_DEM_to450m_dem.nc",
-                                     overwrite = TRUE,
-                                     num_threads = max(1, floor(workers * 0.8)),
-                                     max_files_per_vrt = 9000)
+dem_450m_mosaic <- mosaic_tiles(input_dir = dem_450m_tiles_dir,
+                                output_file = NULL,
+                                pattern = "*_DEM_to450m_dem.nc",
+                                varname = "dem")
 
 message("🗺️ Mosaicing slope...")
-slope_450m_mosaic <- mosaic_tiles_gdal(input_dir =  slope_450m_tiles_dir,
-                                       output_file = NULL,
-                                       pattern = "*_DEM_to450m_slope.nc",
-                                       overwrite = TRUE,
-                                       num_threads = max(1, floor(workers * 0.8)),
-                                       max_files_per_vrt = 9000)
+slope_450m_mosaic <- mosaic_tiles(input_dir = slope_450m_tiles_dir,
+                                  output_file = NULL,
+                                  pattern = "*_DEM_to450m_slope.nc",
+                                  varname = "slope")
 
 message("🗺️ Mosaicing aspect...")
-aspect_450m_mosaic <- mosaic_tiles_gdal(input_dir =  aspect_450m_tiles_dir,
-                                        output_file = NULL,
-                                        pattern = "*_DEM_to450m_aspect.nc",
-                                        overwrite = TRUE,
-                                        num_threads = max(1, floor(workers * 0.8)),
-                                        max_files_per_vrt = 9000)
+aspect_450m_mosaic <- mosaic_tiles(input_dir = aspect_450m_tiles_dir,
+                                   output_file = NULL,
+                                   pattern = "*_DEM_to450m_aspect.nc",
+                                   varname = "aspect")
 
 gc()
+
 # ---------------------------- Resample to Target Grid ------------------------
 
 message("🔄 Resampling DEM...")

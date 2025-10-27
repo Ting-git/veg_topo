@@ -28,12 +28,15 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 p_cor <- plot_cor_twi_vegh(
   input = cor_twi_vegh_mosaic_file,
   extent = ext_global,
-  title = "VEGH-TWI Pearson Correlation Map",
   text_size = 12,
   x_step = 30,
-  y_step = 30,
-  fix_aspect = FALSE
+  y_step = 30
 ) +
+  guides(fill = guide_colorbar(
+    title.position = "left",
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(5, "in")
+  )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1)
@@ -53,10 +56,9 @@ ggsave(
 p_pval <-  plot_cor_pval(
   input = pval_cor_twi_vegh_mosaic_file,
   extent = ext_global,
-  text_size = 14,
+  text_size = 12,
   x_step = 30,
-  y_step = 30,
-  fix_aspect = FALSE
+  y_step = 30
 ) +
   geom_sf(data = coast,
           colour = 'black',

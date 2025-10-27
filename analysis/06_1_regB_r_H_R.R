@@ -294,7 +294,7 @@ process_regB_500m <- function(regB_row,
 # ----------------- Process -----------------
 
 # load sample regions info
-regB_info <- readRDS(here::here("data/df_samples_B.rds")) |>
+regB_info <- readRDS(regB_sample_info_path) |>
   select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
 
 for (i in seq_len(nrow(regB_info))) {

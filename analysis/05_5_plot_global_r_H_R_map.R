@@ -28,11 +28,11 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 p_r <- plot_r_H_R(
   input = r_H_R_5km_path,
   extent = ext_global,
-  title = "Pearson's r (H~Rin)",
   text_size = 12,
   x_step = 30,
   y_step = 30
-) + guides(fill = guide_colorbar(
+) +
+  guides(fill = guide_colorbar(
   title.position = "left",
   barwidth = grid::unit(0.1, "in"),
   barheight = grid::unit(5, "in")
@@ -56,7 +56,7 @@ ggsave(
 p_pval <-  plot_cor_pval(
   input = pval_r_H_R_5km_path,
   extent = ext_global,
-  title_text = "Pearson's p value (H~Rin)",
+  title_text = "Pearson's p-value (H～Rᵢₙ)",
   text_size = 12,
   x_step = 30,
   y_step = 30
