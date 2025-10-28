@@ -45,18 +45,19 @@ plot_hex_scatter <- function(df,
     ) +
     theme_bw(base_size = text_size) +
     theme(
-      legend.position = "right",
+      legend.position = "none",
       legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
       axis.text = ggplot2::element_text(size = text_size  * 0.9),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold",
+                                         margin = margin(b = 3)),
       plot.title.position = "panel"
     )
 
   # Optional linear regression line
   if (add_lm) {
-    p <- p + geom_smooth(method = "lm", color = "red", linewidth = 0.5)
+    p <- p + geom_smooth(method = "lm", color = "black", linetype = "dashed", linewidth = 0.5)
   }
 
   return(p)

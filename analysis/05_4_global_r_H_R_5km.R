@@ -40,18 +40,20 @@ source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
 
 source(here::here("R/plot_dem.R"))
-source(here::here("R/plot_aspect.R"))
-source(here::here("R/plot_slope.R"))
+# source(here::here("R/plot_aspect.R"))
+# source(here::here("R/plot_slope.R"))
 source(here::here("R/plot_vegh.R"))
 source(here::here("R/plot_r_H_R.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_cor_pval.R"))
-source(here::here("R/plot_sw_in.R"))
+# source(here::here("R/plot_sw_in.R"))
 source(here::here("R/plot_rin.R"))
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_single_sample_location.R"))
-source(here::here("R/plot_google_img.R"))
+# source(here::here("R/plot_google_img.R"))
 source(here::here("R/plot_fused.R"))
+source(here::here("R/plot_kg_class.R"))
+
 
 # ------ File Configuration ---------------------------------------------
 
@@ -62,10 +64,9 @@ if (!dir.exists(r_H_R_tiles_dir)) {
 
 # ------------ function to process single tile----------------------------------
 process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
-                                text_size = 12, fig_width = 14, fig_height = 18) {
+                                text_size = 12, fig_width = 14, fig_height = 14) {
 
   tryCatch({
-
 
     # --- Tile info ---
     tile_id <- tile_row$tile_id
@@ -85,7 +86,6 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     names(twi_rc) <- "twi"
     message("Saved temporary TWI raster: ", twi_tmp_path)
 
-
     # --- Vegetation Height Raster ---
     vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(tile_extent)
     vegh_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_vegh_450m.nc"))
@@ -103,19 +103,6 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     rin_rc <- terra::rast(terrain_tmp_path)
     names(rin_rc) <- "rin"
     message("Saved temporary radiation index raster: ", terrain_tmp_path)
-
-    # # --- Elevation and radiation Raster ---
-    # dem_rc <- extent_to_tile_ids(tile_extent, tile_size = 1, return_raster = TRUE,
-    #                              source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
-    #
-    # # Aggregate DEM and calculate slope/aspect
-    # aligned <- aggregate_topography(
-    #   dem_rc,
-    #   res_tar = NULL,
-    #   target = twi_rc,
-    #   if_resample = TRUE
-    # )
-    # rm(dem_rc); gc()
 
     # --- Stack and correlation ---
     stacked <- c(rin_rc, vegh_rc)
@@ -136,40 +123,74 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
+    # --- reset theme for plots ---
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
+
     # ---- Generate plots ----
-    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_slope <- plot_slope(slope_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_aspect <- plot_aspect(aspect_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_rin <- plot_rin(rin_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, title_text = "5km: Pearson's r (H~R)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~R)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_TWI <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
+    # p_slope <- plot_slope(slope_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
+    # p_aspect <- plot_aspect(aspect_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size)  + re_theme
+    p_rin <- plot_rin(rin_rc, extent = tile_extent, text_size = text_size)  + re_theme
+    p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, title_text = "5km: Pearson's r (H～Rᵢₙ)", text_size = text_size)  + re_theme
+    # p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H～Rᵢₙ)", text_size = text_size) + re_theme
+    p_r_H_TWI <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)  + re_theme
+    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = tile_extent, text_size = text_size) + re_theme
+
+    # p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
     p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+
     # ---- Combine plots ----
     final_plot <- (
-      (p_dem + p_slope + p_aspect) /
-        (p_rin + p_vegh + p_fused) /
-        (p_r_H_R + p_p + p_r_H_TWI )  /
-        (p_google + p_location + p_scatter)) +
+      (p_dem + p_rin + p_vegh) /
+        (p_r_H_R + p_r_H_TWI + p_fused)  /
+        (p_location + p_scatter + p_kg)) +
       plot_annotation(title = tile_id) +
-      plot_layout(heights = c( 1, 1, 1, 1))
+      plot_layout(heights = c( 1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/05_tile_", tile_id, "_win_5km_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/05_tile_", tile_id, "_H_Rin_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
 
     # ---- Memory cleanup ----
     # list all objects need to be remove
     rm(
-      p_dem, p_slope, p_aspect, p_p,
       twi_rc, vegh_rc, rin_rc,
       stacked, df_win, df_cor, cor_r,pval_r,
-      p_vegh, p_rin, p_r_H_R,
-      p_r_H_TWI, p_google, p_fused, p_scatter, p_location,
+      p_dem, p_vegh, p_rin, p_r_H_R, p_kg,
+      p_r_H_TWI, p_fused, p_scatter, p_location,
       final_plot)
     gc(verbose = FALSE)
 
@@ -240,7 +261,6 @@ mosaic_tiles(
 # process_r_H_R_5km(tiles_info[35,])
 
 # # ------ Smaller region  test ---------------------------------------------
-#
 # regA_info <- data.frame(
 #   tile_id = c("Aletsch_glacier"),
 #   ymin = c(46.8),
@@ -259,6 +279,6 @@ mosaic_tiles(
 # output_dir = r_H_R_tiles_dir
 # text_size = 12
 # fig_width = 14
-# fig_height = 18
+# fig_height = 14
 
 

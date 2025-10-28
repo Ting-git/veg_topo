@@ -14,7 +14,7 @@ This markdown file focuses on visualizing the results, generating plots for each
 ```{r}
 
 # list all figures of global correlation (H~TWI) for all 49 tiles
-files <- list.files(path = here::here("data/figures"), pattern = "^02_tile.*_win_5km_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^02_tile.*_H_TWI_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -29,6 +29,6 @@ knitr::include_graphics(files)
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/02_re2.Rmd"))
+rmarkdown::render(here::here("vignettes/02_re2_r_H_TWI_tile_result.Rmd.Rmd"))
 ```
 

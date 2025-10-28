@@ -7,8 +7,6 @@ veg_topo_extr_dir <- file.path("/storage/scratch/giub_geco/tting")
 # Use it to create global map
 ext_global <- terra::ext(-180, 180, -60, 85)
 
-
-
 # Vegetation height
 vegh_10m_tiles_dir <- file.path(veg_topo_extr_dir, "vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_vegh_450m/3_3_deg")
@@ -34,10 +32,11 @@ sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_
 sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_flat_450m.nc")
 sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_terrain_effect_450m.nc")
 
-# Fraction of used land
+# Fraction of land cover type
 fused_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fused_5km.nc")
 fbare_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fbare_5km.nc")
-fwi_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fwi_5km.nc") # fraction of water and ice
+fwater_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fwater_5km.nc") # fraction of water body
+fsnow_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fsnow_5km.nc") # fraction of permanent snow and ice
 
 mi_5km_file <- file.path(veg_topo_extr_dir, "global_mi_5km/mi_5km.nc")
 
@@ -71,3 +70,8 @@ regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "regB_r_R_H_500m")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
+
+# Köppen–Geiger Climate Classification
+kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")
+kg_legend_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/legend.txt")
+

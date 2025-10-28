@@ -56,19 +56,21 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
-      x = "Longitude",
-      y = "Latitude",
-      fill = NULL
+      fill = NULL,
     ) +
     ggplot2::scale_x_continuous(
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_step),
+      breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_step),
+      breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
+    ) +
+    ggplot2::coord_sf(
+      xlim = c(xmin, xmax),
+      ylim = c(ymin, ymax),
+      expand = FALSE,
+      clip = "off"
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
@@ -80,6 +82,5 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )
-
   return(p)
 }

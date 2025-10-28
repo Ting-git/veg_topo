@@ -28,8 +28,9 @@ plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
     labs(title = title, x = "Longitude", y = "Latitude") +
     theme(
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size  * 0.9),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      axis.text = ggplot2::element_text(size = text_size  * 0.8),
+      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold",
+                                         margin = margin(b = 3)),
     )
 
   rm(satellite_map); gc()

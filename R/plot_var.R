@@ -1,15 +1,5 @@
-#' Plot Correlation between VEGH and R (Radiation)
-#'
-#' @param input A SpatRaster object or a raster file path
-#' @param extent Optional terra::ext() extent.
-#'   If provided and smaller than the input raster extent,
-#'   the raster will be cropped to their intersecting area.
-#' @param text_size Font size
-#' @param x_step Number of x-axis step
-#' @param y_step Number of y-axis step
-#' @return A ggplot2 object
-#' @export
-plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢₙ)",
+
+plot_var <- function(input, extent = NULL, title_text = "Land use fraction",
                        text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
@@ -43,15 +33,9 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢ
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scico::scale_fill_scico(
-      palette = "vik",
-      direction = 1,
-      limits = c(-1, 1),
-      breaks = seq(-1, 1, by = 0.5),
-      midpoint = 0,
-      # name = expression(r[H*","*R]),
-      na.value = NA
-    ) +
+    scale_fill_gradientn(
+      colours = rev(brewer.pal(7, "Spectral")),
+      na.value = NA) +
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,

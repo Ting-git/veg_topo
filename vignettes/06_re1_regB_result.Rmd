@@ -1,5 +1,5 @@
 ---
-title: "Pearson's r (H~R) Calculation by Tile"
+title: "Pearson's r (H~R) Calculation in sample regions"
 author: "Ting Tan"
 date: "`r Sys.Date()`"
 output: html_document
@@ -12,6 +12,7 @@ The Pearson correlation analysis between vegetation height and topographic wetne
 This markdown file focuses on visualizing the plots from the script.
 
 ```{r}
+library(terra)
 # Automatically select configuration file
 hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
@@ -23,12 +24,26 @@ if (hostname == "dash") {
 }
 ```
 
+### Final Sample
+
+```{r}
+
+# list all figures
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_.*_1_plots\\.png$", full.names = TRUE)
+
+# Print 
+cat("Found", length(files), "figures:\n")
+
+# print
+knitr::include_graphics(files)
+```
+
 ### low_latitude_flat_relief
 
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_low_latitude_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_low_latitude_flat_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -42,7 +57,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_low_latitude_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_low_latitude_rugged_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -56,7 +71,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_low_latitude_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_low_latitude_flat_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -70,7 +85,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_low_latitude_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_low_latitude_rugged_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -84,7 +99,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_mid_latitude_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_mid_latitude_flat_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -98,7 +113,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_mid_latitude_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_mid_latitude_rugged_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -109,11 +124,11 @@ knitr::include_graphics(files)
 
 ### relatively_high_latitude_flat_relief
 
-{r}
+```{r}
 
 # list all figures
 
-files \<- list.files(path = here::here("data/figures"), pattern = "\^06_regB_relatively_high_latitude_flat_relief.\*\_win_500m_plots\\\\.png\$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_high_latitude_flat_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print
 
@@ -122,13 +137,13 @@ cat("Found", length(files), "figures:\\n")
 # print
 
 knitr::include_graphics(files)
+```
 
 ### relatively_high_latitude_rugged_relief
 
 ```{r}
-
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_high_latitude_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_relatively_high_latitude_rugged_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -142,7 +157,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_high_latitude_flat_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_high_latitude_flat_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
@@ -156,7 +171,7 @@ knitr::include_graphics(files)
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_high_latitude_rugged_relief.*_win_500m_plots\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "^06_regB_high_latitude_rugged_relief.*_plots\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")

@@ -36,17 +36,17 @@ source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
-# source(here::here("R/plot_dem.R"))
+source(here::here("R/plot_dem.R"))
 source(here::here("R/plot_vegh.R"))
 source(here::here("R/plot_twi.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_single_sample_location.R"))
-source(here::here("R/plot_google_img.R"))
+# source(here::here("R/plot_google_img.R"))
 source(here::here("R/plot_fused.R"))
 source(here::here("R/plot_cor_pval.R"))
-source(here::here("R/plot_biomes.R"))
-source(here::here("R/plot_dem.R"))
+# source(here::here("R/plot_biomes.R"))
+source(here::here("R/plot_kg_class.R"))
 
 # ------ File Configuration ---------------------------------------------
 
@@ -60,6 +60,26 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
                               text_size = 12, fig_width = 14, fig_height = 14) {
 
   tryCatch({
+
+    regA_info <- data.frame(
+      tile_id = c("Aletsch_glacier"),
+      ymin = c(46.8),
+      ymax = c(47),
+      xmin = c(7.8),
+      xmax = c(8),
+      sample_id = c(1)
+    )
+
+    # center location
+    regA_info$xmid <- (regA_info$xmax + regA_info$xmin) / 2
+    regA_info$ymid <- (regA_info$ymax + regA_info$ymin) / 2
+
+    tile_row <- regA_info[1, ]
+
+    output_dir = cor_twi_vegh_tiles_dir
+    text_size = 12
+    fig_width = 14
+    fig_height = 14
 
     # --- Tile info ---
     tile_id <- tile_row$tile_id
@@ -89,21 +109,6 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
     names(vegh_rc) <- "vegh"
     message("Saved temporary vegetation height raster: ", vegh_tmp_path)
 
-    # # --- Elevation and radiation Raster ---
-    # dem_rc <- extent_to_tile_ids(tile_extent, tile_size = 1, return_raster = TRUE,
-    #                              source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
-    #
-    # # Aggregate DEM and calculate slope/aspect
-    # aligned <- aggregate_topography(
-    #   dem_rc,
-    #   res_tar = NULL,
-    #   target = twi_rc,
-    #   if_resample = TRUE
-    # )
-    # # extract DEM
-    # dem <- aligned[["dem"]]
-    # rm(dem_rc, aligned); gc()
-
     # --- Stack and correlation ---
     stacked <- c(twi_rc, vegh_rc)
     df_win <- create_spatial_windows(stacked, value_vars = c("twi", "vegh"), dwin = 0.05)
@@ -123,42 +128,75 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
-    # --- Plotting ---
-    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_twi <- plot_twi(twi_rc, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_r <- plot_cor_twi_vegh(cor_r, extent = tile_extent,  title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)+ ggplot2::theme(aspect.ratio = 1)
-    p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~TWI)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    # p_biome <- plot_biomes(ecoregion_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_dem
+    # --- reset theme for plots ---
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
+
+    # --- Plotting, change the layout for better visualization ---
+    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size) + re_theme
+    p_twi <- plot_twi(twi_rc, extent = tile_extent, text_size = text_size) + re_theme
+    p_r <- plot_cor_twi_vegh(cor_r, extent = tile_extent,  title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)+ re_theme
+    p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~TWI)", text_size = text_size) + re_theme
+    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + re_theme
+    # p_biome <- plot_biomes(ecoregion_path, extent = tile_extent, text_size = text_size) + re_theme
+    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = tile_extent, text_size = text_size) + re_theme
+
+    # p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
     p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh",
                                   x_text = "Topographic Wetness Index",
                                   y_text = "Vegetation height (m)",
                                   text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     p_location <- plot_single_sample_location(tile_xmid, tile_ymid,  tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     # ---- Combine plots ----
-    final_plot <- ((p_dem + p_twi +p_vegh) /
-                     ( p_r + p_p + p_fused) /
-                     (p_google + p_location + p_scatter))+
+    final_plot <- ((p_dem + p_twi + p_vegh) /
+                     (p_r + p_fused + p_p ) /
+                     (p_location + p_scatter + p_kg))+
       plot_annotation(title = tile_id) +
       plot_layout(heights = c(1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/02_tile_", tile_id, "_win_5km_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/02_tile_", tile_id, "_H_TWI_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
 
     # --- Cleanup ---
     rm(twi_rc, vegh_rc, stacked, df_win, df_cor, cor_r,
-       pval_r, p_vegh, p_twi, p_r, p_p, p_biome,
-       p_google, p_fused, p_scatter, p_location); gc(verbose = FALSE)
+       pval_r, p_vegh, p_twi, p_r, p_p, p_kg,
+       p_fused, p_scatter, p_location); gc(verbose = FALSE)
 
     # --- Print proccess time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
     message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
     tictoc::toc()
-
 
     return(TRUE)
 
@@ -220,27 +258,8 @@ mosaic_tiles(
 # tiles_info <- readRDS(valid_tiles_info_path)
 # process_r_H_TWI_5km(tiles_info[35,])
 
-# # ------ Smaller region  test ---------------------------------------------
-#
-# regA_info <- data.frame(
-#   tile_id = c("Aletsch_glacier"),
-#   ymin = c(46.8),
-#   ymax = c(47),
-#   xmin = c(7.8),
-#   xmax = c(8),
-#   sample_id = c(1)
-# )
-#
-# # center location
-# regA_info$xmid <- (regA_info$xmax + regA_info$xmin) / 2
-# regA_info$ymid <- (regA_info$ymax + regA_info$ymin) / 2
-#
-# tile_row <- regA_info[1, ]
-#
-# output_dir = cor_twi_vegh_tiles_dir
-# text_size = 12
-# fig_width = 14
-# fig_height = 16
+# ------ Smaller region  test ---------------------------------------------
+
 
 
 

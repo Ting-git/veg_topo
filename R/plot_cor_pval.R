@@ -43,7 +43,7 @@ plot_cor_pval <- function(input, extent = NULL,
 
   # ---- Classify p-values into discrete bins ----
   breaks <- c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf)
-  labels <- c("<0.001", "0.001–0.01", "0.01–0.05", "0.05–0.1", "≥0.1")
+  labels <- c("<0.001", "<0.01", "<0.05", "<0.1", "≥0.1")
   rcl <- cbind(breaks[-length(breaks)], breaks[-1], 1:5)
   input_class <- terra::classify(input, rcl = rcl)
   names(input_class) <- "class"
@@ -66,24 +66,26 @@ plot_cor_pval <- function(input, extent = NULL,
       drop = FALSE,
       guide = guide_legend(keywidth = 0.8, keyheight = 1)
     ) +
-    labs(
+    ggplot2::labs(
       title = title_text,
-      x = "Longitude",
-      y = "Latitude",
-      fill = NULL
+      fill = NULL,
     ) +
-    scale_x_continuous(
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_step),
+    ggplot2::scale_x_continuous(
+      breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
-    scale_y_continuous(
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_step),
+    ggplot2::scale_y_continuous(
+      breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
     ) +
-    theme_bw(base_size = text_size) +
-    theme(
+    ggplot2::coord_sf(
+      xlim = c(xmin, xmax),
+      ylim = c(ymin, ymax),
+      expand = FALSE,
+      clip = "off"
+    ) +
+    ggplot2::theme_bw(base_size = text_size) +
+    ggplot2::theme(
       legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),

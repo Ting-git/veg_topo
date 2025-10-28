@@ -1,10 +1,9 @@
 ---
-title: "Further analysis based on the Raster r_H_R"
+title: "Influence of land use intensity on Pearson's r (H, Rin) "
 author: "Ting Tan"
 date: "`r Sys.Date()`"
 output: html_document
 ---
-
 
 ```{r SetUp, include=FALSE, eval=TRUE}
 
@@ -30,9 +29,10 @@ if (hostname == "dash") {
 
 ## Task
 
-The Pearson correlation analysis between vegetation height and topographic wetness index for all 49 tiles has been completed in `~/veg_topo/analysis/05_4_global_r_H_R_5km.R` and `~/veg_topo/analysis/05_5_plot_global_r_H_R_map.R`.
+The Pearson correlation analysis between vegetation height and radiation index for all 49 tiles has been completed in `~/veg_topo/analysis/05_4_global_r_H_R_5km.R` and `~/veg_topo/analysis/05_5_plot_global_r_H_R_map.R`.
 
-This markdown file focuses on visualizing the plots from scripts.
+This markdown file focuses on analysis how land use intensity influence the correlation result.
+
 ---
 
 ## Data Pre
@@ -54,16 +54,15 @@ colnames(df) <- c("lon", "lat", "r_H_R", "fused", "mi")
 
 ---
 
-### Original map
+### Original map vs map masked by fused
 
 ```{r}
 knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_map.png"))
-knitr::include_graphics(here::here("data/figures/05_r_H_R_5km_pval.png"))
 ```
 
 ---
 
-## r(H~R) Across Land-Use Intensity Bins
+## r(H~Rin) Across Land-Use Intensity Bins
 
 We bin the data by fused values into 0.1 intervals representing different levels of human impact. 
 
@@ -157,23 +156,7 @@ plot_list <- c(plot_list, list(slope_intercept_plot))
 grid.arrange(grobs = plot_list, ncol = 3)
 ```
 
-
-## Pearson Correlation (H~R) for 49 Tiles
-
-```{r ls-figures}
-# list all figures of global correlation (H~TWI) for all 49 tiles
-files <- list.files(path = here::here("data/figures"), pattern = "^05_tile.*_win_5km_plots\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-# print(files)
-```
-
-```{r print}
-knitr::include_graphics(files)
-```
-
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/05_re5_r_H_R_results.Rmd"))
+rmarkdown::render(here::here("vignettes/05_re7_r_H_Rin_land_use.Rmd"))
 ```

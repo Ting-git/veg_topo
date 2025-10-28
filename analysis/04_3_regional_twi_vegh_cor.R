@@ -21,7 +21,7 @@ hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   message("💻 Detected Worksation: dash → using config.R")
   source(here::here("config.R"))
-  workers = 4
+  workers = 2
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
@@ -42,8 +42,9 @@ source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_single_sample_location.R"))
 source(here::here("R/plot_google_img.R"))
-source(here::here("R/plot_fused.R"))
 source(here::here("R/plot_cor_pval.R"))
+source(here::here("R/plot_kg_class.R"))
+# source(here::here("R/plot_fused.R"))
 # source(here::here("R/plot_biomes.R"))
 
 # --------------- Main Processing Function -------------------------------------
@@ -129,7 +130,7 @@ process_regA_500m <- function(regA_row, output_dir = regA_cor_twi_vegh_dir,
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
-    # --- Elevation Raster ---
+    # --- Elevation Raster---
     dem_rc <- extent_to_tile_ids(regA_extent, tile_size = 1, return_raster = TRUE,
                                  source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
     dem_rr <- terra::resample(dem_rc, twi_rc, method = "bilinear")
@@ -140,37 +141,71 @@ process_regA_500m <- function(regA_row, output_dir = regA_cor_twi_vegh_dir,
     names(dem_rc) <- "dem"
     message("Saved: ", dem_nc_path)
 
-    # --- Plotting ---
-    p_dem <- plot_dem(dem_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
-    p_vegh <- plot_vegh(vegh_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
-    p_twi <- plot_twi(twi_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
-    p_r <- plot_cor_twi_vegh(cor_r, extent = regA_extent,  title_text = "500m: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
-    p_r2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = regA_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
-    p_google <- plot_google_img(extent = regA_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + ggplot2::theme(aspect.ratio = 1)
+    # --- reset theme for plots ---
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
 
-    p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh",
+    # --- Plotting, change the layout for better visualization ---
+    p_dem <- plot_dem(dem_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_twi <- plot_twi(twi_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_r <- plot_cor_twi_vegh(cor_r, extent = regA_extent,  title_text = "500m: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_r2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = regA_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    # p_fused <- plot_fused(fused_5km_file, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+
+    p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh", title_text = "H vs TWI",
                                   x_text = "Topographic Wetness Index", y_text = "Vegetation height (m)",
                                   text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    source(here::here("R/plot_single_sample_location.R"))
+
     p_location <- plot_single_sample_location(regA_xmid, regA_ymid,  regA_id, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+
+    p_google <- plot_google_img(extent = regA_extent) + ggplot2::theme(aspect.ratio = 1)
 
     # ---- Combine plots ----
     final_plot <- ((p_dem + p_twi + p_vegh) /
-                     (p_r + p_r2 + p_fused) /
+                     (p_r + p_r2 + p_kg) /
                      (p_google + p_location + p_scatter)) +
       plot_annotation(title = regA_id) +
       plot_layout(heights = c(1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/04_regA_", regA_id, "_win_500m_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/04_regA_", regA_id, "_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
-
 
     # --- Cleanup ---
     rm(twi_rc, vegh_rc, stacked, df_win, df_cor, cor_r,
-       pval_r, dem_rc, dem_rr, p_dem, p_vegh, p_twi, p_r,
-       p_r2, p_google, p_fused, p_scatter, p_location); gc(verbose = FALSE)
+       pval_r, dem_rc, p_dem, p_vegh, p_twi, p_r,
+       p_r2, p_google, p_kg, p_scatter, p_location); gc(verbose = FALSE)
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
@@ -218,12 +253,12 @@ message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fa
 # process_regA_500m(regA_info[1, ])
 
 
-# # # ----------- Test on smaller regions -----------------------------
+# # ----------- Test on smaller regions -----------------------------
 # regA_info <- data.frame(
 #   strata_A_label = c("Aletsch_glacier"),
-#   ymin = c(46.9),
+#   ymin = c(46.5),
 #   ymax = c(47),
-#   xmin = c(7.9),
+#   xmin = c(7.5),
 #   xmax = c(8),
 #   sample_id = c(1)
 # )

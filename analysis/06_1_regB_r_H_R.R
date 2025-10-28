@@ -24,11 +24,11 @@ hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   message("💻 Detected Worksation: dash → using config.R")
   source(here::here("config.R"))
-  workers = 2
+  workers = 30
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
-  workers = 5
+  workers = 50
 }
 
 source(here::here("R/create_spatial_windows.R"))
@@ -66,11 +66,10 @@ process_regB_500m <- function(regB_row,
                               output_dir = regB_r_R_H_dir,
                               text_size = 12,
                               fig_width = 14,
-                              fig_height = 18) {
+                              fig_height = 14) {
   tryCatch({
 
     # --- reg info ---
-
     regB_id <- paste0(regB_row$strata_B_label, "_", regB_row$sample_id)
     regB_extent <- terra::ext(regB_row$xmin, regB_row$xmax, regB_row$ymin, regB_row$ymax)
     regB_xmid <- (regB_row$xmin +regB_row$xmax) / 2
@@ -155,8 +154,7 @@ process_regB_500m <- function(regB_row,
     }, silent = TRUE)
 
     # Inner parallelism
-    num_cores <- 49
-    cl <- makeCluster(num_cores)
+    cl <- makeCluster(workers)
     registerDoParallel(cl)
 
     # Chunk Processing
@@ -242,37 +240,70 @@ process_regB_500m <- function(regB_row,
     terra::writeCDF(aligned[["aspect"]], aspect_nc_path, overwrite = TRUE)
     message("Saved: ",  aspect_nc_path)
 
+    # reset theme object
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
 
     # ---- Generate plots ----
-    p_dem <- plot_dem(aligned[["dem"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_slope <- plot_slope(aligned[["slope"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_aspect <- plot_aspect(aligned[["aspect"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_vegh <- plot_vegh(vegh_rc, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_rin <- plot_rin(rin, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R <- plot_r_H_R(cor_r, extent = regB_extent, title_text = "500m: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = regB_extent, title_text = "5km: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_dem <- plot_dem(aligned[["dem"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    # p_slope <- plot_slope(aligned[["slope"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    # p_aspect <- plot_aspect(aligned[["aspect"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_rin <- plot_rin(rin, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_r_H_R <- plot_r_H_R(cor_r, extent = regB_extent, title_text = "500m: Pearson's r (H～Rᵢₙ)", text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = regB_extent, title_text = "5km: Pearson's r (H～Rᵢₙ)", text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    # p_fused <- plot_fused(fused_5km_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+
     p_google <- plot_google_img(extent = regB_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
     p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     p_location <- plot_single_sample_location(regB_xmid, regB_ymid, regB_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     # ---- Combine plots ----
-    final_plot <- ((p_dem + p_slope + p_aspect) /
-                     (p_r_H_R + p_vegh + p_rin) /
-                     (p_r_H_R2 + p_location + p_scatter) /
-                     (p_google + p_fused)) +
+    final_plot <- ((p_dem + p_vegh + p_rin) /
+                     (p_r_H_R + p_r_H_R2 + p_kg) /
+                     (p_google + p_location + p_scatter)) +
       plot_annotation(title = regB_id) +
-      plot_layout(heights = c(1, 1, 1, 1))
+      plot_layout(heights = c(1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/06_regB_", regB_id, "_win_500m_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/06_regB_", regB_id, "_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
 
     # ---- Memory cleanup ----
     # list all objects need to be remove
     rm(twi_rc, vegh_rc, dem_rc, aligned,
        df, chunks, df_calc, stacked, df_win, df_cor, cor_r,pval_r,
-       p_dem, p_slope, p_aspect, p_vegh, p_rin, p_r_H_R,
-       p_r_H_R2, p_google, p_fused, p_scatter, p_location,
+       p_dem, p_vegh, p_rin, p_r_H_R,
+       p_r_H_R2, p_google, p_kg, p_scatter, p_location,
        final_plot)
     gc(verbose = FALSE)
 
@@ -280,7 +311,6 @@ process_regB_500m <- function(regB_row,
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
     message(sprintf("Region %s completed [%.1f mins]", regB_id, elapsed_mins))
     tictoc::toc()
-
     return(TRUE)
 
   }, error = function(e) {
@@ -332,7 +362,7 @@ for (i in seq_len(nrow(regB_info))) {
 # process_regB_500m(regB_info[1, ])
 
 
-# # ----------- Test on smaller regions -----------------------------
+# ----------- Test on smaller regions -----------------------------
 # regB_info <- data.frame(
 #   strata_B_label = c("Aletsch_glacier"),
 #   ymin = c(46.9),
@@ -346,6 +376,8 @@ for (i in seq_len(nrow(regB_info))) {
 # output_dir = regB_r_R_H_dir
 # text_size = 12
 # fig_width = 14
-# fig_height = 20
+# fig_height = 14
+
+
 
 

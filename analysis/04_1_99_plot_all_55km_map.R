@@ -26,7 +26,7 @@ library(here)
 
 # Load configuration and plotting helper
 source(here::here("config.R"))
-source(here::here("R/plot_fused.R"))
+source(here::here("R/plot_var.R"))
 
 message("🌍 Starting visualization of 55-km environmental maps...")
 
@@ -59,7 +59,7 @@ stacked_masked <- mask(crop(stacked, land_vect), land_vect)
 
 # ------------------------- 3. Plot & Save --------------------------------------
 plot_map <- function(r_layer, title_text, output_file) {
-  p <- plot_fused(
+  p <- plot_var(
     input      = r_layer,
     title_text = title_text,
     extent     = ext_global,
@@ -72,7 +72,13 @@ plot_map <- function(r_layer, title_text, output_file) {
       barwidth      = grid::unit(0.1, "in"),
       barheight     = grid::unit(5, "in")
     )) +
-    geom_sf(data = coast, colour = "black", linewidth = 0.1)
+    geom_sf(data = coast, colour = "black", linewidth = 0.1) +
+    coord_sf(
+      xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+      ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+      expand = FALSE,
+      clip = "on"
+    )
 
   ggsave(
     filename = output_file,

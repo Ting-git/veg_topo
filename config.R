@@ -41,6 +41,7 @@ dem_sd_50km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/dem_1
 dem_sd_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_sd_55km.nc")
 dem_rg_max_min_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_max_min_55km.nc") # range of elevation: max - min
 dem_rg_95p_05p_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_95p_05p_55km.nc") # range of elevation: 95p - 05p
+dem_rg_98p_02p_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_dem_55km/dem_rg_98p_02p_55km.nc") # range of elevation: 98p - 02p
 
 # Protected area
 pa_shp0 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
@@ -50,7 +51,6 @@ pa_shp2 <- file.path("/data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025/WDPA
 fpa_55km_path <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_fpa_55km_2025/WDPA_WDOECM_Jul2025_55km.nc")
 
 # Mean Annual temperature
-
 mat_55km_file <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_mat_55km/global_mat_55km_1970_2000.nc")
 mat_5km_file <- file.path("/data_2/scratch/ting/veg_topo_data/data/global_mat_5km/global_mat_5km_1970_2000.nc")
 
@@ -62,6 +62,7 @@ valid_tiles_vect_path <- file.path(project_root, "data/valid_tiles.gpkg")
 mi_950m_file <- file.path(veg_topo_extr_dir,"data_raw/aridityindex_zomer_2022/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 mi_5km_file <- file.path(veg_topo_extr_dir, "data/global_mi_5km/mi_5km.nc")
 mi_55km_file <- file.path(veg_topo_extr_dir, "data/global_mi_55km/mi_55km.nc")
+
 
 # correalation between twi and vegh
 cor_twi_vegh_tiles_dir <- file.path(veg_topo_extr_dir, "data/global_cor_twi_vegh/30_30_deg")
@@ -114,3 +115,8 @@ ecoregion_5km_path <- file.path(veg_topo_extr_dir, "data/global_ecoregion_5km/Ec
 
 # cci_landcover_path <- file.path("/data_2/scratch/ting/data_raw/CCI_landcover_2020/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 cci_landcover_path <- file.path("/data/archive/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
+
+# Köppen–Geiger Climate Classification
+kg_present_0p0083_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")
+kg_legend_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/legend.txt")
+
