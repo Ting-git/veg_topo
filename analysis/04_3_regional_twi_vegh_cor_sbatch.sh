@@ -1,9 +1,9 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="region_r_H_TWI_500m"
+#SBATCH --job-name="regA"
 #SBATCH --time=2:00:00 # ~6.5 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=9
 #SBATCH --mem=400G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL

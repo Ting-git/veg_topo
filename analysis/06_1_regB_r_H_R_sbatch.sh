@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="region_r_H_R_500m"
+#SBATCH --job-name="regB"
 #SBATCH --time=4:00:00 # ~98 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker

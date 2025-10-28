@@ -47,6 +47,13 @@ source(here::here("R/plot_kg_class.R"))
 # source(here::here("R/plot_fused.R"))
 # source(here::here("R/plot_biomes.R"))
 
+# ------ File Configuration ---------------------------------------------
+
+if (!dir.exists(regA_cor_twi_vegh_dir)) {
+  dir.create(regA_cor_twi_vegh_dir, recursive = TRUE)
+  message("Directory created: ", regA_cor_twi_vegh_dir)
+}
+
 # --------------- Main Processing Function -------------------------------------
 
 #' Process a single region for TWI and vegetation height correlation analysis
