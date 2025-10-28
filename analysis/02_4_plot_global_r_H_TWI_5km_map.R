@@ -39,7 +39,13 @@ p_cor <- plot_cor_twi_vegh(
   )) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(
@@ -62,7 +68,13 @@ p_pval <-  plot_cor_pval(
 ) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(

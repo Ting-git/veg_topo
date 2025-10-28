@@ -51,7 +51,13 @@ p_flat <- plot_sw_in(
   )) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(
@@ -80,7 +86,13 @@ p_uneven <- plot_sw_in(
   )) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(
@@ -108,7 +120,13 @@ p_te <- plot_rin(
 )) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1)+
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(

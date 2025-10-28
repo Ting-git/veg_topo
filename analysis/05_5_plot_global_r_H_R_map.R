@@ -39,7 +39,13 @@ p_r <- plot_r_H_R(
 )) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1)+
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(
@@ -63,7 +69,13 @@ p_pval <-  plot_cor_pval(
 ) +
   geom_sf(data = coast,
           colour = 'black',
-          linewidth = 0.1)
+          linewidth = 0.1)+
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  )
 
 # save
 ggsave(

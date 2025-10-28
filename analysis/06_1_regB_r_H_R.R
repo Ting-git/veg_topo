@@ -42,16 +42,17 @@ source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
 
 source(here::here("R/plot_dem.R"))
-source(here::here("R/plot_aspect.R"))
-source(here::here("R/plot_slope.R"))
+# source(here::here("R/plot_aspect.R"))
+# source(here::here("R/plot_slope.R"))
 source(here::here("R/plot_vegh.R"))
 source(here::here("R/plot_r_H_R.R"))
-source(here::here("R/plot_sw_in.R"))
+# source(here::here("R/plot_sw_in.R"))
 source(here::here("R/plot_rin.R"))
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_single_sample_location.R"))
 source(here::here("R/plot_google_img.R"))
-source(here::here("R/plot_fused.R"))
+# source(here::here("R/plot_fused.R"))
+source(here::here("R/plot_kg_class.R"))
 
 # ------ File Configuration ---------------------------------------------
 
