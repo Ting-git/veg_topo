@@ -164,12 +164,12 @@ df_binned <- df |>
   # Assign readable labels to each bin
   mutate(
     mi_label = case_when(
-      mi_bin == levels(mi_bin)[1] ~ "hyper_arid",
-      mi_bin == levels(mi_bin)[2] ~ "semiarid",
-      mi_bin == levels(mi_bin)[3] ~ "dry_subhumid",
-      mi_bin == levels(mi_bin)[4] ~ "moist_subhumid",
-      mi_bin == levels(mi_bin)[5] ~ "humid",
-      mi_bin == levels(mi_bin)[6] ~ "perhumid"
+      mi_bin == levels(mi_bin)[1] ~ "mi_1_hyper_arid",
+      mi_bin == levels(mi_bin)[2] ~ "mi_2_semiarid",
+      mi_bin == levels(mi_bin)[3] ~ "mi_3_dry_subhumid",
+      mi_bin == levels(mi_bin)[4] ~ "mi_4_moist_subhumid",
+      mi_bin == levels(mi_bin)[5] ~ "mi_5_humid",
+      mi_bin == levels(mi_bin)[6] ~ "mi_6_perhumid"
     ),
     relief_label = case_when(
       relief_bin == levels(relief_bin)[1] ~ "flat_relief",
