@@ -6,12 +6,12 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-# ------Load required libraries-------------------------------------------------
+# Load required libraries
 
 library(terra)     # For handling raster data
 library(furrr)
 library(dplyr)
-library(ggmap)
+# library(ggmap)
 library(tidyterra)
 library(doParallel)    # inner parallelism
 library(foreach)
@@ -23,59 +23,54 @@ library(patchwork)
 library(rnaturalearth)
 library(sf)
 
-# ------Load configuration and helper functions---------------------------------
-
+# Load configuration and helper functions
 # Automatically select configuration file
 hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   message("💻 Detected Worksation: dash → using config.R")
   source(here::here("config.R"))
-  workers = 16 # don't do it on worksation
+  workers = 16
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
-  workers = 100
+  workers = 50
 }
+
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/mosaic_tiles.R"))
-source(here::here("R/plot_dem.R"))
-source(here::here("R/plot_aspect.R"))
-source(here::here("R/plot_slope.R"))
-source(here::here("R/plot_vegh.R"))
-source(here::here("R/plot_r_H_R.R"))
-source(here::here("R/plot_sw_in.R"))
-source(here::here("R/plot_rin.R"))
-source(here::here("R/plot_hex_scatter.R"))
-source(here::here("R/plot_single_sample_location.R"))
-source(here::here("R/plot_google_img.R"))
-# source(here::here("R/plot_cci_land_cover.R"))
-source(here::here("R/plot_fused.R"))
-source(here::here("R/plot_cor_pval.R"))
-source(here::here("R/plot_cor_twi_vegh.R"))
-
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 
 source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
-```
 
+source(here::here("R/plot_dem.R"))
+# source(here::here("R/plot_aspect.R"))
+# source(here::here("R/plot_slope.R"))
+source(here::here("R/plot_vegh.R"))
+source(here::here("R/plot_r_H_R.R"))
+# source(here::here("R/plot_sw_in.R"))
+source(here::here("R/plot_rin.R"))
+source(here::here("R/plot_hex_scatter.R"))
+source(here::here("R/plot_single_sample_location.R"))
+# source(here::here("R/plot_google_img.R"))
+source(here::here("R/plot_fused.R"))
+source(here::here("R/plot_kg_class.R"))
+
+# File Configuration
+if (!dir.exists(regB_valid_r_H_Rin_dir)) {
+  dir.create(regB_valid_r_H_Rin_dir, recursive = TRUE)
+  message("Directory created: ", regB_valid_r_H_Rin_dir)
+}
+```
 
 ---
 
 ## Task
 
-To verify the correctness of the split-window correlation analysis, all input and intermediate datasets should be visualized to ensure the accuracy of the workflow.
-
-We manually selected several well-known regions, including those mentioned by Fan et al. (2019), for this validation.
-The evaluation will be conducted at two spatial scales:
-
-1. Coarse resolution (5 km): Pearson’s r will be computed using the radiation index and vegetation height aggregated to 450 m.
-2. Fine resolution (500 m): Pearson’s r will be calculated using the radiation index and vegetation height data at 30 m resolution.
-
-This setup allows us to assess whether the analysis performs consistently across different spatial resolutions and datasets.
+Choose representative regions discussed in Fan et al. (2019) and other regions of interest revealed by the global (H)–(R_{in}) analysis for detailed examination.
 
 ---
 
@@ -83,30 +78,33 @@ This setup allows us to assess whether the analysis performs consistently across
 
 ```{r}
 
-tiles_info <- data.frame(
-  tile_id = c(
-    "Aletsch_glacier",
-    "3a_arid_western_Texas",
-    "3b_seasonal_arid_California",
-    "3c_seasonal_arid_Idaho",
-    "3d_winter_snowpacks_Mount_Cramer",
-    "3e_high_latitude_southwest_Yukon",
-    "3f_boreal_forest_Alaska"
-  ),
-  ymin = c(46.8, 31.5, 37.5, 43, 43.8, 61.5, 64),
-  ymax = c(47, 32.5, 38.5, 44, 44.1, 62.5, 65),
-  xmin = c(7.8, -105, -120.5, -115.8, -115.5, -138.5, -148),
-  xmax = c(8, -104.5, -119.5, -114.8, -114.5, -137.5, -147)
+tiles_info <- tribble(
+  ~strata_B_label,                        ~ymin,   ~ymax,   ~xmin,     ~xmax,   ~sample_id,
+
+  # --- Europe ---
+  "e1_Aletsch_glacier",                   46.4,    46.5,     7.8,       7.9,     1,
+  "e2_Parc_National_Suisse",              46.5,    46.8,    10.1,      10.4,     1,
+  "e4_WesternAlps_MontBlanc_massif",      45.0,    45.5,     6.5,       7.0,     1,
+
+  # --- Asia ---
+  "e5_subtropical_Yunnan_region",         35.5,    36.0,    97.0,      97.5,     1,
+
+  # --- Africa ---
+  "e3_equatorial_rainforest_CongoBasin",  -1.0,    -0.5,    17.0,      17.5,     1,
+
+  # --- South America ---
+  "e6_Orinoco_transition_forest",          6.5,     7.0,   -70.5,     -70.0,     1,
+
+  # --- North America (Arid & Temperate regions) ---
+  "3a_arid_western_Texas",                31.5,    32.5,  -105.0,   -104.5,     1,
+  "3b_seasonal_arid_California_foothills",37.5,    38.5,  -120.5,   -119.5,     1,
+  "3c_seasonal_arid_Idaho_Basin",         43.0,    44.0,  -115.8,   -114.8,     1,
+  "3d_winter_snowpacks_Mount_Cramer",     43.8,    44.1,  -115.5,   -114.5,     1,
+
+  # --- Northern high-latitude regions ---
+  "3e_high_latitude_southwest_Yukon",     61.5,    62.5,  -138.5,   -137.5,     1,
+  "3f_boreal_forest_Alaska",              64.0,    65.0,  -148.0,   -147.0,     1
 )
-
-```
-
-```{r, eval=FALSE}
-regB_row <- tiles_info[1, ]
-output_dir = tempdir()
-text_size = 12
-fig_width = 14
-fig_height = 18
 
 ```
 
@@ -114,156 +112,16 @@ fig_height = 18
 
 ## Global analysis on validation regions
 
-```{r res1, eval=FALSE}
-process_r_H_R_5km <- function(tile_row, output_dir = tempdir(),
-                                text_size = 12, fig_width = 14, fig_height = 18) {
-
-  tryCatch({
-
-
-    # --- Tile info ---
-    tile_id <- tile_row$tile_id
-    tile_extent <- terra::ext(tile_row$xmin, tile_row$xmax, tile_row$ymin, tile_row$ymax)
-    tile_xmid <- (tile_row$xmin + tile_row$xmax)/2
-    tile_ymid <- (tile_row$ymin + tile_row$ymax)/2
-
-    tictoc::tic(paste0("Processing tile: ", tile_id))
-    t0 <- Sys.time()
-
-    # --- TWI Raster ---
-    twi_rc <- terra::rast(twi_450m_mosaic_clean_path) |> terra::crop(tile_extent)
-    twi_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_twi_450m.nc"))
-    terra::writeCDF(twi_rc, twi_tmp_path, varnames = "twi", overwrite = TRUE)
-    rm(twi_rc); gc()
-    twi_rc <- terra::rast(twi_tmp_path)
-    names(twi_rc) <- "twi"
-    message("Saved temporary TWI raster: ", twi_tmp_path)
-
-
-    # --- Vegetation Height Raster ---
-    vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(tile_extent)
-    vegh_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_vegh_450m.nc"))
-    terra::writeCDF(vegh_rc, vegh_tmp_path, varnames = "vegh",overwrite = TRUE)
-    rm(vegh_rc); gc()
-    vegh_rc <- terra::rast(vegh_tmp_path)
-    names(vegh_rc) <- "vegh"
-    message("Saved temporary vegetation height raster: ", vegh_tmp_path)
-
-    # --- Radiation index of terrain effect ---
-    rin_rc <- terra::rast(sw_in_terrain_effect_450m_path) |> terra::crop(tile_extent)
-    terrain_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_terrain_effect_450m.nc"))
-    terra::writeCDF(rin_rc, terrain_tmp_path, varnames = "rin", overwrite = TRUE)
-    rm(rin_rc); gc()
-    rin_rc <- terra::rast(terrain_tmp_path)
-    names(rin_rc) <- "rin"
-    message("Saved temporary radiation index raster: ", terrain_tmp_path)
-
-    # # --- Elevation and radiation Raster ---
-    # dem_rc <- extent_to_tile_ids(tile_extent, tile_size = 1, return_raster = TRUE,
-    #                              source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
-    #
-    # # Aggregate DEM and calculate slope/aspect
-    # aligned <- aggregate_topography(
-    #   dem_rc,
-    #   res_tar = NULL,
-    #   target = twi_rc,
-    #   if_resample = TRUE
-    # )
-    # rm(dem_rc); gc()
-
-    # --- Stack and correlation ---
-    stacked <- c(rin_rc, vegh_rc)
-    df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.05)
-    df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
-
-    # --- Save correlation ---
-    cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
-    names(cor_r) <- "r_H_R"
-    cor_nc_path <- file.path(output_dir, paste0("tile_", tile_id, "_r_H_R_5km_map.nc"))
-    terra::writeCDF(cor_r, cor_nc_path, overwrite = TRUE)
-    message("Saved: ", cor_nc_path)
-
-    # --- Save p-value ---
-    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type="xyz", crs="EPSG:4326")
-    names(pval_r) <- "pval_r_H_R"
-    pval_nc_path <- file.path(output_dir, paste0("tile_", tile_id, "_r_H_R_5km_pval.nc"))
-    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
-    message("Saved: ", pval_nc_path)
-
-    # ---- Generate plots ----
-    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_slope <- plot_slope(slope_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_aspect <- plot_aspect(aspect_450m_mosaic_path, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_rin <- plot_rin(rin_rc, extent = tile_extent, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, title_text = "5km: Pearson's r (H~R)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~R)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_TWI <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-    p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    # ---- Combine plots ----
-    final_plot <- (
-      (p_dem + p_slope + p_aspect) /
-        (p_rin + p_vegh + p_fused) /
-        (p_r_H_R + p_p + p_r_H_TWI )  /
-        (p_google + p_location + p_scatter)) +
-      plot_annotation(title = tile_id) +
-      plot_layout(heights = c( 1, 1, 1, 1))
-
-    # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/05_validate_", tile_id, "_win_5km_plots.png")))
-    ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
-
-    # ---- Memory cleanup ----
-    # list all objects need to be remove
-    rm(
-      p_dem, p_slope, p_aspect, p_p,
-      twi_rc, vegh_rc, rin_rc,
-      stacked, df_win, df_cor, cor_r,pval_r,
-      p_vegh, p_rin, p_r_H_R,
-      p_r_H_TWI, p_google, p_fused, p_scatter, p_location,
-      final_plot)
-    gc(verbose = FALSE)
-
-    # --- Print proccessed time ---
-    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
-    message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
-    tictoc::toc()
-
-    return(TRUE)
-
-
-  }, error = function(e) {
-    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
-    message(sprintf("❌ Tile %s failed after %.1f mins: %s", tile_row$tile_id, elapsed_mins, e$message))
-    return(FALSE)
-  })
-}
-
-
-for (i in seq_len(nrow(tiles_info))) {
-  process_r_H_R_5km(tiles_info[i, ])
-}
-```
-
----
-
-
-## Regional Analysis on validation regions
-
-```{r res2, eval=TRUE}
+```{r validate, eval=TRUE}
 process_regB_500m <- function(regB_row,
-                              output_dir = tempdir(),
+                              output_dir = regB_valid_r_H_Rin_dir,
                               text_size = 12,
                               fig_width = 14,
-                              fig_height = 18) {
+                              fig_height = 14) {
   tryCatch({
 
     # --- reg info ---
-
-    regB_id <- regB_row$tile_id
+    regB_id <- paste0(regB_row$strata_B_label, "_", regB_row$sample_id)
     regB_extent <- terra::ext(regB_row$xmin, regB_row$xmax, regB_row$ymin, regB_row$ymax)
     regB_xmid <- (regB_row$xmin +regB_row$xmax) / 2
     regB_ymid <- (regB_row$ymin +regB_row$ymax) / 2
@@ -275,8 +133,7 @@ process_regB_500m <- function(regB_row,
     # --- TWI Raster ---
     twi_rc <- terra::rast(twi_30m_path) |> terra::crop(regB_extent)
     twi_nc_path <- file.path(output_dir, paste0("regB_tile_", regB_id, "_twi_450m.nc"))
-    terra::writeRaster(twi_rc, twi_nc_path, overwrite = TRUE, 
-                   wopt = list(gdal = c("COMPRESS=LZW")))
+    terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
     rm(twi_rc); gc()
     twi_rc <- terra::rast(twi_nc_path)
     names(twi_rc) <- "twi"
@@ -287,9 +144,8 @@ process_regB_500m <- function(regB_row,
                                   source = "lang_vegh_10m", tiles_dir = vegh_10m_tiles_dir)
 
     # Vegetation Height Raster: crop and store in temporary file
-    tmp_vegh <- tempfile(fileext = ".tif")
-    terra::writeRaster(vegh_rc, tmp_vegh, overwrite = TRUE,
-                   wopt = list(gdal = c("COMPRESS=LZW")))
+    tmp_vegh <- tempfile(fileext = ".nc")
+    terra::writeCDF(vegh_rc, tmp_vegh, varnames = "vegh", overwrite = TRUE)
     rm(vegh_rc); gc()
     vegh_rc <- terra::rast(tmp_vegh)
     names(vegh_rc) <- "vegh"
@@ -307,6 +163,11 @@ process_regB_500m <- function(regB_row,
       if_mask = TRUE,
       if_return_raster = TRUE
     )
+    vegh_nc_path <- file.path(output_dir, paste0("regB_tile_", regB_id, "_vegh_450m.nc"))
+    terra::writeCDF(vegh_rc, vegh_nc_path, varnames="vegh", overwrite = TRUE)
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(vegh_nc_path)
+    message("Saved: ", vegh_nc_path)
 
     # --- Elevation and radiation Raster ---
     dem_rc <- extent_to_tile_ids(regB_extent, tile_size = 1, return_raster = TRUE,
@@ -344,8 +205,7 @@ process_regB_500m <- function(regB_row,
     }, silent = TRUE)
 
     # Inner parallelism
-    num_cores <- wokers
-    cl <- makeCluster(num_cores)
+    cl <- makeCluster(workers)
     registerDoParallel(cl)
 
     # Chunk Processing
@@ -400,41 +260,101 @@ process_regB_500m <- function(regB_row,
     # --- Save correlation ---
     cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
     names(cor_r) <- "r_H_R"
+    cor_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_r_H_R_500m.nc"))
+    terra::writeCDF(cor_r, cor_nc_path, overwrite = TRUE)
+    message("Saved: ", cor_nc_path)
 
     # --- Save p-value ---
     pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type = "xyz", crs = "EPSG:4326")
     names(pval_r) <- "pval_r_H_R"
+    pval_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_pval_r_H_R_500m.nc"))
+    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
+    message("Saved: ", pval_nc_path)
+
+    # --- Save Rin as NetCDF ---
+    rin_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_rin_30m.nc"))
+    terra::writeCDF(rin, rin_nc_path, overwrite = TRUE)
+    message("Saved: ", rin_nc_path)
+
+    # --- Save DEM as NetCDF ---
+    dem_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_dem_30m.nc"))
+    terra::writeCDF(aligned[["dem"]], dem_nc_path, overwrite = TRUE)
+    message("Saved: ", dem_nc_path)
+
+    # --- Save Slope as NetCDF ---
+    slope_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_slope_30m.nc"))
+    terra::writeCDF(aligned[["slope"]], slope_nc_path, overwrite = TRUE)
+    message("Saved: ", slope_nc_path)
+
+    # --- Save Aspect as NetCDF ---
+    aspect_nc_path <- file.path(output_dir, paste0("regB_", regB_id, "_aspect_30m.nc"))
+    terra::writeCDF(aligned[["aspect"]], aspect_nc_path, overwrite = TRUE)
+    message("Saved: ",  aspect_nc_path)
+
+    # reset theme object
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
 
     # ---- Generate plots ----
-    p_dem <- plot_dem(aligned[["dem"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_slope <- plot_slope(aligned[["slope"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_aspect <- plot_aspect(aligned[["aspect"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_vegh <- plot_vegh(vegh_rc, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_rin <- plot_rin(rin, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R <- plot_r_H_R(cor_r, extent = regB_extent, title_text = "500m: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = regB_extent, title_text = "5km: Pearson's r (H ~ R)", text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    p_google <- plot_google_img(extent = regB_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_fused <- plot_fused(fused_5km_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
+    p_dem <- plot_dem(aligned[["dem"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    # p_slope <- plot_slope(aligned[["slope"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    # p_aspect <- plot_aspect(aligned[["aspect"]], extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_rin <- plot_rin(rin, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_r_H_R <- plot_r_H_R(cor_r, extent = regB_extent, title_text = "500m: Pearson's r (H～Rᵢₙ)", text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_r_H_R2 <- plot_r_H_R(r_H_R_5km_path, extent = regB_extent, title_text = "5km: Pearson's r (H～Rᵢₙ)", text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_fused <- plot_fused(fused_5km_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = regB_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
+
+    # p_google <- plot_google_img(extent = regB_extent) + ggplot2::theme(aspect.ratio = 1)
     p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     p_location <- plot_single_sample_location(regB_xmid, regB_ymid, regB_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
     # ---- Combine plots ----
-    final_plot <- ((p_dem + p_slope + p_aspect) /
-                     (p_r_H_R + p_vegh + p_rin) /
-                     (p_r_H_R2 + p_location + p_scatter) /
-                     (p_google + p_fused)) +
+    final_plot <- ((p_dem + p_vegh + p_rin) /
+                     (p_r_H_R + p_r_H_R2 + p_kg) /
+                     (p_location + p_scatter + p_fused)) +
       plot_annotation(title = regB_id) +
-      plot_layout(heights = c(1, 1, 1, 1))
+      plot_layout(heights = c(1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/05_validate_", regB_id, "_win_500m_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/06_validate_", regB_id, "_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
 
     # ---- Memory cleanup ----
     # list all objects need to be remove
     rm(twi_rc, vegh_rc, dem_rc, aligned,
        df, chunks, df_calc, stacked, df_win, df_cor, cor_r,pval_r,
-       p_dem, p_slope, p_aspect, p_vegh, p_rin, p_r_H_R,
-       p_r_H_R2, p_google, p_fused, p_scatter, p_location,
+       p_dem, p_vegh, p_rin, p_r_H_R,
+       p_r_H_R2, p_fused, p_kg, p_scatter, p_location,
        final_plot)
     gc(verbose = FALSE)
 
@@ -442,7 +362,6 @@ process_regB_500m <- function(regB_row,
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
     message(sprintf("Region %s completed [%.1f mins]", regB_id, elapsed_mins))
     tictoc::toc()
-
     return(TRUE)
 
   }, error = function(e) {
@@ -459,130 +378,23 @@ for (i in seq_len(nrow(tiles_info))) {
 ```
 
 ---
-### Aletsch Glacier
-5km vs 500m
+
+### Plot validate regions
+
 ```{r}
 
 # list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_Aletsch.*\\.png$", full.names = TRUE)
+files <- list.files(path = here::here("data/figures"), pattern = "06_validate_.*\\.png$", full.names = TRUE)
 
 # Print 
 cat("Found", length(files), "figures:\n")
 
 # print
 knitr::include_graphics(files)
-```
-
-### 3a_arid_western_Texas
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3a_arid_western_Texas.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-### 3b_seasonal_arid_California
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3b_seasonal_arid_California.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-### 3c_seasonal_arid_Idaho
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3c_seasonal_arid_Idaho.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-### 3d_winter_snowpacks_Mount_Cramer
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3d_winter_snowpacks_Mount_Cramer.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-### 3e_high_latitude_southwest_Yukon
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3e_high_latitude_southwest_Yukon.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-### 3f_boreal_forest_Alaska
-5km vs 500m
-```{r}
-
-# list all figures
-files <- list.files(path = here::here("data/figures"), pattern = "05_validate_3f_boreal_forest_Alaska.*\\.png$", full.names = TRUE)
-
-# Print 
-cat("Found", length(files), "figures:\n")
-
-# print
-knitr::include_graphics(files)
-```
-
-###  5km vs 500m
-```{r}
-# # list all figures
-# # files <- list.files(path = here::here("data/figures"), pattern = "05_validate.*5km_.*\\.png$", full.names = TRUE)
-# 
-# # Print 
-# cat("Found", length(files), "figures:\n")
-# 
-# # print
-# knitr::include_graphics(files)
-```
-
-```{r}
-# 
-# # list all figures
-# files <- list.files(path = here::here("data/figures"), pattern = "05_validate_.*500m_.*\\.png$", full.names = TRUE)
-# 
-# # Print 
-# cat("Found", length(files), "figures:\n")
-# 
-# # print
-# knitr::include_graphics(files)
 ```
 
 
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/05_re3.Rmd"))
+rmarkdown::render(here::here("vignettes/06_re2_regions_validation.Rmd"))
 ```

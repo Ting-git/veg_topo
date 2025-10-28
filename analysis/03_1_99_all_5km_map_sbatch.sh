@@ -1,7 +1,7 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="flc_5km_map"
 #SBATCH --time=2:00:00 # ~ 6.5 min
-#SBATCH --ntasks=4
+#SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=50G  # 50G

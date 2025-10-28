@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="plot_global_sw_in_450m_map"
+#SBATCH --job-name="05LandUsedMask"
 #SBATCH --time=2:00:00 # ~ 6.5 min
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=50G  # 50G
+#SBATCH --mem=200G  #
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -23,7 +23,7 @@ module load R/4.4.2-gfbf-2024a
 echo "=================================================="
 echo "Job started on: $(date --rfc-3339=seconds)"
 echo "Job ID: $SLURM_JOB_ID"
-echo "Job name: $SLURM_JOB_NAME"  # 输出job name
+echo "Job name: $SLURM_JOB_NAME"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
@@ -34,7 +34,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 05_3_plot_global_sw_in_450m_map.R\n"); source("05_3_plot_global_sw_in_450m_map.R")'
+)); cat("Running script: 05_6_land_use_and_r_H_Rin.R\n"); source("05_6_land_use_and_r_H_Rin.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
