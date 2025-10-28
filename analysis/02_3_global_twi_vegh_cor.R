@@ -61,26 +61,6 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
 
   tryCatch({
 
-    regA_info <- data.frame(
-      tile_id = c("Aletsch_glacier"),
-      ymin = c(46.8),
-      ymax = c(47),
-      xmin = c(7.8),
-      xmax = c(8),
-      sample_id = c(1)
-    )
-
-    # center location
-    regA_info$xmid <- (regA_info$xmax + regA_info$xmin) / 2
-    regA_info$ymid <- (regA_info$ymax + regA_info$ymin) / 2
-
-    tile_row <- regA_info[1, ]
-
-    output_dir = cor_twi_vegh_tiles_dir
-    text_size = 12
-    fig_width = 14
-    fig_height = 14
-
     # --- Tile info ---
     tile_id <- tile_row$tile_id
     tile_extent <- terra::ext(tile_row$xmin, tile_row$xmax, tile_row$ymin, tile_row$ymax)
@@ -259,7 +239,25 @@ mosaic_tiles(
 # process_r_H_TWI_5km(tiles_info[35,])
 
 # ------ Smaller region  test ---------------------------------------------
-
+# regA_info <- data.frame(
+#   tile_id = c("Aletsch_glacier"),
+#   ymin = c(46.8),
+#   ymax = c(47),
+#   xmin = c(7.8),
+#   xmax = c(8),
+#   sample_id = c(1)
+# )
+#
+# # center location
+# regA_info$xmid <- (regA_info$xmax + regA_info$xmin) / 2
+# regA_info$ymid <- (regA_info$ymax + regA_info$ymin) / 2
+#
+# tile_row <- regA_info[1, ]
+#
+# output_dir = cor_twi_vegh_tiles_dir
+# text_size = 12
+# fig_width = 14
+# fig_height = 14
 
 
 
