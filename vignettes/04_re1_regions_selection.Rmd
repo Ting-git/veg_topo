@@ -29,7 +29,6 @@ library(RColorBrewer)
 library(rnaturalearth)
 library(sf)
 
-
 # Load configuration and functions
 source(here::here("config.R"))
 source(here::here("R/plot_density_grid.R"))
@@ -48,7 +47,9 @@ if (!dir.exists(reg_sample_dir)) {
 
 Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework.
 
-## Implementation
+---
+
+## Input data description
 
 ```{r DataPre}
 # Load resampled raster datasets (MI, TWI, fused)
@@ -112,7 +113,6 @@ cat("Found", length(files), "figures:\n")
 knitr::include_graphics(files)
 ```
 
-
 ```{r DataOverview}
 # Select columns for plot
 cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_95p_05p", "dem_rg_98p_02p", "dem_rg_max_min", "fpa", "mat", "fveg")
@@ -126,9 +126,10 @@ plot_density_grid(
   save_path = here::here("data/figures/04_region_selection_input_data_density.png")
 )
 ```
+
 ---
 
-### Binning Variables
+## Binning Variables
 
 To classify the global landscape into meaningful categories, we create bins for key drivers:
 
@@ -164,12 +165,12 @@ df_binned <- df |>
   # Assign readable labels to each bin
   mutate(
     mi_label = case_when(
-      mi_bin == levels(mi_bin)[1] ~ "mi_1_hyper_arid",
-      mi_bin == levels(mi_bin)[2] ~ "mi_2_semiarid",
-      mi_bin == levels(mi_bin)[3] ~ "mi_3_dry_subhumid",
-      mi_bin == levels(mi_bin)[4] ~ "mi_4_moist_subhumid",
-      mi_bin == levels(mi_bin)[5] ~ "mi_5_humid",
-      mi_bin == levels(mi_bin)[6] ~ "mi_6_perhumid"
+      mi_bin == levels(mi_bin)[1] ~ "1_hyper_arid",
+      mi_bin == levels(mi_bin)[2] ~ "2_semiarid",
+      mi_bin == levels(mi_bin)[3] ~ "3_dry_subhumid",
+      mi_bin == levels(mi_bin)[4] ~ "4_moist_subhumid",
+      mi_bin == levels(mi_bin)[5] ~ "5_humid",
+      mi_bin == levels(mi_bin)[6] ~ "6_perhumid"
     ),
     relief_label = case_when(
       relief_bin == levels(relief_bin)[1] ~ "flat_relief",
@@ -177,11 +178,11 @@ df_binned <- df |>
       relief_bin == levels(relief_bin)[3] ~ "rugged_relief"
     ),
     lat_label = case_when(
-      abs_lat_bin == levels(abs_lat_bin)[1] ~ "low_lat",
-      abs_lat_bin == levels(abs_lat_bin)[2] ~ "lower_lat",
-      abs_lat_bin == levels(abs_lat_bin)[3] ~ "mid_lat",
-      abs_lat_bin == levels(abs_lat_bin)[4] ~ "higher_lat",
-      abs_lat_bin == levels(abs_lat_bin)[5] ~ "high_lat"
+      abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_low_lat",
+      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_lower_lat",
+      abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_mid_lat",
+      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_higher_lat",
+      abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_high_lat"
     )
   ) |>
 
@@ -204,9 +205,9 @@ table(df_binned$strata_B_label)
 
 ---
 
-### Filtering Candidate Regions
+## Filtering Candidate Regions
 
-#### For Lateral Subsurface Flow–Dominated Analysis (Strata A)
+### For Lateral Subsurface Flow–Dominated Analysis (Strata A)
 
 ```{r FilterA, echo = TRUE}
 
@@ -278,7 +279,7 @@ table(df_filt_B$strata_B_label)
 
 ---
 
-### Sampling Representative Locations
+## Sampling Representative Locations
 
 ```{r Sampling}
 # Pick one region (coarse gridcell) representing all combination of bins.
@@ -334,7 +335,7 @@ saveRDS(df_samples_B, regB_sample_info_path)
 
 ---
 
-### Export and Visualization
+## Export and Visualization
 
 * Bounding boxes are saved as GeoPackage (`.gpkg`) files for GIS use.
 * Locations are plotted on global maps, color‐coded by strata category.
@@ -434,6 +435,7 @@ for (i in seq_len(nrow(regA_info))) {
 
 
 ### region sample for Radiation analysis
+
 ```{r}
 # ---- plot regB location ----
 ggplot(data = world) +
