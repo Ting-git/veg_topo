@@ -33,11 +33,15 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scale_fill_viridis_c() +
+    scico::scale_fill_scico(
+      palette = "bamako",
+      direction = 1,
+      na.value = NA
+    ) +
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
-      fill = NULL,
+      fill = "m",
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

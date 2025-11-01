@@ -59,25 +59,31 @@ pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "global_r_H_R_5km/pval_r_H_R
 mat_55km_file <- file.path(veg_topo_extr_dir, "global_mat_55km/global_mat_55km_1970_2000.nc")
 mat_5km_file <- file.path(veg_topo_extr_dir, "global_mat_5km/global_mat_5km_1970_2000.nc")
 
-# Regional correlation
+# random sample region extent
 reg_sample_dir <- file.path(veg_topo_extr_dir, "reg_sample")
 
+reg_sample_info_path <- file.path(reg_sample_dir, "reg_sample_info.rds")
+reg_sample_vect_path <- file.path(reg_sample_dir, "reg_sample_vect.gpkg")
+
 regA_sample_info_path <- file.path(reg_sample_dir, "regA_sample_info.rds")
-regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
-
 regA_sample_vect_path <- file.path(reg_sample_dir, "regA_sample_vect.gpkg")
-regA_sample_vect_path <- file.path(reg_sample_dir, "regB_sample_vect.gpkg")
 
+regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
+regB_sample_vect_path <- file.path(reg_sample_dir, "regB_sample_vect.gpkg")
+
+# random sample region result
+reg_correlation_dir <- file.path(veg_topo_extr_dir, "reg_correlation_500m")
 regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "regA_cor_twi_vegh_500m")
 regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "regB_r_R_H_500m")
 
-regA_valid_r_H_TWI_dir <- file.path(veg_topo_extr_dir, "regA_validate_r_H_TWI_500m")
-regB_valid_r_H_Rin_dir <- file.path(veg_topo_extr_dir, "regB_validate_r_H_Rin_500m")
+# validation regions result
+reg_validate_dir <- file.path(veg_topo_extr_dir, "reg_validate_500m")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
 
 # Köppen–Geiger Climate Classification
 kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")
+kg_present_0p083_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")
 kg_legend_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/legend.txt")
 

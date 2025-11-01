@@ -18,7 +18,7 @@
 #' plot(result$dem)
 #' plot(result$slope)
 #' plot(result$aspect)
-aggregate_topography <- function(dem, res_tar = NULL, target = NULL, if_resample = FALSE) {
+aggregate_topography <- function(dem, res_tar = NULL, target = NULL, if_aggregate = TRUE, if_resample = FALSE) {
   # Calculate slope (degrees) and aspect (radians)
   slope  <- terrain(dem, v = "slope", unit = "degrees")
   aspect <- terrain(dem, v = "aspect", unit = "radians")
@@ -29,7 +29,7 @@ aggregate_topography <- function(dem, res_tar = NULL, target = NULL, if_resample
 
   # Combine all rasters for aggregation
   rasters <- c(dem, slope, x_comp, y_comp)
-  aggregated <- raster_preprocess_save(input = rasters, res_tar = res_tar, target = target, if_resample = if_resample)
+  aggregated <- raster_preprocess_save(input = rasters, res_tar = res_tar, target = target, if_aggregate = if_aggregate, if_resample = if_resample)
 
   # Extract results
   dem_agg   <- aggregated[[1]]

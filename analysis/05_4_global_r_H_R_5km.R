@@ -22,7 +22,7 @@ hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   message("💻 Detected Worksation: dash → using config.R")
   source(here::here("config.R"))
-  workers = 1 # don't do it on worksation
+  workers = 2 # don't do it on worksation
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
@@ -34,7 +34,7 @@ source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
-source(here::here("R/extent_to_tile_ids.R"))
+# source(here::here("R/extent_to_tile_ids.R"))
 
 source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
@@ -43,12 +43,13 @@ source(here::here("R/plot_dem.R"))
 # source(here::here("R/plot_aspect.R"))
 # source(here::here("R/plot_slope.R"))
 source(here::here("R/plot_vegh.R"))
+source(here::here("R/plot_twi.R"))
 source(here::here("R/plot_r_H_R.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
-source(here::here("R/plot_cor_pval.R"))
+# source(here::here("R/plot_cor_pval.R"))
 # source(here::here("R/plot_sw_in.R"))
 source(here::here("R/plot_rin.R"))
-source(here::here("R/plot_hex_scatter.R"))
+# source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_single_sample_location.R"))
 # source(here::here("R/plot_google_img.R"))
 source(here::here("R/plot_fused.R"))
@@ -64,7 +65,7 @@ if (!dir.exists(r_H_R_tiles_dir)) {
 
 # ------------ function to process single tile----------------------------------
 process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
-                                text_size = 12, fig_width = 14, fig_height = 14) {
+                              text_size = 12, x_step = 5, y_step = 5) {
 
   tryCatch({
 
@@ -124,65 +125,73 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     message("Saved: ", pval_nc_path)
 
     # --- reset theme for plots ---
-    re_theme <- ggplot2::theme(
-      aspect.ratio = 1,
-      legend.position = "right",
-      legend.text = ggplot2::element_text(size = text_size * 0.9),
-      legend.title = ggplot2::element_text(size = text_size),
-      legend.margin = margin(0, 0, 0, 0),
-      legend.box.margin = margin(0, 0, 0, -5),
-      axis.title.x = ggplot2::element_blank(),
-      axis.title.y = ggplot2::element_blank(),
-      axis.text.x = ggplot2::element_text(
-        size = text_size * 0.9,
-        margin = margin(t = 15, b = -20),
-        vjust = 1
-      ),
-      axis.text.y = ggplot2::element_text(
-        size = text_size * 0.8,
-        angle = 90,
-        hjust = 0.5,
-        vjust = 0.5,
-        margin = margin(r = 15, l = -20)
-      ),
-      panel.spacing = unit(0, "cm"),
-      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
-      plot.margin = margin(1, 1, 1, 1),
-      plot.title = ggplot2::element_text(
-        size = text_size * 1.2,
-        face = "bold",
-        margin = margin(b = 3)
-      ),
-      plot.title.position = "panel"
+    re_theme <- list(
+      guides(fill = guide_colorbar(barwidth = 0.8, barheight = 12)),
+      ggplot2::theme(
+        aspect.ratio = 1,
+        legend.position = "right",
+        legend.text = ggplot2::element_text(size = text_size * 0.9, angle = 90),
+        legend.title = ggplot2::element_text(size = text_size),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 2, 0, -8),
+        axis.title.x = ggplot2::element_blank(),
+        axis.title.y = ggplot2::element_blank(),
+        axis.text.x = ggplot2::element_text(
+          size = text_size * 0.8,
+          hjust = 0,
+          vjust = 1,
+          margin = margin(t = 2, b = 2),
+        ),
+        axis.text.y = ggplot2::element_text(
+          size = text_size * 0.8,
+          hjust = 0.5,
+          vjust = 0.5,
+          angle = 90,
+          margin = margin(r = 0, l = 2)
+        ),
+        panel.spacing = unit(0, "cm"),
+        panel.border = ggplot2::element_rect(linewidth = 0.3, fill = NA),
+        plot.margin = margin(0, 0, 0, 0),
+        plot.title = ggplot2::element_text(
+          size = text_size * 1.2,
+          face = "plain",
+          margin = margin(b = 0)
+        ),
+        plot.title.position = "panel"
+      )
     )
 
     # ---- Generate plots ----
-    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
+    p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, title_text = "450 m: Elevation", text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, title_text = expression("450 m: " * italic(H)[veg]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+    p_twi <- plot_twi(twi_rc, extent = tile_extent, title_text = "450 m: TWI", text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+
+    p_rin <- plot_rin(rin_rc, extent = tile_extent, title_text = "450 m: Radiation index",  text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
+    p_rA <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent,  title_text <- bquote("5 km: Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+    p_rB <- plot_r_H_R(cor_r, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
+
+    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
+    p_kg <- plot_kg_class(kg_present_0p083_file, kg_legend_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + ggplot2::theme(aspect.ratio = 1)
+    p_location <- plot_single_sample_location(tile_xmid, tile_ymid,  tile_id, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
+
     # p_slope <- plot_slope(slope_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
     # p_aspect <- plot_aspect(aspect_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
-    p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size)  + re_theme
-    p_rin <- plot_rin(rin_rc, extent = tile_extent, text_size = text_size)  + re_theme
-    p_r_H_R <- plot_r_H_R(cor_r, extent = tile_extent, title_text = "5km: Pearson's r (H～Rᵢₙ)", text_size = text_size)  + re_theme
     # p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H～Rᵢₙ)", text_size = text_size) + re_theme
-    p_r_H_TWI <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)  + re_theme
-    p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + re_theme
-    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = tile_extent, text_size = text_size) + re_theme
 
     # p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
-    p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    p_location <- plot_single_sample_location(tile_xmid, tile_ymid, tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
+    # p_scatter <- plot_hex_scatter(df_win, x_var = "rin", y_var = "vegh", x_text = "Radiation index", y_text = "Vegetation height (m)", text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
 
     # ---- Combine plots ----
     final_plot <- (
-      (p_dem + p_rin + p_vegh) /
-        (p_r_H_R + p_r_H_TWI + p_fused)  /
-        (p_location + p_scatter + p_kg)) +
+      (p_twi + p_dem + p_rin) /
+        (p_rA + p_vegh + p_rB)  /
+        (p_location + p_fused + p_kg)) +
       plot_annotation(title = tile_id) +
       plot_layout(heights = c( 1, 1, 1))
 
     # ---- Save plot ----
     out_file <- here::here(file.path(paste0("data/figures/05_tile_", tile_id, "_H_Rin_plots.png")))
-    ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
+    ggsave(filename = out_file, plot = final_plot, width = 14, height = 14.2, dpi = 600)
 
     # ---- Memory cleanup ----
     # list all objects need to be remove
@@ -199,6 +208,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
     tictoc::toc()
 
+
     return(TRUE)
 
 
@@ -210,55 +220,53 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
 }
 
 
-# ----------------- Parallel execution -----------------
-# Set up cluster plan
-plan(cluster, workers = workers)
-
-# load tiles info
-tiles_info <- readRDS(valid_tiles_info_path)
-
-# Run in parallel
-tictoc::tic("🚀 Parallel processing of tiles")
-results <- future_map(seq_len(nrow(tiles_info)),
-                      function(i) process_r_H_R_5km(tiles_info[i, ]),
-                      .progress = FALSE,
-                      .options = furrr_options(seed=TRUE))
-plan(sequential)
-tictoc::toc()
-
-# Summarize results
-success_count <- sum(unlist(results))
-fail_count <- length(results) - success_count
-message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
-
-# -------- Combination ---------------------------------------------------------
-
-# mosacing the r(H~TWI) map
-mosaic_tiles(
-  input_dir   = r_H_R_tiles_dir,
-  output_file = r_H_R_5km_path,
-  pattern = "*_map.nc",
-  varname = "r_H_R")
-
-# mosacing the pval ofr(H~TWI) map
-mosaic_tiles(
-  input_dir   = r_H_R_tiles_dir,
-  output_file = pval_r_H_R_5km_path,
-  pattern = "*_pval.nc",
-  varname = "pval_r_H_R")
-
-# # ---------- Delete intermediate data ------------------------------------------
-# # List all files in the directory r_H_R_tiles_dir that match "*.nc"
-# # If there are any files found, delete them
+# # ----------------- Parallel execution -----------------
+# # Set up cluster plan
+# plan(cluster, workers = workers)
 #
+# # load tiles info
+# tiles_info <- readRDS(valid_tiles_info_path)
+#
+# # Run in parallel
+# tictoc::tic("🚀 Parallel processing of tiles")
+# results <- future_map(seq_len(nrow(tiles_info)),
+#                       function(i) process_r_H_R_5km(tiles_info[i, ]),
+#                       .progress = FALSE,
+#                       .options = furrr_options(seed=TRUE))
+# plan(sequential)
+# tictoc::toc()
+#
+# # Summarize results
+# success_count <- sum(unlist(results))
+# fail_count <- length(results) - success_count
+# message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
+#
+# # -------- Combination ---------------------------------------------------------
+# # mosacing the r(H~TWI) map
+# mosaic_tiles(
+#   input_dir   = r_H_R_tiles_dir,
+#   output_file = r_H_R_5km_path,
+#   pattern = "*_map.nc",
+#   varname = "r_H_R")
+#
+# # mosacing the pval ofr(H~TWI) map
+# mosaic_tiles(
+#   input_dir   = r_H_R_tiles_dir,
+#   output_file = pval_r_H_R_5km_path,
+#   pattern = "*_pval.nc",
+#   varname = "pval_r_H_R")
+
+# ---------- Delete intermediate data ------------------------------------------
+# List all files in the directory r_H_R_tiles_dir that match "*.nc"
+# If there are any files found, delete them
+
 # cor_5km_tiles_path <- fs::dir_ls(path = r_H_R_tiles_dir, glob = "*.nc")
 # if (length(cor_5km_tiles_path) > 0) file.remove(cor_5km_tiles_path)
 
 # ------ Single tile test ---------------------------------------------
-
 # test for 1 tile
-# tiles_info <- readRDS(valid_tiles_info_path)
-# process_r_H_R_5km(tiles_info[35,])
+tiles_info <- readRDS(valid_tiles_info_path)
+process_r_H_R_5km(tiles_info[40,])
 
 # # ------ Smaller region  test ---------------------------------------------
 # regA_info <- data.frame(
@@ -278,7 +286,7 @@ mosaic_tiles(
 #
 # output_dir = r_H_R_tiles_dir
 # text_size = 12
-# fig_width = 14
-# fig_height = 14
+# x_step = 0.05
+# y_step = 0.05
 
 

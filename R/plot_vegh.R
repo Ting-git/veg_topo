@@ -56,7 +56,7 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
-      fill = NULL,
+      fill = "m",
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

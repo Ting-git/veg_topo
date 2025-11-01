@@ -15,8 +15,8 @@ plot_single_sample_location <- function(lon, lat, tile_id = NULL, text_size = 12
 
   # Define custom window centers
   centers_df <- data.frame(
-    lon_c = c(-135, -105, -45,  30,  90,   13,   -60,  15,  135,   90),
-    lat_c = c(  45,   45,  45,  45,  45,   45,    15,   0,  -15,   30 )
+    lon_c = c(-135, -105, -75,   -0,  30,   60,  90,   135,   -60,  15,  135,   90),
+    lat_c = c(  45,   45,  45,   45,  45,   30,  45,   45,    -15,   0,  -15,   30 )
   )
 
   # Find the nearest window center
@@ -51,9 +51,19 @@ plot_single_sample_location <- function(lon, lat, tile_id = NULL, text_size = 12
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
       legend.position = "none",
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size*0.8),
-      plot.title = ggplot2::element_text(size = text_size*1.2, face = "bold",
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.8,
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+      ),
+      plot.title = ggplot2::element_text(size = text_size*1.2, face = "plain",
                                          margin = margin(b = 3)),
       plot.title.position = "panel",
       panel.grid.major = ggplot2::element_line(color = "gray80", linewidth = 0.5),

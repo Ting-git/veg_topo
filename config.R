@@ -8,7 +8,6 @@ veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
 ext_global <- ext(-180, 180, -60, 85)
 
 # -----------------------Data Raw and Data Clean--------------------------------
-
 # Vegetation height
 vegh_10m_tiles_dir <- file.path("/data_2/archive/vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 
@@ -96,21 +95,25 @@ r_H_R_tiles_dir <-  file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/30_30_de
 r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/r_H_R_5km.nc")
 pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "data/global_r_H_R_5km/pval_r_H_R_5km.nc")
 
-
-
+# random sample region extent
 reg_sample_dir <- file.path(veg_topo_extr_dir, "data/reg_sample")
 
-regA_sample_info_path <- file.path(reg_sample_dir, "regA_sample_info.rds")
-regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
+reg_sample_info_path <- file.path(reg_sample_dir, "reg_sample_info.rds")
+reg_sample_vect_path <- file.path(reg_sample_dir, "reg_sample_vect.gpkg")
 
+regA_sample_info_path <- file.path(reg_sample_dir, "regA_sample_info.rds")
 regA_sample_vect_path <- file.path(reg_sample_dir, "regA_sample_vect.gpkg")
+
+regB_sample_info_path <- file.path(reg_sample_dir, "regB_sample_info.rds")
 regB_sample_vect_path <- file.path(reg_sample_dir, "regB_sample_vect.gpkg")
 
+# random sample region result
+reg_correlation_dir <- file.path(veg_topo_extr_dir, "data/reg_correlation_500m")
 regA_cor_twi_vegh_dir <- file.path(veg_topo_extr_dir, "data/regA_cor_twi_vegh_500m")
 regB_r_R_H_dir <- file.path(veg_topo_extr_dir, "data/regB_r_R_H_500m")
 
-regA_valid_r_H_TWI_dir <- file.path(veg_topo_extr_dir, "data/regA_validate_r_H_TWI_500m")
-regB_valid_r_H_Rin_dir <- file.path(veg_topo_extr_dir, "data/regB_validate_r_H_Rin_500m")
+# validation regions result
+reg_validate_dir <- file.path(veg_topo_extr_dir, "data/reg_validate_500m")
 
 # -----------------------Additional Data------------------------------------------
 ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
@@ -121,5 +124,7 @@ cci_landcover_path <- file.path("/data/archive/landcover_defourny_2023/data/C3S-
 
 # Köppen–Geiger Climate Classification
 kg_present_0p0083_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")
+kg_present_0p083_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")
+
 kg_legend_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/legend.txt")
 

@@ -71,7 +71,7 @@ plot_kg_class <- function(input, legend_file = NULL, extent = NULL, title_text =
 
   # ---- Plot raster ----
   p <- ggplot2::ggplot() +
-    tidyterra::geom_spatraster(data = kg_factor) +
+    tidyterra::geom_spatraster(data = kg_factor, maxcell = Inf) +
     scale_fill_manual(
       name = NULL,
       values = setNames(existing_legend$color_hex, existing_legend$code_char),
@@ -102,9 +102,30 @@ plot_kg_class <- function(input, legend_file = NULL, extent = NULL, title_text =
       legend.position = "right",
       legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -8),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.8,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(t = 2, b = 2),
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 0, l = 2)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(0, 0, 0, 0),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "plain",
+        margin = margin(b = 0)
+      ),
       plot.title.position = "panel"
     )
 
