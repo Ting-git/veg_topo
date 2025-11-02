@@ -26,7 +26,7 @@ if (hostname == "dash") {
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
-  workers <- 60
+  workers <- 50
 }
 
 # ------ Load helper and custom functions -----------------------------------------------------
@@ -82,7 +82,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
   tryCatch({
 
     # --- Region info ---
-    reg_id < reg_row$strata_label
+    reg_id <- reg_row$strata_label
     reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
     reg_xmid <- (reg_row$xmin +reg_row$xmax) / 2
     reg_ymid <- (reg_row$ymin +reg_row$ymax) / 2
@@ -368,13 +368,13 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     out_file2 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_9plots.png")))
     ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 19.2, dpi = 600)
 
-    # # --- Cleanup ---
-    # rm(twi_rc, vegh_rc, dem_rc, aligned,
-    #    df, chunks, df_calc, stacked, df_win, df_cor, corA_r, pval_r, corB_r,
-    #    p_dem, p_vegh, p_twi, p_rin, p_rB, p_rA, p_google, p_kg, p_location,
-    #    p_rA2, p_fused, p_rB2,
-    #    final_plot1, final_plot2)
-    # gc(verbose = FALSE)
+    # --- Cleanup ---
+    rm(twi_rc, vegh_rc, dem_rc, aligned,
+       df, chunks, df_calc, stacked, df_win, df_cor, corA_r, pval_r, corB_r,
+       p_dem, p_vegh, p_twi, p_rin, p_rB, p_rA, p_google, p_kg, p_location,
+       p_rA2, p_fused, p_rB2,
+       final_plot1, final_plot2)
+    gc(verbose = FALSE)
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
@@ -393,7 +393,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
 # ------------ validation region define ----------------------------------------
 
-tiles_info <- tribble(
+reg_info <- tribble(
   ~strata_label,                        ~ymin,   ~ymax,   ~xmin,     ~xmax,
 
   # ------------------ Subsurface flow validation (Fan et al., 2019) -----------
@@ -473,6 +473,9 @@ for (i in seq_len(nrow(reg_info))) {
   process_reg_500m(reg_info[i, ])
 }
 
+# for (i in 46:57) {
+#   process_reg_500m(reg_info[i, ])
+# }
 
 # # ----------- Test on smaller regions -----------------------------
 # reg_info <- data.frame(
@@ -493,8 +496,6 @@ for (i in seq_len(nrow(reg_info))) {
 # reg_row <- reg_info[1, ]
 # output_dir = reg_validate_dir
 # text_size = 12
-# x_step = 0.05
-# y_step = 0.05
 
 
 

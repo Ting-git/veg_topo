@@ -65,15 +65,17 @@ if (!dir.exists(r_H_R_tiles_dir)) {
 
 # ------------ function to process single tile----------------------------------
 process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
-                              text_size = 12, x_step = 5, y_step = 5) {
+                              text_size = 12) {
 
   tryCatch({
-
     # --- Tile info ---
     tile_id <- tile_row$tile_id
     tile_extent <- terra::ext(tile_row$xmin, tile_row$xmax, tile_row$ymin, tile_row$ymax)
     tile_xmid <- (tile_row$xmin + tile_row$xmax)/2
     tile_ymid <- (tile_row$ymin + tile_row$ymax)/2
+
+    x_step <- tile_row$xmax - tile_row$xmin
+    y_step <-  tile_row$ymax - tile_row$ymin
 
     tictoc::tic(paste0("Processing tile: ", tile_id))
     t0 <- Sys.time()
@@ -130,24 +132,26 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
       ggplot2::theme(
         aspect.ratio = 1,
         legend.position = "right",
-        legend.text = ggplot2::element_text(size = text_size * 0.9, angle = 90),
-        legend.title = ggplot2::element_text(size = text_size),
+        legend.text = ggplot2::element_text(size = text_size * 0.9, angle = 90,
+                                            hjust = 0.5, vjust = 0.5,
+                                            margin = margin(r = 0, l = 2)),
+        legend.title = ggplot2::element_text(size = text_size,
+                                             angle = 90,   hjust = 0, vjust = 0.5 ),
         legend.margin = margin(0, 0, 0, 0),
         legend.box.margin = margin(0, 2, 0, -8),
         axis.title.x = ggplot2::element_blank(),
         axis.title.y = ggplot2::element_blank(),
         axis.text.x = ggplot2::element_text(
           size = text_size * 0.8,
-          hjust = 0,
-          vjust = 1,
+          hjust = 0.5,
+          vjust = 0.5,
           margin = margin(t = 2, b = 2),
         ),
         axis.text.y = ggplot2::element_text(
           size = text_size * 0.8,
           hjust = 0.5,
           vjust = 0.5,
-          angle = 90,
-          margin = margin(r = 0, l = 2)
+          margin = margin(r = 2, l = -15) # important set to reduce the space between 2 plot
         ),
         panel.spacing = unit(0, "cm"),
         panel.border = ggplot2::element_rect(linewidth = 0.3, fill = NA),
@@ -161,13 +165,19 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
       )
     )
 
+    # The left indentation of the y-axis label should be removed from the first image in each row;
+    # otherwise, the y-axis text will be clipped.
+    re_theme_left <- ggplot2::theme(axis.text.y = ggplot2::element_text(
+      margin = margin(r = 2, l = 0) # important set to left plot to show full y_text
+    ))
+
     # ---- Generate plots ----
     p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, title_text = "450 m: Elevation", text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
     p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, title_text = expression("450 m: " * italic(H)[veg]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
-    p_twi <- plot_twi(twi_rc, extent = tile_extent, title_text = "450 m: TWI", text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+    p_twi <- plot_twi(twi_rc, extent = tile_extent, title_text = "450 m: TWI", text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme + re_theme_left
 
     p_rin <- plot_rin(rin_rc, extent = tile_extent, title_text = "450 m: Radiation index",  text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
-    p_rA <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent,  title_text <- bquote("5 km: Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme
+    p_rA <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent,  title_text <- bquote("5 km: Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme + re_theme_left
     p_rB <- plot_r_H_R(cor_r, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
 
     p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
@@ -185,7 +195,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     final_plot <- (
       (p_twi + p_dem + p_rin) /
         (p_rA + p_vegh + p_rB)  /
-        (p_location + p_fused + p_kg)) +
+        (p_kg + p_fused + p_location)) +
       plot_annotation(title = tile_id) +
       plot_layout(heights = c( 1, 1, 1))
 
@@ -198,8 +208,8 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     rm(
       twi_rc, vegh_rc, rin_rc,
       stacked, df_win, df_cor, cor_r,pval_r,
-      p_dem, p_vegh, p_rin, p_r_H_R, p_kg,
-      p_r_H_TWI, p_fused, p_scatter, p_location,
+      p_dem, p_vegh, p_rA, p_rB,
+      p_kg, p_fused, p_location,
       final_plot)
     gc(verbose = FALSE)
 
@@ -208,10 +218,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
     tictoc::toc()
 
-
     return(TRUE)
-
-
   }, error = function(e) {
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
     message(sprintf("❌ Tile %s failed after %.1f mins: %s", tile_row$tile_id, elapsed_mins, e$message))
@@ -220,27 +227,27 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
 }
 
 
-# # ----------------- Parallel execution -----------------
-# # Set up cluster plan
-# plan(cluster, workers = workers)
-#
-# # load tiles info
-# tiles_info <- readRDS(valid_tiles_info_path)
-#
-# # Run in parallel
-# tictoc::tic("🚀 Parallel processing of tiles")
-# results <- future_map(seq_len(nrow(tiles_info)),
-#                       function(i) process_r_H_R_5km(tiles_info[i, ]),
-#                       .progress = FALSE,
-#                       .options = furrr_options(seed=TRUE))
-# plan(sequential)
-# tictoc::toc()
-#
-# # Summarize results
-# success_count <- sum(unlist(results))
-# fail_count <- length(results) - success_count
-# message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
-#
+# ----------------- Parallel execution -----------------
+# Set up cluster plan
+plan(cluster, workers = workers)
+
+# load tiles info
+tiles_info <- readRDS(valid_tiles_info_path)
+
+# Run in parallel
+tictoc::tic("🚀 Parallel processing of tiles")
+results <- future_map(seq_len(nrow(tiles_info)),
+                      function(i) process_r_H_R_5km(tiles_info[i, ]),
+                      .progress = FALSE,
+                      .options = furrr_options(seed=TRUE))
+plan(sequential)
+tictoc::toc()
+
+# Summarize results
+success_count <- sum(unlist(results))
+fail_count <- length(results) - success_count
+message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
+
 # # -------- Combination ---------------------------------------------------------
 # # mosacing the r(H~TWI) map
 # mosaic_tiles(
@@ -263,10 +270,10 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
 # cor_5km_tiles_path <- fs::dir_ls(path = r_H_R_tiles_dir, glob = "*.nc")
 # if (length(cor_5km_tiles_path) > 0) file.remove(cor_5km_tiles_path)
 
-# ------ Single tile test ---------------------------------------------
-# test for 1 tile
-tiles_info <- readRDS(valid_tiles_info_path)
-process_r_H_R_5km(tiles_info[40,])
+# # ------ Single tile test ---------------------------------------------
+# # test for 1 tile
+# tiles_info <- readRDS(valid_tiles_info_path)
+# process_r_H_R_5km(tiles_info[40,])
 
 # # ------ Smaller region  test ---------------------------------------------
 # regA_info <- data.frame(
@@ -288,5 +295,6 @@ process_r_H_R_5km(tiles_info[40,])
 # text_size = 12
 # x_step = 0.05
 # y_step = 0.05
+
 
 
