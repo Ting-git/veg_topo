@@ -1,16 +1,6 @@
-#' Plot Topographic Wetness Index (TWI) with fixed color scale
-#'
-#' @param input A SpatRaster object or raster file path
-#' @param extent Optional terra::ext() extent.
-#'   If provided and smaller than the input raster extent,
-#'   the raster will be cropped to their intersecting area.
-#' @param text_size Font size
-#' @param x_step Number of x-axis breaks
-#' @param y_step Number of y-axis breaks
-#' @return A ggplot2 object
-#' @export
-plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Index (TWI)",
-                     text_size = 12, x_step = 10, y_step = 10) {
+
+plot_mi <- function(input, extent = NULL, title_text = "Land use fraction",
+                       text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -40,32 +30,17 @@ plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Ind
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # Fixed color scale range (TWI can vary, adjust if needed)
-  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
-  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
-
-  process_label <- vmax > 100
-  fill_label <- ifelse(process_label, "×10³", "")
-
+  # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scico::scale_fill_scico(
-      palette = "oslo",
-      direction = -1,
-      limits = c(vmin, vmax),
+    scale_fill_gradientn(
+      colours = brewer.pal(7, "Spectral"),
       na.value = NA,
-      labels = function(x) {
-        if (process_label) {
-          format(x / 1000, nsmall = 1)
-        } else {
-          x
-        }
-      }
-    ) +
+      labels = function(x) format(x / 10000, nsmall = 1)) +
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
-      fill = fill_label,
+      fill = NULL,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

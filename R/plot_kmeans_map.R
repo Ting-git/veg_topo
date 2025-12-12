@@ -1,44 +1,21 @@
-#' Plot K-means clustering result on a map using ggplot2 and tidyterra
-#'
-#' This function visualizes a classified raster (SpatRaster) with custom colors
-#' and optional cluster highlighting. The raster should already be classified
-#' (numeric cluster IDs). If cluster labels are provided, they must be a **sorted named vector**,
-#' where the names correspond to cluster values and the order determines legend order.
-#'
-#' @param raster A classified SpatRaster (numeric values corresponding to cluster IDs).
-#' @param fill_colors Vector of colors for each cluster (should follow the same order as \code{cluster_labels} if provided).
-#' @param title_text Optional title for the plot.
-#' @param highlight_cluster Optional cluster ID to highlight (others will be faded).
-#' @param cluster_labels Optional sorted named character vector of cluster labels.
-#'        Names must match cluster values in the raster.
-#'
-#' @return A ggplot object showing the raster with cluster coloring, optional highlighting, and legend.
-#'
-#' @examples
-#' \dontrun{
-#' library(terra)
-#' library(tidyterra)
-#'
-#' # Example raster (numeric clusters)
-#' raster_factor <- cluster_raster
-#'
-#' # Define sorted cluster labels (names = raster values, values = label)
-#' cluster_labels <- c("2"="Arid", "3"="Semi-arid", "1"="Sub-humid", "4"="Humid")
-#' fill_colors <- c("#228B22", "#1E90FF", "#B22222", "#FFD700")
-#'
-#' # Plot with highlighting cluster 2
-#' plot_kmeans_map(raster_factor, fill_colors,
-#'                 highlight_cluster = 2,
-#'                 cluster_labels = cluster_labels)
-#'
-#' # Plot without cluster labels
-#' plot_kmeans_map(raster_factor, fill_colors)
-#' }
-#'
-#' @export
-plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster map (k=8)",
-                            highlight_cluster = NULL, cluster_labels = NULL,
+plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster map (k=8)",
+                            highlight_cluster = NULL,
                             text_size = 12, x_step = 30, y_step = 30) {
+
+  # Reorder cluster_value and cluster_labels with an defined order
+  load(here::here("data/cluster_data.RData")) # cluster_values, cluster_labels
+
+  # fill_color for dry to wet cluster
+  fill_colors <- c(
+    "#E78AC3",  # Pink - Arid
+    "#FC8D62",  # Orange - Semi-arid
+    "#FFD92F",  # Yellow - Semi-arid
+    "#E5C494",  # Light brown - Dry-sub-humid
+    "#B3B3B3",  # Gray - Humid
+    "#66C2A5", # Blue-green - Humid
+    "#8DA0CB",  # Blue - Humid
+    "#A6D854"   # Green - Humid
+  )
 
   # Remove names from colors
   fill_colors <- unname(fill_colors)
@@ -47,45 +24,90 @@ plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster ma
   if (is.character(input)) input <- terra::rast(input)
   if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
 
-  # ---- Extract extent boundaries ----
-  # ext_global from `config.R`
-  xmin <- terra::xmin(ext_global)
-  xmax <- terra::xmax(ext_global)
-  ymin <- terra::ymin(ext_global)
-  ymax <- terra::ymax(ext_global)
-
-  # Determine final cluster levels
-  raster <- as.factor(input)
-
-  if (!is.null(cluster_labels)) {
-    # Assign sorted levels using user-provided labels
-    levels_df <- data.frame(value = as.numeric(names(cluster_labels)),   # must be numeric
-                            category = unname(cluster_labels))
-    levels(raster) <- levels_df
-    final_levels <- as.character(levels(raster)[[1]]$category)
+  # ---- Handle extent and optional cropping ----
+  if (is.null(extent)) {
+    extent <- terra::ext(input)
+  } else if (!inherits(extent, "SpatExtent")) {
+    stop("`extent` must be a SpatExtent object from terra::ext().")
   } else {
-    # Use raster unique values directly if no labels provided
-    final_levels <- sort(unique(values(raster)))
-    final_levels <- as.character(final_levels)
+    # Crop raster if extent is smaller
+    area_in <- (terra::xmax(input) - terra::xmin(input)) * (terra::ymax(input) - terra::ymin(input))
+    area_ex <- (terra::xmax(extent) - terra::xmin(extent)) * (terra::ymax(extent) - terra::ymin(extent))
+
+    if (area_ex < area_in) {
+      cropped <- terra::crop(input, extent)
+      if (all(is.na(terra::values(cropped)))) stop("Extent does not intersect raster.")
+      input <- cropped
+      message("Raster cropped to specified extent.")
+    }
   }
 
-  # Assign colors and alpha following final_levels
-  names(fill_colors) <- final_levels
-  alpha_values <- if (!is.null(highlight_cluster)) {
-    ifelse(final_levels == as.character(highlight_cluster), 1, 0.2)
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
+
+  # Get actual values present in the (possibly cropped) raster
+  raster_vals <- terra::values(input) |> na.omit() |> unique() |> sort()
+
+  # Convert to factor
+  raster <- as.factor(input)
+
+  # ---- Handle cluster labels ----
+  # Get the actual categories present after cropping
+  if (!is.null(cluster_labels)) {
+    # Filter cluster_labels to only include those present in the cropped raster
+    present_clusters <- as.character(raster_vals)
+    present_labels <- cluster_labels[names(cluster_labels) %in% present_clusters]
+
+    if (length(present_labels) > 0) {
+      # Create levels dataframe with only present clusters
+      levels_df <- data.frame(
+        value = as.numeric(names(present_labels)),
+        category = unname(present_labels)
+      )
+      levels(raster) <- levels_df
+      final_levels <- as.character(levels(raster)[[1]]$category)
+    } else {
+      # If no cluster labels match, use numeric values
+      final_levels <- as.character(raster_vals)
+    }
   } else {
-    rep(1, length(final_levels))
+    # Use raster unique values directly if no labels provided
+    final_levels <- as.character(raster_vals)
+  }
+
+  # ---- Create color and alpha mappings ----
+  # Match colors to present levels
+  if (!is.null(cluster_labels) && exists("present_labels")) {
+    # Get the index order from cluster_labels
+    color_index <- match(names(present_labels), names(cluster_labels))
+    present_colors <- fill_colors[color_index]
+  } else {
+    # For numeric values, use colors based on sorted values
+    color_index <- match(raster_vals, 1:length(fill_colors))
+    present_colors <- fill_colors[color_index]
+  }
+
+  # Create named vectors for scale_* functions
+  names(present_colors) <- final_levels
+
+  # Handle highlighting
+  if (!is.null(highlight_cluster)) {
+    highlight_label <- if (!is.null(cluster_labels)) {
+      as.character(cluster_labels[as.character(highlight_cluster)])
+    } else {
+      as.character(highlight_cluster)
+    }
+
+    alpha_values <- ifelse(final_levels == highlight_label, 1, 0.2)
+  } else {
+    alpha_values <- rep(1, length(final_levels))
   }
   names(alpha_values) <- final_levels
 
-  # Legend labels
-  legend_labels <- if (!is.null(cluster_labels)) {
-    cluster_labels[final_levels]
-  } else {
-    final_levels
-  }
-
-  # Create ggplot
+  # ---- Create ggplot ----
   p <- ggplot() +
     tidyterra::geom_spatraster(
       data = raster,
@@ -93,10 +115,10 @@ plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster ma
       maxcell = Inf
     ) +
     scale_fill_manual(
-      values = fill_colors,
-      labels = legend_labels,
+      values = present_colors,
       name = "Cluster",
       na.value = NA,
+      na.translate = FALSE,
       guide = guide_legend(
         title.position = "left",
         label.position = "bottom",
@@ -106,14 +128,18 @@ plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster ma
     scale_alpha_manual(values = alpha_values, guide = "none") +
     labs(title = title_text) +
     ggplot2::scale_x_continuous(
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_step),
+      breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_step),
+      breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
+    ) +
+    ggplot2::coord_sf(
+      xlim = c(xmin, xmax),
+      ylim = c(ymin, ymax),
+      expand = FALSE,
+      clip = "off"
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
@@ -122,7 +148,7 @@ plot_kmeans_map <- function(input, fill_colors, title_text = "K-means cluster ma
       legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size  * 0.9),
+      axis.text = ggplot2::element_text(size = text_size * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )

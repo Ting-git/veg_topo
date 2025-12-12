@@ -28,7 +28,7 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 p_cor <- plot_cor_twi_vegh(
   input = cor_twi_vegh_mosaic_file,
   extent = ext_global,
-  text_size = 12,
+  text_size = 14,
   x_step = 30,
   y_step = 30
 ) +
@@ -45,6 +45,12 @@ p_cor <- plot_cor_twi_vegh(
     ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
     expand = FALSE,
     clip = "on"
+  ) +
+  ggplot2::theme(
+    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
+    plot.background  = element_blank(),                            # plot 外部透明
+    legend.background = element_blank(),
+    legend.box.background = element_blank()
   )
 
 # save
@@ -62,7 +68,7 @@ ggsave(
 p_pval <-  plot_cor_pval(
   input = pval_cor_twi_vegh_mosaic_file,
   extent = ext_global,
-  text_size = 12,
+  text_size = 14,
   x_step = 30,
   y_step = 30
 ) +
@@ -74,6 +80,12 @@ p_pval <-  plot_cor_pval(
     ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
     expand = FALSE,
     clip = "on"
+  )+
+  ggplot2::theme(
+    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
+    plot.background  = element_blank(),                            # plot 外部透明
+    legend.background = element_blank(),
+    legend.box.background = element_blank()
   )
 
 # save

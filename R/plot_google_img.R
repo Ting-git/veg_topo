@@ -1,4 +1,3 @@
-
 plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
                             text_size = 12) {
 
@@ -12,7 +11,7 @@ plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # ----Compute zoom ----
+  # ---- Compute zoom ----
   earth_circumference <- 40075017
   region_width <- xmax - xmin
   region_width_meters <- region_width * 111000
@@ -23,12 +22,15 @@ plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
   bbox <- c(left = xmin, bottom = ymin, right = xmax, top = ymax)
   satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zoom_level)
 
-  # ---- Plot ----
+  # ---- Crop to exact extent ----
   p <- ggmap(satellite_map) +
+
+    coord_sf(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) +
     labs(title = title, x = NULL, y = NULL) +
+    theme_bw() +
     theme(
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size  * 0.8),
+      axis.text = ggplot2::element_text(size = text_size * 0.8),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "plain",
                                          margin = margin(b = 3)),
       axis.text.x = ggplot2::element_text(

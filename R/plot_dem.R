@@ -30,18 +30,33 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
+  # Fixed color scale range (DEM can vary, adjust if needed)
+  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
+  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
+
+  process_label <- vmax > 100
+  fill_label <- ifelse(process_label, "km", "m")
+
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "bamako",
       direction = 1,
-      na.value = NA
+      na.value = NA,
+      labels = function(x) {
+        if (process_label) {
+          format(x / 1000, nsmall = 1)
+        } else {
+          x
+        }
+      },
+      guide = guide_colorbar(barwidth = 0.8, barheight = 6)
     ) +
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,
-      fill = "m",
+      fill = fill_label,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),
