@@ -144,17 +144,27 @@ tictoc::tic()
 
 # load coast outline, vector data
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
-
+source(here::here("R/plot_kmeans_map.R"))
 # plot k-means map
 p_8c  <- plot_kmeans_map(
   kmeans_8c_r,
   text_size = text_size,
+  extent = ext_global,
   title_text = "K-means Cluster Map (K=8)"
 ) +
   geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  ) +
   ggplot2::theme(
-    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-    plot.background  = element_blank(),                            # plot 外部透明
+    legend.position = "bottom",
+    legend.margin = margin(t = -8, b = 0, unit = "pt"),
+    plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
   )
@@ -171,7 +181,13 @@ ggsave(
   filename = here::here("data/figures/03_kmeans_gl_map_8c.png"),
   plot = p_8c_add, width = 14, height = 7.3, dpi = 600, units = "in"
 )
+
 tictoc::toc()
+
+img <- image_read(here::here("data/figures/03_kmeans_gl_map_8c.png"))
+img_trimmed <- image_trim(img)  # 自动检测并裁去纯白区域
+image_write(img_trimmed, here::here("data/figures/03_kmeans_gl_map_8c_trimmed.png"))
+
 
 #
 # # ----Plot-Map-Each-Cluster----
@@ -182,20 +198,30 @@ tictoc::toc()
 #
 #   cluster <- gsub("\n", " | ", cluster_labels[i])
 #
-#   p_8c  <- plot_kmeans_map(
-#     kmeans_8c_r,
-#     text_size = text_size,
-#     title_text = paste0("Cluster: ", cluster),
-#     highlight_cluster = cluster_labels[i]
-#   ) +
-#     geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
-#     ggplot2::theme(
-#       panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-#       plot.background  = element_blank(),                            # plot 外部透明
-#       legend.background = element_blank(),
-#       legend.box.background = element_blank()
-#     )
-#
+  # p_8c  <- plot_kmeans_map(
+  #   kmeans_8c_r,
+  #   text_size = text_size,
+  #   extent = ext_global,
+  #   title_text = paste0("Cluster: ", cluster),
+  #   highlight_cluster = cluster_labels[i]
+  # ) +
+  #   geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
+  # coord_sf(
+  #   xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+  #   ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+  #   expand = FALSE,
+  #   clip = "on"
+  #   ) +
+  # ggplot2::theme(
+  #   legend.position = "bottom",
+  #   legend.margin = margin(t = -8, b = 0, unit = "pt"),
+  #   plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+  #   panel.background = element_rect(fill = "white", color = NA),
+  #   plot.background  = element_blank(),
+  #   legend.background = element_blank(),
+  #   legend.box.background = element_blank()
+  # )
+
   # p <- p_8c +
   # inset_element(boxplot,
   #               left = 0,   # 左边位置 (0-1)

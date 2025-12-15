@@ -333,22 +333,6 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
       margin = margin(r = 2, l = 0) # important set to left plot to show full y_text
     ))
 
-    add_manual_tag <- function(p, tag, x_rel = 0.05, y_rel = 0.95) {
-      # 获取绘图范围
-      gb <- ggplot_build(p)
-      x_range <- gb$layout$panel_params[[1]]$x.range
-      y_range <- gb$layout$panel_params[[1]]$y.range
-
-      # 计算实际坐标
-      x_pos <- x_range[1] + (x_range[2] - x_range[1]) * x_rel
-      y_pos <- y_range[2] - (y_range[2] - y_range[1]) * (1 - y_rel)
-
-      p +
-        annotate("text", x = x_pos, y = y_pos, label = tag,
-                 hjust = 0, vjust = 1, size = 14/ggplot2::.pt,
-                 fontface = "bold")
-    }
-
     # --- Plotting, change the layout for better visualization ---
 
     p_twi <- plot_twi(twi_rc, extent = reg_extent, title_text = "30 m: TWI", text_size = text_size, x_step = x_step, y_step = y_step) +

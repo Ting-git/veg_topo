@@ -120,6 +120,7 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
       na.value = NA,
       na.translate = FALSE,
       guide = guide_legend(
+        keywidth = 0.2,
         title.position = "left",
         label.position = "bottom",
         nrow = 1
