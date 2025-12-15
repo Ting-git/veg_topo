@@ -57,8 +57,8 @@ rsync --human-readable -i --info=progress2 -avhP \
 
 
 # DEM 30m
-rsync --human-readable -i --info=progress2 -avhP --no-perms --no-owner --no-group \
+rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/ \
-  tt22k003@submit04.unibe.ch:/storage/capacity/occr_geco/data_2/scratch/tting/
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/copernicus_dem_30m/
 
 echo "=== ALL TRANSFERS COMPLETED ==="
