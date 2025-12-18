@@ -86,31 +86,30 @@ df$cluster8c <- factor(df$cluster8c,
 # ---- 4. Cluster Box/Violin Plots ----
 
 text_size = 14
-# sub-plotting
-pbox_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "boxplot", bquote(r[.("H, TWI")]), text_size = text_size, show_legend = FALSE)
-# pvio_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "violin",  NULL, show_legend = TRUE)
-pbox_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "boxplot", expression(MI), text_size = text_size, show_legend = FALSE)
-# pvio_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "violin",  NULL, show_legend = TRUE)
-pbox_fused  <- plot_box_or_violin(df, "cluster8c", "fused",  "boxplot", bquote(f[.("used")]), text_size = text_size, show_legend = FALSE)
-# pvio_fused  <- plot_box_or_violin(df, "cluster8c", "fused",  "violin",  NULL, show_legend = TRUE)
 
-# combined_plot <- (
-#   (pbox_cor | pvio_cor) /
-#     (pbox_mi  | pvio_mi)  /
-#     (pbox_fused | pvio_fused)
-# ) +
-#   plot_layout(guides = "collect") &
-#   theme(
-#     legend.position = NULL,
-#     plot.margin = margin(5, 5, 5, 5),
-#     axis.text = element_text(size = 10),
-#     axis.title = element_text(size = 12)
-#   )
-# ggsave(
-#   filename = here::here("data/figures/03_kmeans_8c_data_distribution.png"),
-#   plot = combined_plot,
-#   width = 14, height = 10, dpi = 300
-# )
+# pvio_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "violin",  NULL, show_legend = TRUE)
+pbox_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "boxplot", expression(MI), text_size = text_size, show_legend = FALSE)+
+  labs(tag = "b") +
+  theme(
+    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+    plot.tag.position = c(0.05, 0.92)  # 自定义位置
+  )
+
+# sub-plotting
+pbox_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "boxplot", bquote(r[.("H, TWI")]), text_size = text_size, show_legend = FALSE)+
+  labs(tag = "c") +
+  theme(
+    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+    plot.tag.position = c(0.05, 0.92)  # 自定义位置
+  )
+
+# pvio_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "violin",  NULL, show_legend = TRUE)
+pbox_fused  <- plot_box_or_violin(df, "cluster8c", "fused",  "boxplot", bquote(f[.("used")]), text_size = text_size, show_legend = FALSE)+
+  labs(tag = "d") +
+  theme(
+    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+    plot.tag.position = c(0.05, 0.92)  # 自定义位置
+  )
 
 boxplot <- (
   (pbox_mi) /
@@ -161,12 +160,21 @@ p_8c  <- plot_kmeans_map(
   ) +
   ggplot2::theme(
     legend.position = "bottom",
-    legend.margin = margin(t = -8, b = 0, unit = "pt"),
+    legend.margin = margin(0, 0, 0, 0),
+    legend.box.margin = margin(-8, 0, 0, 0),
+    axis.title.x = ggplot2::element_blank(),
+    axis.title.y = ggplot2::element_blank(),
+    panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
+  ) +
+  labs(tag = "a") +
+  theme(
+    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+    plot.tag.position = c(0.05, 0.94)  # 自定义位置
   )
 
 p_8c_add <- p_8c +
@@ -178,66 +186,67 @@ p_8c_add <- p_8c +
 
 # Save plot
 ggsave(
-  filename = here::here("data/figures/03_kmeans_gl_map_8c.png"),
-  plot = p_8c_add, width = 14, height = 7.3, dpi = 600, units = "in"
+  filename = here::here("data/figures/03_kmeans_gl_map_8c_inset.png"),
+  plot = p_8c_add, width = 14, height = 7, dpi = 600, units = "in"
 )
 
 tictoc::toc()
 
-img <- image_read(here::here("data/figures/03_kmeans_gl_map_8c.png"))
-img_trimmed <- image_trim(img)  # 自动检测并裁去纯白区域
-image_write(img_trimmed, here::here("data/figures/03_kmeans_gl_map_8c_trimmed.png"))
 
+# ----Plot-Map-Each-Cluster----
 
-#
-# # ----Plot-Map-Each-Cluster----
-#
-# tictoc::tic()
-# # Loop over 8 clusters and save a map for each one
-# for (i in 1:length(cluster_labels)) {
-#
-#   cluster <- gsub("\n", " | ", cluster_labels[i])
-#
-  # p_8c  <- plot_kmeans_map(
-  #   kmeans_8c_r,
-  #   text_size = text_size,
-  #   extent = ext_global,
-  #   title_text = paste0("Cluster: ", cluster),
-  #   highlight_cluster = cluster_labels[i]
-  # ) +
-  #   geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
-  # coord_sf(
-  #   xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-  #   ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-  #   expand = FALSE,
-  #   clip = "on"
-  #   ) +
-  # ggplot2::theme(
-  #   legend.position = "bottom",
-  #   legend.margin = margin(t = -8, b = 0, unit = "pt"),
-  #   plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-  #   panel.background = element_rect(fill = "white", color = NA),
-  #   plot.background  = element_blank(),
-  #   legend.background = element_blank(),
-  #   legend.box.background = element_blank()
-  # )
+tictoc::tic()
+# Loop over 8 clusters and save a map for each one
+for (i in 1:length(cluster_labels)) {
+# for (i in 1:1) {
+    cluster <- gsub("\n", "", cluster_labels[i])
 
-  # p <- p_8c +
-  # inset_element(boxplot,
-  #               left = 0,   # 左边位置 (0-1)
-  #               bottom = 0, # 底部位置
-  #               right = 0.19, # 右边位置
-  #               top = 0.66)   # 顶部位置
-#   ggsave(
-#     filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", i, ".png")),
-#     plot = p,
-#     width = 14,
-#     height = 8.5,
-#     dpi = 600,
-#     units = "in"
-#   )
-# }
-# tictoc::toc()
+  p_8c  <- plot_kmeans_map(
+    kmeans_8c_r,
+    text_size = text_size,
+    extent = ext_global,
+    title_text = paste0("Cluster: ", cluster),
+    highlight_cluster = cluster_values[i]
+  ) +
+    geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
+    coord_sf(
+      xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+      ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+      expand = FALSE,
+      clip = "on"
+    ) +
+    ggplot2::theme(
+      legend.position = "bottom",
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(-8, 0, 0, 0),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      panel.spacing = unit(0, "pt"),
+      plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background  = element_blank(),
+      legend.background = element_blank(),
+      legend.box.background = element_blank()
+    ) +
+    labs(tag = "a") +
+    theme(
+      plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+      plot.tag.position = c(0.05, 0.94)  # 自定义位置
+    )
+
+  p_8c_add <- p_8c +
+    inset_element(boxplot,
+                  left = 0,   # 左边位置 (0-1)
+                  bottom = 0, # 底部位置
+                  right = 0.19, # 右边位置
+                  top = 0.66)   # 顶部位置
+
+  ggsave(
+    filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", cluster_values[i], ".png")),
+    plot = p_8c_add, width = 14, height = 7, dpi = 600, units = "in"
+  )
+  tictoc::toc()
+}
 
 
 # ---- 5. Cluster Biome Composition (Absolute Counts) ----

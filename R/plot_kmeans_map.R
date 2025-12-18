@@ -51,10 +51,9 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
   # Get actual values present in the (possibly cropped) raster
   raster_vals <- terra::values(input) |> na.omit() |> unique() |> sort()
 
-  # Convert to factor
-  raster <- as.factor(input)
-
   # ---- Handle cluster labels ----
+  names(cluster_labels) <- as.character(cluster_values)
+
   # Get the actual categories present after cropping
   if (!is.null(cluster_labels)) {
     # Filter cluster_labels to only include those present in the cropped raster
@@ -62,27 +61,32 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
     present_labels <- cluster_labels[names(cluster_labels) %in% present_clusters]
 
     if (length(present_labels) > 0) {
-      # Create levels dataframe with only present clusters
-      levels_df <- data.frame(
-        value = as.numeric(names(present_labels)),
-        category = unname(present_labels)
+      # Create mapping between numeric values and labels
+      # IMPORTANT: Ensure the order matches raster_vals
+      value_to_label <- setNames(
+        as.character(present_labels[order(as.numeric(names(present_labels)))]),
+        sort(as.numeric(names(present_labels)))
       )
-      levels(raster) <- levels_df
-      final_levels <- as.character(levels(raster)[[1]]$category)
+
+      # Get final levels in correct order
+      final_levels <- unname(value_to_label)
     } else {
       # If no cluster labels match, use numeric values
+      value_to_label <- setNames(as.character(raster_vals), raster_vals)
       final_levels <- as.character(raster_vals)
     }
   } else {
     # Use raster unique values directly if no labels provided
+    value_to_label <- setNames(as.character(raster_vals), raster_vals)
     final_levels <- as.character(raster_vals)
   }
 
-  # ---- Create color and alpha mappings ----
+  # ---- Create color mappings ----
   # Match colors to present levels
   if (!is.null(cluster_labels) && exists("present_labels")) {
-    # Get the index order from cluster_labels
-    color_index <- match(names(present_labels), names(cluster_labels))
+    # Get the index order from cluster_labels (original order, not cropped order)
+    # We need to match the color to the cluster value, not the present order
+    color_index <- match(as.numeric(names(present_labels)), cluster_values)
     present_colors <- fill_colors[color_index]
   } else {
     # For numeric values, use colors based on sorted values
@@ -91,28 +95,70 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
   }
 
   # Create named vectors for scale_* functions
+  # Ensure colors are named by the labels (final_levels)
   names(present_colors) <- final_levels
 
-  # Handle highlighting
+  # ---- Prepare data for plotting ----
+  # Convert raster to dataframe for better control
+  raster_df <- as.data.frame(input, xy = TRUE, na.rm = TRUE)
+  colnames(raster_df) <- c("x", "y", "value")
+
+  # Debug: print unique values in dataframe
+  message("Unique values in raster_df: ", paste(unique(raster_df$value), collapse = ", "))
+  message("Value to label mapping: ", paste(names(value_to_label), "->", value_to_label, collapse = ", "))
+
+  # Convert value to factor with proper labels
+  # IMPORTANT: Ensure we use the same factor levels as in value_to_label
+  raster_df$value_factor <- factor(
+    raster_df$value,
+    levels = as.numeric(names(value_to_label)),
+    labels = unname(value_to_label)
+  )
+
+  # Debug: print factor levels
+  message("Factor levels: ", paste(levels(raster_df$value_factor), collapse = ", "))
+  message("Factor values in data: ", paste(head(levels(raster_df$value_factor)[raster_df$value_factor]), collapse = ", "))
+
+  # ---- Handle highlighting ----
   if (!is.null(highlight_cluster)) {
-    highlight_label <- if (!is.null(cluster_labels)) {
-      as.character(cluster_labels[as.character(highlight_cluster)])
+    # Find the corresponding label for the highlighted cluster
+    # First try to get from cluster_labels
+    highlight_label <- NULL
+
+    if (is.numeric(highlight_cluster) || (is.character(highlight_cluster) && grepl("^[0-9]+$", highlight_cluster))) {
+      # If it's a number (or numeric string), look it up in cluster_labels
+      highlight_num <- as.numeric(highlight_cluster)
+      if (highlight_num %in% as.numeric(names(cluster_labels))) {
+        highlight_label <- as.character(cluster_labels[as.character(highlight_num)])
+      }
     } else {
-      as.character(highlight_cluster)
+      # If it's already a label, check if it exists in final_levels
+      if (highlight_cluster %in% final_levels) {
+        highlight_label <- highlight_cluster
+      }
     }
 
-    alpha_values <- ifelse(final_levels == highlight_label, 1, 0.2)
+    # Debug highlight
+    message("Highlight cluster input: ", highlight_cluster)
+    message("Highlight label found: ", highlight_label)
+
+    if (!is.null(highlight_label)) {
+      # Create alpha column based on highlight
+      raster_df$alpha <- ifelse(as.character(raster_df$value_factor) == highlight_label, 1, 0.2)
+      message("Alpha values: ", paste(table(raster_df$alpha), collapse = ", "))
+    } else {
+      warning("Highlight cluster not found in data. No highlighting applied.")
+      raster_df$alpha <- 1
+    }
   } else {
-    alpha_values <- rep(1, length(final_levels))
+    raster_df$alpha <- 1
   }
-  names(alpha_values) <- final_levels
 
   # ---- Create ggplot ----
   p <- ggplot() +
-    tidyterra::geom_spatraster(
-      data = raster,
-      aes(fill = after_stat(as.factor(value)), alpha = after_stat(as.factor(value))),
-      maxcell = Inf
+    geom_tile(
+      data = raster_df,
+      aes(x = x, y = y, fill = value_factor, alpha = alpha)
     ) +
     scale_fill_manual(
       values = present_colors,
@@ -126,31 +172,31 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
         nrow = 1
       )
     ) +
-    scale_alpha_manual(values = alpha_values, guide = "none") +
+    scale_alpha_identity(guide = "none") +  # Use identity scale for alpha
     labs(title = title_text) +
-    ggplot2::scale_x_continuous(
+    scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
-    ggplot2::scale_y_continuous(
+    scale_y_continuous(
       breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
     ) +
-    ggplot2::coord_sf(
+    coord_sf(
       xlim = c(xmin, xmax),
       ylim = c(ymin, ymax),
       expand = FALSE,
       clip = "off"
     ) +
-    ggplot2::theme_bw(base_size = text_size) +
-    ggplot2::theme(
+    theme_bw(base_size = text_size) +
+    theme(
       legend.position = "bottom",
       legend.box = "horizontal",
-      legend.text = ggplot2::element_text(size = text_size * 0.9),
-      legend.title = ggplot2::element_text(size = text_size),
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      legend.text = element_text(size = text_size * 0.9),
+      legend.title = element_text(size = text_size),
+      axis.title = element_text(size = text_size),
+      axis.text = element_text(size = text_size * 0.9),
+      plot.title = element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )
 
