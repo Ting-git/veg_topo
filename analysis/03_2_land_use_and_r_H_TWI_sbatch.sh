@@ -1,6 +1,9 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="03LandUsedMask"
 #SBATCH --time=2:00:00 # ~ 6.5 min
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1

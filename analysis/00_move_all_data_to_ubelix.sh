@@ -13,6 +13,22 @@ rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data/global_flc_5km \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
 
+# r_H_TWI 5km
+rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
+  /data_2/scratch/ting/veg_topo_data/data/global_cor_twi_vegh \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
+
+# r_H_Rin 5km
+rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
+  /data_2/scratch/ting/veg_topo_data/data/global_r_H_R_5km \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
+# k-means 5km
+rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
+  /data_2/scratch/ting/veg_topo_data/data/global_kmeans_5km \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
 # mi 5km
 rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data/global_mi_5km \

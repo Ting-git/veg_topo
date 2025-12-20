@@ -1,5 +1,8 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="mosaic_vegh_450m"
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker

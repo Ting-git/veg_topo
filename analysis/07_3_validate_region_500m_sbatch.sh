@@ -1,14 +1,16 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="4validation"
+#SBATCH --job-name="validation"
 #SBATCH --time=24:00:00 # ~98 min
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=50
-#SBATCH --mem=200G
+#SBATCH --mem=300G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
-
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4

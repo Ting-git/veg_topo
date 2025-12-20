@@ -1,5 +1,5 @@
 plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
-                            text_size = 12) {
+                            text_size = 12, x_step = 0.5, y_step = 0.5) {
 
   # ---- Register Google API key ----
   api_key <- Sys.getenv("GOOGLE_API_KEY")
@@ -23,23 +23,44 @@ plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
   satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zoom_level)
 
   # ---- Crop to exact extent ----
-  p <- ggmap(satellite_map) +
+  # 格式化经度标签
+  lon_labels <- function(x) {
+    ifelse(x < 0, paste0(abs(x), "°W"),
+           ifelse(x > 0, paste0(x, "°E"), "0°"))
+  }
 
+  # 格式化纬度标签
+  lat_labels <- function(y) {
+    ifelse(y < 0, paste0(abs(y), "°S"),
+           ifelse(y > 0, paste0(y, "°N"), "0°"))
+  }
+
+  p <- ggmap(satellite_map) +
     coord_sf(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) +
     labs(title = title, x = NULL, y = NULL) +
+    scale_x_continuous(
+      breaks = seq(from = xmin, to = xmax, by = x_step),
+      labels = lon_labels,
+      expand = c(0, 0)
+    ) +
+    scale_y_continuous(
+      breaks = seq(from = ymin, to = ymax, by = y_step),
+      labels = lat_labels,
+      expand = c(0, 0)
+    ) +
     theme_bw() +
     theme(
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.8),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "plain",
-                                         margin = margin(b = 3)),
-      axis.text.x = ggplot2::element_text(
+      axis.title = element_text(size = text_size),
+      axis.text = element_text(size = text_size * 0.8),
+      plot.title = element_text(size = text_size * 1.2, face = "plain",
+                                margin = margin(b = 3)),
+      axis.text.x = element_text(
         size = text_size * 0.8,
         hjust = 0,
         vjust = 1,
-        margin = margin(t = 2, b = 2),
+        margin = margin(t = 2, b = 2)
       ),
-      axis.text.y = ggplot2::element_text(
+      axis.text.y = element_text(
         size = text_size * 0.8,
         hjust = 0.5,
         vjust = 0.5,

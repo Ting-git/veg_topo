@@ -2,6 +2,9 @@
 #SBATCH --job-name="map_r_H_R_5km"
 #SBATCH --time=2:00:00 # ~ 2.5 min
 #SBATCH --ntasks=1
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=200G

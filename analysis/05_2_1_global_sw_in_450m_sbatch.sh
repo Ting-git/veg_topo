@@ -1,6 +1,9 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="global_sw_in_450m"
 #SBATCH --time=4:00:00     # 增加时间预算
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=64

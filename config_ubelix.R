@@ -49,6 +49,7 @@ cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_v
 pval_cor_twi_vegh_mosaic_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"pval_cor_twi_vegh_5km_mosaic.nc")
 
 cor_twi_vegh_mask_fused0.05_file <- file.path(dirname(cor_twi_vegh_tiles_dir),"cor_twi_vegh_5km_mask_fused0.05.nc")
+kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "global_kmeans_5km/kmeans_corth_fused_mi_5km_8c.nc")
 
 # Global correlation (H~R)
 r_H_R_tiles_dir <-  file.path(veg_topo_extr_dir, "global_r_H_R_5km/30_30_deg")

@@ -1,6 +1,9 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="global_sw_in_terrain_effect_450m"
 #SBATCH --time=2:00:00 # 10 min
+#SBATCH --account=invest
+#SBATCH --qos=job_icpu-stocker
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=16
