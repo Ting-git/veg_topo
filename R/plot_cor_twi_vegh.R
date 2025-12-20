@@ -10,7 +10,9 @@
 #' @return A ggplot2 object
 #' @export
 plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H~TWI)",
-                              text_size = 12, x_step = 10, y_step = 10) {
+                              text_size = 12, x_step = 10, y_step = 10, land_color = NA) {
+
+  land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
 
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -42,6 +44,10 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H
 
   # Plot
   p <- ggplot2::ggplot() +
+    geom_sf(data = land,
+            fill = land_color,        # 填充黑色
+            colour = NA,           # 移除边框线
+            linewidth = 0) +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "bam",

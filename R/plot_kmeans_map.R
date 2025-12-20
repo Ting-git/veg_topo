@@ -1,6 +1,8 @@
 plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster map (k=8)",
                             highlight_cluster = NULL,
-                            text_size = 12, x_step = 30, y_step = 30) {
+                            text_size = 12, x_step = 30, y_step = 30, land_color = NA) {
+
+  land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
 
   # Reorder cluster_value and cluster_labels with an defined order
   load(here::here("data/cluster_data.RData")) # cluster_values, cluster_labels
@@ -52,23 +54,34 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
   raster_vals <- terra::values(input) |> na.omit() |> unique() |> sort()
 
   # ---- Handle cluster labels ----
+  # 确保cluster_labels正确命名（使用cluster_values的顺序）
   names(cluster_labels) <- as.character(cluster_values)
 
   # Get the actual categories present after cropping
   if (!is.null(cluster_labels)) {
     # Filter cluster_labels to only include those present in the cropped raster
     present_clusters <- as.character(raster_vals)
-    present_labels <- cluster_labels[names(cluster_labels) %in% present_clusters]
+
+    # 关键修改：保持cluster_labels的原始顺序
+    # cluster_labels是按照cluster_values顺序命名的
+    # 所以我们需要保持这个顺序
+
+    # 获取所有存在的聚类（按cluster_values顺序）
+    all_clusters <- as.character(cluster_values)
+    existing_clusters <- all_clusters[all_clusters %in% present_clusters]
+
+    # 获取对应的标签（保持cluster_values的顺序）
+    present_labels <- cluster_labels[existing_clusters]
 
     if (length(present_labels) > 0) {
       # Create mapping between numeric values and labels
-      # IMPORTANT: Ensure the order matches raster_vals
+      # 保持cluster_values中的顺序，而不是数字大小顺序
       value_to_label <- setNames(
-        as.character(present_labels[order(as.numeric(names(present_labels)))]),
-        sort(as.numeric(names(present_labels)))
+        as.character(present_labels),
+        as.numeric(names(present_labels))
       )
 
-      # Get final levels in correct order
+      # Get final levels in correct order（按照cluster_values的顺序）
       final_levels <- unname(value_to_label)
     } else {
       # If no cluster labels match, use numeric values
@@ -84,10 +97,18 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
   # ---- Create color mappings ----
   # Match colors to present levels
   if (!is.null(cluster_labels) && exists("present_labels")) {
-    # Get the index order from cluster_labels (original order, not cropped order)
-    # We need to match the color to the cluster value, not the present order
-    color_index <- match(as.numeric(names(present_labels)), cluster_values)
-    present_colors <- fill_colors[color_index]
+    # 获取当前存在的聚类数值
+    present_nums <- as.numeric(names(present_labels))
+
+    # 确保按照cluster_values的顺序分配颜色
+    # cluster_values: 2 3 1 5 4 6 8 7
+    # fill_colors: 1st, 2nd, 3rd, 4th, 5th, 6th, 7th, 8th
+    # 所以：聚类2 -> 颜色1, 聚类3 -> 颜色2, 聚类1 -> 颜色3, 聚类5 -> 颜色4...
+
+    # 查找每个聚类值在cluster_values中的位置
+    color_positions <- match(present_nums, cluster_values)
+    present_colors <- fill_colors[color_positions]
+
   } else {
     # For numeric values, use colors based on sorted values
     color_index <- match(raster_vals, 1:length(fill_colors))
@@ -156,6 +177,10 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
 
   # ---- Create ggplot ----
   p <- ggplot() +
+    geom_sf(data = land,
+            fill = land_color,        # 填充黑色
+            colour = NA,           # 移除边框线
+            linewidth = 0) +
     geom_tile(
       data = raster_df,
       aes(x = x, y = y, fill = value_factor, alpha = alpha)

@@ -63,6 +63,7 @@ df_summary$cluster8c
 
 # Manually set the cluster labels according to their median_mi value
 cluster_values <- df_summary$cluster8c
+cluster_values
 cluster_labels <- c(
   "Arid downslope \nsuppression",
   "Arid downslope \nsupport",
@@ -149,7 +150,8 @@ p_8c  <- plot_kmeans_map(
   kmeans_8c_r,
   text_size = text_size,
   extent = ext_global,
-  title_text = "K-means Cluster Map (K=8)"
+  title_text = "K-means Cluster Map (K=8)",
+  land_color = "white"
 ) +
   geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
   coord_sf(
@@ -205,7 +207,7 @@ for (i in 1:length(cluster_labels)) {
     kmeans_8c_r,
     text_size = text_size,
     extent = ext_global,
-    title_text = paste0("Cluster: ", cluster),
+    title_text = paste0(cluster, " cluster"),
     highlight_cluster = cluster_values[i]
   ) +
     geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
@@ -242,7 +244,7 @@ for (i in 1:length(cluster_labels)) {
                   top = 0.66)   # 顶部位置
 
   ggsave(
-    filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", cluster_values[i], ".png")),
+    filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", i, ".png")),
     plot = p_8c_add, width = 14, height = 7, dpi = 600, units = "in"
   )
   tictoc::toc()

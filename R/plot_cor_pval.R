@@ -12,7 +12,7 @@
 plot_cor_pval <- function(input, extent = NULL,
                           title_text = "Pearson's p-value (H~TWI)",
                           text_size = 12, x_step = 10, y_step = 10) {
-
+  land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
   if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
@@ -41,30 +41,35 @@ plot_cor_pval <- function(input, extent = NULL,
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # ---- Classify p-values into discrete bins ----
-  breaks <- c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf)
-  labels <- c("<0.001", "<0.01", "<0.05", "<0.1", "≥0.1")
-  rcl <- cbind(breaks[-length(breaks)], breaks[-1], 1:5)
-  input_class <- terra::classify(input, rcl = rcl)
-  names(input_class) <- "class"
+  # ---- 获取图层名称 ----
+  # 获取第一个图层的名称用于美学映射
+  layer_name <- names(input)[1]
 
-  # ---- convert to factor ----
-  input_class <- terra::as.factor(input_class)
-  levels(input_class)[[1]] <- data.frame(ID = 1:5, label = labels)
-
+  breaks_sqrt <- c(0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1)
+  labels_sqrt <- c("0.01", "0.05", "0.10", "0.25", "0.50", "0.75", "1.00")
   # ---- Plot using tidyterra ----
   p <- ggplot() +
+    geom_sf(data = land,
+            fill = "#FAFAF7",        # 填充黑色
+            colour = NA,           # 移除边框线
+            linewidth = 0) +
     tidyterra::geom_spatraster(
-      data = input_class,
-      aes(fill = label),
+      data = input,
       maxcell = Inf
     ) +
-    scale_fill_manual(
-      values = rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
-      labels = labels,
+    scico::scale_fill_scico(
+      palette = "batlowK",
+      direction = -1,
       na.value = NA,
-      drop = FALSE,
-      guide = guide_legend(keywidth = 0.8, keyheight = 1)
+      trans = "sqrt",  # 平方根变换
+      breaks = breaks_sqrt,
+      labels = labels_sqrt,
+      guide = guide_colorbar(
+        barwidth = 0.8,
+        barheight = 6,
+        title = NULL,
+        direction = "vertical"
+      )
     ) +
     ggplot2::labs(
       title = title_text,
