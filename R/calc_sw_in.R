@@ -1,8 +1,8 @@
 # wrapper function to get annual total
-calc_sw_in <- function(lat, slope = 0, aspect = 0, year = 2001) {
+calc_sw_in <- function(lat, slope = 0, aspect = 0, year = 2020, return_f_toa_terrain = FALSE) {
   doy_seq <- 1:(julian_day(year + 1, 1, 1) - julian_day(year, 1, 1))
   daily_rad <- calc_sw_in_daily(lat = lat, slope = slope, aspect = aspect,
-                                year = year, doy = doy_seq)
+                                year = year, doy = doy_seq, return_f_toa_terrain = return_f_toa_terrain)
   rowSums(daily_rad) / 1e6  # MJ/m²
   # rowSums(daily_rad)  # J/m²
 }
@@ -183,6 +183,12 @@ calc_sw_in_daily <- function(
   # according to Email David Sandoval 26.05.2025
   r_toa[r_toa < 0] <- 0
 
+  # (Ting)
+  # r_toa is per unit slope-surface area (J m-2 day-1)
+  # convert to horizontal-equivalent by area projection
+  # project slope-surface irradiance to horizontal-equivalent
+  r_toa_horiz_proj <- r_toa / dcos(slope_mat)
+
   # for flat earth
   r_toa_f <- (kSecInDay/pi) * kGsc * dr_mat * (ru_f * pir * hs_f + rv_f * dsin(hs_f))
   # solar$r_toa <- r_toa
@@ -190,16 +196,26 @@ calc_sw_in_daily <- function(
   # according to Email David Sandoval 26.05.2025
   r_toa_f[r_toa_f < 0] <- 0
 
-  # ratio of local incident radiation considering slope and aspect over the
-  # hypothetical incident radiation assuming flat earth
-  f_toa_terrain <- r_toa / r_toa_f
+  # r_toa is per unit slope-surface area (J m-2 day-1)
+  # convert to horizontal-equivalent by area projection
+  f_toa_terrain <- r_toa_horiz_proj / r_toa_f # (Ting) change r_toa to r_toa_horiz_proj
   f_toa_terrain[!is.finite(f_toa_terrain)] <- 0 # (Ting) Handling division by zero
+
+  # # Print all key information
+  # cat(sprintf("Latitude: %.1f°, Slope: %.1f°, Aspect (input): %.1f°, Day of year: %d\n",
+  #             lat, slope, (aspect + 180) %% 360, doy))
+  # cat(sprintf("Actual slope TOA radiation (r_toa): %.0f J/m²\n", r_toa[1,1]))
+  # cat(sprintf("Horizontally projected TOA radiation (r_toa_horiz_proj): %.0f J/m²\n",
+  #             r_toa_horiz_proj[1,1]))
+  # cat(sprintf("Terrain factor (f_toa_terrain): %.6f\n", f_toa_terrain[1,1]))
+  # cat("---\n")
 
 
   # (Ting) Vectorized computation for multiple latitudes and days!!
   if (return_f_toa_terrain) {
     return(t(f_toa_terrain))
   } else {
-    return(t(r_toa))
+    return(t(r_toa_horiz_proj)) # (Ting) change r_toa to r_toa_horiz_proj
   }
+
 }
