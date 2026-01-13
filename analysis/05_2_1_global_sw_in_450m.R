@@ -3,19 +3,19 @@
 library(terra)
 library(fs)
 # library(here)
-
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Workstation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
 source(here::here("R/mosaic_tiles.R"))
 
 # File Configuration ------------------------------------------------------
-
-sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
-twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
-
 # Output file paths
 output_dir <- fs::path_dir(sw_in_450m_tile_dir)
-sw_in_450m_path <- file.path(output_dir, "sw_in_uneven_450m.nc")
-sw_in_flat_450m_path <- file.path(output_dir, "sw_in_flat_450m.nc")
-sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc")
 
 # Load data ------------------------------------------------------
 
@@ -31,7 +31,7 @@ sw_in_mosaic <- mosaic_tiles(
   pattern = "*_to_sw_in_uneven_450m.nc",
   varname = "sw_in")
 
-# 检查镶嵌是否成功
+# Check mosaicing process
 if (is.null(sw_in_mosaic) || terra::ncell(sw_in_mosaic) == 0) {
   stop("Mosaicing failed - no data produced")
 }
@@ -51,12 +51,21 @@ sw_in_resampled <- mask(sw_in_resampled, twi_450m_r)
 # Save Results ------------------------------------------------------------
 
 # Save output files
-terra::writeCDF(sw_in_resampled, sw_in_450m_path, overwrite = TRUE, varname = "sw_in_uneven")
-if(file.exists(sw_in_450m_path)) message("✅ Saved: ", sw_in_450m_path)
+message("Saving as GeoTIFF...")
+terra::writeRaster(
+  sw_in_resampled,
+  sw_in_uneven_450m_path,
+  filetype = "GTiff",
+  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+  overwrite = TRUE,
+  datatype = "FLT4S",
+  NAflag = -9999
+)
+if(file.exists(sw_in_uneven_450m_path)) message("✅ Saved: ", sw_in_uneven_450m_path)
 
 rm(list = ls())
 gc()
 
 # check result
-# sw_in <- rast(sw_in_450m_path)
+# sw_in <- rast(sw_in_uneven_450m_path)
 # plot(sw_in)

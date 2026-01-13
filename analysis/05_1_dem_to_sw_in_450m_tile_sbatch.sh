@@ -1,13 +1,13 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="DEM12001-26450"
+#SBATCH --job-name="DEMfull"
 #SBATCH --time=48:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=60
-#SBATCH --mem=400G  #
+#SBATCH --cpus-per-task=100
+#SBATCH --mem=600G  #
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis

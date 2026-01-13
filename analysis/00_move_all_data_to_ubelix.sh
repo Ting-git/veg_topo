@@ -63,6 +63,13 @@ rsync --human-readable -i --info=progress2 -avhP \
   /data/archive/koeppengeiger_beck_2018/ \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/koeppengeiger_beck_2018/
 
+# cci 300m
+rsync --human-readable -i --info=progress2 -avhP \
+  --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
+  --no-owner --no-group \
+  /data/archive/landcover_defourny_2023/ \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/landcover_defourny_2023/
+
 # VEGH 10m
 rsync --human-readable -i --info=progress2 -avhP \
   --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \

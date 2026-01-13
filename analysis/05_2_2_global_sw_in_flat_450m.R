@@ -3,19 +3,20 @@
 library(terra)
 library(fs)
 # library(here)
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 
+if (hostname == "dash") {
+  message("💻 Detected Workstation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
 source(here::here("R/mosaic_tiles.R"))
 
 # File Configuration ------------------------------------------------------
-
-sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
-twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
-
 # Output file paths
 output_dir <- fs::path_dir(sw_in_450m_tile_dir)
-sw_in_450m_path <- file.path(output_dir, "sw_in_uneven_450m.nc")
-sw_in_flat_450m_path <- file.path(output_dir, "sw_in_flat_450m.nc")
-sw_in_terrain_effect_path <- file.path(output_dir, "sw_in_terrain_effect_450m.nc")
 
 # Load data ------------------------------------------------------
 
@@ -36,7 +37,7 @@ message("Starting resampling...")
 sw_in_flat_resampled <- terra::resample(sw_in_flat_mosaic, twi_450m_r, method = "bilinear")
 message("Resampling completed.")
 
-rm(sw_in_flat_mosaic)  # 立即清理镶嵌数据
+rm(sw_in_flat_mosaic)
 gc()
 
 message("Applying land mask...")
@@ -46,7 +47,16 @@ message("Masking completed.")
 # Save Results ------------------------------------------------------------
 
 # Save output files
-terra::writeCDF(sw_in_flat_resampled, sw_in_flat_450m_path, overwrite = TRUE, varname = "sw_in_flat")
+message("Saving as GeoTIFF...")
+terra::writeRaster(
+  sw_in_flat_resampled,
+  sw_in_flat_450m_path,
+  filetype = "GTiff",
+  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+  overwrite = TRUE,
+  datatype = "FLT4S",
+  NAflag = -9999
+)
 if(file.exists(sw_in_flat_450m_path)) message("✅ Saved: ", sw_in_flat_450m_path)
 
 rm(list = ls())

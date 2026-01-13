@@ -28,9 +28,9 @@ aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect
 
 # Radiation
 sw_in_450m_tile_dir <- file.path(veg_topo_extr_dir, "global_sw_in_450m/1_1_deg_tiles")
-sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_uneven_450m.nc")
-sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_flat_450m.nc")
-sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_terrain_effect_450m.nc")
+sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_uneven_450m.tif")
+sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_flat_450m.tif")
+sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_terrain_effect_450m.tif")
 
 # Fraction of land cover type
 fused_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fused_5km.nc")
@@ -87,4 +87,6 @@ ecoregion_path <- file.path(veg_topo_extr_dir, "ecoregion2017/Ecoregions2017/Eco
 kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")
 kg_present_0p083_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")
 kg_legend_file <- file.path(veg_topo_extr_dir, "koeppengeiger_beck_2018/data/legend.txt")
+
+cci_landcover_path <- file.path(veg_topo_extr_dir, "landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 

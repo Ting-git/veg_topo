@@ -1,6 +1,3 @@
-# This script is configured to run on UBELIX.
-# To run it on workstation02, update the file Configuration section and numbers of available core
-# because the input/output directories differ between servers.
 
 # DEM → Slope/Aspect → Annual SW_in @ 450 m workflow with nested parallelism
 # - External: furrr::future_map() (one worker per DEM tile)
@@ -18,23 +15,31 @@ library(parallel)      # for core detection
 library(doParallel)    # inner parallelism
 library(foreach)
 
-# --- User/project config ----
-# source(here::here("config.R")) # no need for it, due to not execute in workstation02
+# ------ Load configuration file and custom functions -----------------------------------------
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+
+if (hostname == "dash") {
+  message("💻 Detected Workstation: dash → using config.R")
+  source(here::here("config.R"))
+  workers <- 16
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+  workers <- 100
+}
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/helpers.R")) # SPLASH
 source(here::here("R/calc_sw_in.R")) # SPLASH
 
-# ----Data Source Configuration-----
-# Input dir of DEM tiles
-dem_30m_copernicus_dir <- file.path("/storage/scratch/giub_geco/tting/copernicus_dem_30m/copernicus_dem_30m")
+# ---- Processing set manually ----
+# 26450 tiles in total
+# better to split the work into four parts
+# set 1-7000, 7001-14000, 14001-21000, 21001-26450
+start_idx <- 1
+end_idx   <- 26450
 
-# Output dir of SW_IN tiles
-sw_in_450m_tile_dir <- file.path("/storage/scratch/giub_geco/tting/global_sw_in_450m/1_1_deg_tiles")
-
-# Target grid for aggregation
-twi_450m_mosaic_clean_path <- file.path("/storage/scratch/giub_geco/tting/global_twi_450m_clean/ga2_clean.nc")
-
+# ---- file Configuration-----
 # Check if input directory exists, stop if not
 if (!dir.exists(dem_30m_copernicus_dir)) {
   stop(paste("Input directory does not exist:", dem_30m_copernicus_dir))
@@ -60,8 +65,8 @@ dem_files_all <- fs::dir_ls(
 message(sprintf("Found %d DEM tiles", length(dem_files_all)))
 
 # ---- Processing info ----
-start_idx <- 12001
-end_idx   <- 26450
+# start_idx <- 1
+# end_idx   <- 26450 # 26450 tiles in total
 dem_files <- dem_files_all[start_idx:end_idx]
 message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
 
@@ -121,10 +126,14 @@ process_one_tile <- function(file) {
     dem <- terra::rast(file)
 
     # Get slope and aspect and Aggregate to ~450m
-    aligned <- aggregate_topography(
-      dem,
-      res_tar = res_tar,
-      if_resample = FALSE
+    aligned <- suppressMessages(
+      suppressWarnings(
+        aggregate_topography(
+          dem,
+          res_tar = res_tar,
+          if_resample = FALSE
+        )
+      )
     )
 
     # Extract + join
@@ -263,5 +272,3 @@ if (length(failed_results) > 0) {
 } else {
   message("All files processed successfully! No failures.")
 }
-
-
