@@ -13,13 +13,18 @@
 #' @param if_peak Logical, calculate peak relationships? (default FALSE)
 #' @return A data frame with correlation statistics by window
 calculate_correlation_bywin <- function(df_win,
-                                          x = "twi",
-                                          y = "vegh",
-                                          if_nobs = TRUE,
-                                          if_pval = TRUE,
-                                          if_data = FALSE,
-                                          if_peak = FALSE) {
+                                        x = "twi",
+                                        y = "vegh",
+                                        if_nobs = TRUE,
+                                        if_pval = TRUE,
+                                        if_data = FALSE,
+                                        if_peak = FALSE) {
+  # Generate full window midpoints (from df_win)
+  full_grid <- df_win %>%
+    dplyr::select(lon_mid, lat_mid) %>%
+    distinct()
 
+  # Compute correlations for actual windows
   df_cor <- df_win |>
 
     group_by(lon_mid, lat_mid) |>
@@ -29,7 +34,7 @@ calculate_correlation_bywin <- function(df_win,
       # Perform statistical computations
       stats = purrr::map(data, ~{
         df <- .x
-        n_obs <- nrow(df)  # Count the number of valid observations
+        n_obs <- sum(!is.na(df[[x]]) & !is.na(df[[y]]))  # Count only valid observations
 
         # Initialize result list
         result <- list(
@@ -40,8 +45,8 @@ calculate_correlation_bywin <- function(df_win,
         )
 
         # Only calculate correlation if there are enough valid observations with variation
-        if (n_obs >= 3 && sd(df[[x]], na.rm = TRUE) > 0 && sd(df[[y]], na.rm = TRUE) > 0) {
-          test <- cor.test(df[[x]], df[[y]])  # Pearson correlation test
+        if (n_obs >= 30 && sd(df[[x]], na.rm = TRUE) > 0 && sd(df[[y]], na.rm = TRUE) > 0) {
+          test <- cor.test(df[[x]], df[[y]], use = "complete.obs")  # Pearson correlation test; ensure NA-safe
           result$correlation <- test$estimate  # Extract correlation coefficient
           if(if_pval) result$cor_pval <- test$p.value  # Extract p-value
           if(if_peak) result$peak <- identify_peak(df) # Check for peak
@@ -59,16 +64,20 @@ calculate_correlation_bywin <- function(df_win,
     # Remove NULL columns (those not requested)
     select(-stats) |>
     # Remove columns based on function arguments
-    # {function(.) {
-    #   if (!if_data) . <- select(., -data)
-    #   if (!if_nobs) . <- select(., -n_obs)
-    #   if (!if_pval) . <- select(., -cor_pval)
-    #   if (!if_peak) . <- select(., -peak)
-    #   .
-    # }}() |>
+    {function(.) {
+      if (!if_data) . <- select(., -data)
+      # if (!if_nobs) . <- select(., -n_obs)
+      # if (!if_pval) . <- select(., -cor_pval)
+      # if (!if_peak) . <- select(., -peak)
+      .
+    }}() |>
     ungroup()
 
-  return(df_cor)
+  # Left join to the full grid to fill in missing windows
+  df_cor_full <- full_grid |>
+    dplyr::left_join(df_cor, by = c("lon_mid", "lat_mid"))
+
+  return(df_cor_full)
 }
 
 #' Combined windowed correlation analysis

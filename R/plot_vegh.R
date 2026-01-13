@@ -1,62 +1,86 @@
-#' Plot Vegetation Height (VEGH)
+#' Plot Vegetation Height (VEGH) with fixed color scale
 #'
-#' @param input A SpatRaster or raster file path
-#' @param extent Optional terra::ext() extent
+#' @param input A SpatRaster object or raster file path
+#' @param extent Optional terra::ext() extent.
+#'   If provided and smaller than the input raster extent,
+#'   the raster will be cropped to their intersecting area.
 #' @param text_size Font size
-#' @param x_breaks Number of x-axis breaks
-#' @param y_breaks Number of y-axis breaks
+#' @param x_step Number of x-axis breaks
+#' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_vegh <- function(input, extent = NULL, text_size = 6, x_breaks = 5, y_breaks = 5) {
+plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)",
+                      text_size = 12, x_step = 10, y_step = 10) {
 
-  if (is.character(input)) {
-    input <- terra::rast(input)
-  }
+  # ---- Load raster ----
+  if (is.character(input)) input <- terra::rast(input)
+  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
 
-  if (!inherits(input, "SpatRaster")) {
-    stop("Input must be a SpatRaster object or a valid raster file path.")
-  }
-
+  # ---- Handle extent and optional cropping ----
   if (is.null(extent)) {
     extent <- terra::ext(input)
   } else if (!inherits(extent, "SpatExtent")) {
-    stop("`extent` must be a SpatExtent object created by terra::ext().")
+    stop("`extent` must be a SpatExtent object from terra::ext().")
+  } else {
+    # Crop raster if extent is smaller
+    area_in <- (terra::xmax(input) - terra::xmin(input)) * (terra::ymax(input) - terra::ymin(input))
+    area_ex <- (terra::xmax(extent) - terra::xmin(extent)) * (terra::ymax(extent) - terra::ymin(extent))
+
+    if (area_ex < area_in) {
+      cropped <- terra::crop(input, extent)
+      if (all(is.na(terra::values(cropped)))) stop("Extent does not intersect raster.")
+      input <- cropped
+      message("Raster cropped to specified extent.")
+    }
   }
 
-  xmin <- extent$xmin
-  xmax <- extent$xmax
-  ymin <- extent$ymin
-  ymax <- extent$ymax
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
+
+  # Compute value range for color scale
+  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
+  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
 
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scico::scale_fill_scico(palette = "batlow", direction = -1, na.value = NA) +
+    scico::scale_fill_scico(
+      palette = "batlow",
+      direction = -1,
+      limits = c(vmin, vmax),
+      # name = "VEGH",
+      na.value = NA
+    ) +
+    guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
-      title = "Vegetation Height (H, 2020)",
-      x = "Longitude",
-      y = "Latitude",
-      fill = "VEGH"
+      title = title_text,
+      fill = "m",
     ) +
     ggplot2::scale_x_continuous(
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_breaks),
+      breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_breaks),
+      breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
+    ) +
+    ggplot2::coord_sf(
+      xlim = c(xmin, xmax),
+      ylim = c(ymin, ymax),
+      expand = FALSE,
+      clip = "off"
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
       legend.position = "right",
-      legend.text = ggplot2::element_text(size = text_size),
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
       legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )
-
   return(p)
 }

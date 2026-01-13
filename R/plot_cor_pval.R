@@ -1,77 +1,101 @@
-#' Plot Correlation between VEGH and TWI
+#' Plot correlation p-values as categorized raster
 #'
-#' @param input A SpatRaster or raster file path
-#' @param extent Optional terra::ext() extent
-#' @param text_size Font size
-#' @param x_breaks Number of x-axis breaks
-#' @param y_breaks Number of y-axis breaks
-#' @return A ggplot2 object
+#' @param input SpatRaster object or path to raster file containing p-values
+#' @param extent Optional SpatExtent to crop the raster
+#' @param title_text Plot title
+#' @param text_size Base font size
+#' @param x_step Interval for x-axis ticks
+#' @param y_step Interval for y-axis ticks
+#' @return ggplot2 object
 #' @export
-plot_cor_pval <- function(input, extent = NULL, title_text = "VEGH–TWI Pearson Correlation: P-value Map", text_size = 16, x_breaks = 30, y_breaks = 30) {
 
-  if (is.character(input)) {
-    input <- terra::rast(input)
-  }
+plot_cor_pval <- function(input, extent = NULL,
+                          title_text = "Pearson's p-value (H~TWI)",
+                          text_size = 12, x_step = 10, y_step = 10) {
+  land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
+  # ---- Load raster ----
+  if (is.character(input)) input <- terra::rast(input)
+  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
 
-  if (!inherits(input, "SpatRaster")) {
-    stop("Input must be a SpatRaster object or a valid raster file path.")
-  }
-
+  # ---- Handle extent and optional cropping ----
   if (is.null(extent)) {
     extent <- terra::ext(input)
   } else if (!inherits(extent, "SpatExtent")) {
-    stop("`extent` must be a SpatExtent object created by terra::ext().")
+    stop("`extent` must be a SpatExtent object from terra::ext().")
+  } else {
+    # Crop raster if extent is smaller
+    area_in <- (terra::xmax(input) - terra::xmin(input)) * (terra::ymax(input) - terra::ymin(input))
+    area_ex <- (terra::xmax(extent) - terra::xmin(extent)) * (terra::ymax(extent) - terra::ymin(extent))
+
+    if (area_ex < area_in) {
+      cropped <- terra::crop(input, extent)
+      if (all(is.na(terra::values(cropped)))) stop("Extent does not intersect raster.")
+      input <- cropped
+      message("Raster cropped to specified extent.")
+    }
   }
 
-  xmin <- extent$xmin
-  xmax <- extent$xmax
-  ymin <- extent$ymin
-  ymax <- extent$ymax
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
 
-  # Estimate value range for diverging color scale
-  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
-  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
+  # ---- 获取图层名称 ----
+  # 获取第一个图层的名称用于美学映射
+  layer_name <- names(input)[1]
 
-  p <- ggplot2::ggplot() +
-    tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scale_fill_stepsn(
-      colours = c("#2166AC", "#67A9CF", "#D1E5F0", "#FDDBC7", "#EF8A62", "#B2182B"),
-      values = scales::rescale(c(0, 0.01, 0.05, 0.1, 0.5, 1)),  # 分段值（rescaled to 0–1）
-      breaks = c(0.01, 0.05, 0.1, 0.5, 1),
-      limits = c(0, 1),
-      oob = scales::squish,
-      name = "p",
+  breaks_sqrt <- c(0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1)
+  labels_sqrt <- c("0.01", "0.05", "0.10", "0.25", "0.50", "0.75", "1.00")
+  # ---- Plot using tidyterra ----
+  p <- ggplot() +
+    geom_sf(data = land,
+            fill = "#FAFAF7",        # 填充黑色
+            colour = NA,           # 移除边框线
+            linewidth = 0) +
+    tidyterra::geom_spatraster(
+      data = input,
+      maxcell = Inf
+    ) +
+    scico::scale_fill_scico(
+      palette = "batlowK",
+      direction = -1,
       na.value = NA,
+      trans = "sqrt",  # 平方根变换
+      breaks = breaks_sqrt,
+      labels = labels_sqrt,
       guide = guide_colorbar(
-        direction = "horizontal",
-        title.position = "top",
-        label.position = "bottom",
-        barwidth = unit(12, "cm"),
-        barheight = unit(0.5, "cm")
+        barwidth = 0.8,
+        barheight = 6,
+        title = NULL,
+        direction = "vertical"
       )
     ) +
     ggplot2::labs(
       title = title_text,
-      x = "Longitude",
-      y = "Latitude"
+      fill = NULL,
     ) +
     ggplot2::scale_x_continuous(
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, by = x_breaks),
+      breaks = seq(from = xmin, to = xmax, by = x_step),
       expand = c(0, 0)
     ) +
     ggplot2::scale_y_continuous(
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, by = y_breaks),
+      breaks = seq(from = ymin, to = ymax, by = y_step),
       expand = c(0, 0)
+    ) +
+    ggplot2::coord_sf(
+      xlim = c(xmin, xmax),
+      ylim = c(ymin, ymax),
+      expand = FALSE,
+      clip = "off"
     ) +
     ggplot2::theme_bw(base_size = text_size) +
     ggplot2::theme(
-      legend.position = "bottom",
-      legend.text = element_text(size = text_size, angle = 45),
-      legend.title = ggplot2::element_text(size = text_size, face = "bold"),
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
       axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
       plot.title.position = "panel"
     )

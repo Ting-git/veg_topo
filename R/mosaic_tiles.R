@@ -4,7 +4,7 @@ mosaic_tiles <- function(input_dir,
                          pattern = "*.nc",
                          overwrite = TRUE,
                          crs = NULL,
-                         layer_names = NULL) {
+                         varname = "band") {
   # List matching files
   tile_paths <- fs::dir_ls(path = input_dir, glob = pattern)
 
@@ -21,21 +21,13 @@ mosaic_tiles <- function(input_dir,
     terra::crs(mosaic_raster) <- crs
   }
 
-  # Set layer names
-  if (is.null(layer_names)) {
-    names(mosaic_raster) <- paste0("band", seq_len(terra::nlyr(mosaic_raster)))
-  } else {
-    if (length(layer_names) != terra::nlyr(mosaic_raster)) {
-      stop("Length of 'layer_names' does not match number of raster layers")
-    }
-    names(mosaic_raster) <- layer_names
-  }
-
   # Write output if path provided
   if (!is.null(output_file)) {
-    terra::writeCDF(mosaic_raster, output_file, overwrite = overwrite)
-    message("✅ Mosaic saved successfully to: ", output_file)
+    terra::writeCDF(mosaic_raster, output_file, varname = varname, overwrite = overwrite)
+    if(file.exists(output_file)) message("✅ Mosaic saved successfully to: ", output_file)
   }
+
+  rm(tile_rasters);gc()
 
   return(invisible(mosaic_raster))
 }

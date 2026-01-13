@@ -1,148 +1,287 @@
-# ~1.4 min
+# ~ UBELIX with 8 workers: 8.5 min for 34 sample regions
 
 # ------Load required libraries-------------------------------------------------------------
-library(terra)     # For handling raster data
-library(dplyr)
-library(furrr)     # For functional programming tools like pmap_dfr
-library(future)
 
-source(here::here("config.R"))
-source(here::here("R/generate_tile_grid.R"))
+library(terra)
+library(dplyr)
+library(furrr)
+
+library(ggplot2)
+library(tidyterra)
+library(patchwork)
+library(ggmap)
+library(khroma)
+library(RColorBrewer)
+library(rnaturalearth)
+library(sf)
+
+# ------ Load configuration file and custom functions -------------------------------------------------
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+  workers = 2
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+  workers = 8
+}
+
+# Load cuntom functions
+source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
-# source(here::here("R/filter_land_tiles.R"))
+source(here::here("R/raster_preprocess_save.R"))
 
+source(here::here("R/plot_dem.R"))
+source(here::here("R/plot_vegh.R"))
+source(here::here("R/plot_twi.R"))
+source(here::here("R/plot_cor_twi_vegh.R"))
+source(here::here("R/plot_hex_scatter.R"))
+source(here::here("R/plot_single_sample_location.R"))
+source(here::here("R/plot_google_img.R"))
+source(here::here("R/plot_cor_pval.R"))
+source(here::here("R/plot_kg_class.R"))
+# source(here::here("R/plot_fused.R"))
+# source(here::here("R/plot_biomes.R"))
 
-# --- Load Region Info ---
-regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"))
+# ------ File Configuration ---------------------------------------------
 
-# --------------- none paralell testing ----------------------------------------
+if (!dir.exists(regA_cor_twi_vegh_dir)) {
+  dir.create(regA_cor_twi_vegh_dir, recursive = TRUE)
+  message("Directory created: ", regA_cor_twi_vegh_dir)
+}
 
-# --- Set Region Extent ---
+# --------------- Main Processing Function -------------------------------------
 
-# reg_id <- regA_info$strata_A_label[1]
-#
-# xmin <- regA_info$xmin[1]
-# xmax <- regA_info$xmax[1]
-# ymin <- regA_info$ymin[1]
-# ymax <- regA_info$ymax[1]
-#
-# ext <- terra::ext(xmin, xmax, ymin, ymax)
+#' Process a single region for TWI and vegetation height correlation analysis
+#'
+#' @param reg_row Region Information about the reg_id,sample_id, xmix, xmax, ymin, ymax
+#' @param sample_id Sample identifier
+#' @param output_dir Directory to save output NetCDF files
+#' @param dwin Window size for spatial analysis (in degrees)
+#'
+#' @return Returns TRUE if successful, FALSE otherwise
+process_regA_500m <- function(regA_row, output_dir = regA_cor_twi_vegh_dir,
+                              text_size = 12, fig_width = 14, fig_height = 14) {
 
-# ---main processing ---
-# copy to here
-# ----------------------
+  tryCatch({
 
-# --------- Parallel Processing for Each Regions -------------------------------
+    # --- Region info ---
+    regA_id <- paste0(regA_row$strata_A_label, "_", regA_row$sample_id)
+    regA_extent <- terra::ext(regA_row$xmin, regA_row$xmax, regA_row$ymin, regA_row$ymax)
+    regA_xmid <- (regA_row$xmin +regA_row$xmax) / 2
+    regA_ymid <- (regA_row$ymin +regA_row$ymax) / 2
 
-gc()
-plan(multisession, workers = 8)
+    # Start Processing
+    tictoc::tic(paste0("Processing tile: ", regA_id))
+    t0 <- Sys.time()
 
-t00 <- Sys.time()
-message(paste0("Regional Correlation Analysis Start:", format(t00, "%Y-%m-%d %H:%M:%S")))
+    # --- TWI Raster ---
+    twi_rc <- terra::rast(twi_30m_path) |> terra::crop(regA_extent)
+    twi_nc_path <- file.path(output_dir, paste0("tile_", regA_id, "_twi_450m.nc"))
+    terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
+    rm(twi_rc); gc()
+    twi_rc <- terra::rast(twi_nc_path)
+    names(twi_rc) <- "twi"
+    message("Saved: ", twi_nc_path)
 
-results <- future_pmap(
-  regA_info,
-  function(...) {
-    args <- list(...)
-    tryCatch({
+    # --- Vegetation Height Raster ---
+    vegh_rc <- extent_to_tile_ids(regA_extent, tile_size = 3, return_raster = TRUE,
+                                  source = "lang_vegh_10m", tiles_dir = vegh_10m_tiles_dir)
 
-      t0 <- Sys.time()
+    # Vegetation Height Raster: crop and store in temporary file
+    tmp_vegh <- tempfile(fileext = ".nc")          # Create temporary NetCDF file
+    terra::writeCDF(vegh_rc, tmp_vegh, varnames = "vegh", overwrite = TRUE)  # Write cropped raster
+    rm(vegh_rc); gc()                               # Remove large in-memory object
+    vegh_rc <- terra::rast(tmp_vegh)               # Reload raster from temporary file
+    names(vegh_rc) <- "vegh"
 
-      # set region info
-      reg_id <- args$strata_A_label
-      ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
+    # Set 0 as NA value (0m canopy height represents not vegetated or water according to Lang et al. (2019))
+    # Aggregate and resample using TWI data from Ho et al. (2025)
+    vegh_rc <- raster_preprocess_save(
+      input = vegh_rc,
+      target = twi_rc,
+      na_value = 0,
+      fun = mean,
+      varname = "vegh",
+      if_aggregate = TRUE,
+      if_resample = TRUE,
+      if_mask = TRUE,
+      if_return_raster = TRUE
+    )
+    vegh_nc_path <- file.path(output_dir, paste0("tile_", regA_id, "_vegh_450m.nc"))
+    terra::writeCDF(vegh_rc, vegh_nc_path, varnames="vegh", overwrite = TRUE)
+    rm(vegh_rc); gc()
+    vegh_rc <- terra::rast(vegh_nc_path)
+    message("Saved: ", vegh_nc_path)
 
-      # ---- main processing ---------------------------------------------------
+    # --- Stack and correlation ---
+    stacked <- c(twi_rc, vegh_rc)
+    df_win <- create_spatial_windows(stacked, value_vars = c("twi", "vegh"), dwin = 0.005)
+    df_cor <- calculate_correlation_bywin(df_win, x = "twi", y = "vegh")
 
-      # --- Load TWI Raster ---
-      twi_r <- terra::rast(twi_30m_path)
-      names(twi_r) = "twi"
-      twi_rc <- terra::crop(twi_r, ext)
+    # --- Save correlation ---
+    cor_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
+    names(cor_r) <- "r_H_TWI"
+    cor_nc_path <- file.path(output_dir, paste0("tile_", regA_id, "_r_H_TWI_500m_map.nc"))
+    terra::writeCDF(cor_r, cor_nc_path, overwrite = TRUE)
+    message("Saved: ", cor_nc_path)
 
-      # --- Load and Prepare Vegetation Height Raster ---
-      tile_ids <- extent_to_tile_ids(ext)  # Assume this function is defined elsewhere
-      vegh_filepaths <- file.path(vegh_10m_tiles_dir, paste0("ETH_GlobalCanopyHeight_10m_2020_", tile_ids, "_Map.tif"))
+    # --- Save p-value ---
+    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type="xyz", crs="EPSG:4326")
+    names(pval_r) <- "pval_r_H_TWI"
+    pval_nc_path <- file.path(output_dir, paste0("tile_", regA_id, "_r_H_TWI_500m_pval.nc"))
+    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
+    message("Saved: ", pval_nc_path)
 
-      # Check for missing tiles
-      missing_tiles <- vegh_filepaths[!file.exists(vegh_filepaths)]
-      if (length(missing_tiles) > 0) {
-        stop("Missing vegH tiles: ", paste(missing_tiles, collapse = ", "))
-      }
+    # --- Elevation Raster---
+    dem_rc <- extent_to_tile_ids(regA_extent, tile_size = 1, return_raster = TRUE,
+                                 source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
+    dem_rr <- terra::resample(dem_rc, twi_rc, method = "bilinear")
+    dem_nc_path <- file.path(output_dir, paste0("regA_", regA_id, "_dem_30m.nc"))
+    terra::writeCDF(dem_rr, dem_nc_path, varnames = "dem", overwrite = TRUE)
+    rm(dem_rc, dem_rr); gc()
+    dem_rc <- terra::rast(dem_nc_path)
+    names(dem_rc) <- "dem"
+    message("Saved: ", dem_nc_path)
 
-      # Load and mosaic vegH tiles if needed
-      vegh_r <- if (length(vegh_filepaths) > 1) {
-        vegh_rs <- lapply(vegh_filepaths, terra::rast)
-        do.call(terra::mosaic, c(vegh_rs, fun = mean))
-      } else {
-        terra::rast(vegh_filepaths)
-      }
-      names(vegh_r) = "vegh"
+    # --- reset theme for plots ---
+    re_theme <- ggplot2::theme(
+      aspect.ratio = 1,
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -5),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        size = text_size * 0.9,
+        margin = margin(t = 15, b = -20),
+        vjust = 1
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = text_size * 0.8,
+        angle = 90,
+        hjust = 0.5,
+        vjust = 0.5,
+        margin = margin(r = 15, l = -20)
+      ),
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
+      plot.margin = margin(1, 1, 1, 1),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "bold",
+        margin = margin(b = 3)
+      ),
+      plot.title.position = "panel"
+    )
 
-      # Crop and resample vegH to TWI
-      vegh_rc <- terra::crop(vegh_r, ext)
-      vegh_rr <- terra::resample(vegh_rc, twi_rc, method = "bilinear")
+    # --- Plotting, change the layout for better visualization ---
+    p_dem <- plot_dem(dem_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_vegh <- plot_vegh(vegh_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_twi <- plot_twi(twi_rc, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_r <- plot_cor_twi_vegh(cor_r, extent = regA_extent,  title_text = "500m: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_r2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = regA_extent, title_text = "5km: Pearson's r (H~TWI)", text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    # p_fused <- plot_fused(fused_5km_file, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5)  + re_theme
+    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = regA_extent, text_size = text_size, x_step = 0.5, y_step = 0.5) + re_theme
 
-      # --- Stack Rasters ---
+    p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh", title_text = "H vs TWI",
+                                  x_text = "Topographic Wetness Index", y_text = "Vegetation height (m)",
+                                  text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
 
-      stacked_r <- c(twi_rc, vegh_rr)
-      names(stacked_r) <- c("twi", "vegh")
+    p_location <- plot_single_sample_location(regA_xmid, regA_ymid,  regA_id, text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
 
-      # Optional: Plot for visual check
-      # plot(stacked_r, axes = TRUE, asp = 1)
+    p_google <- plot_google_img(extent = regA_extent) + ggplot2::theme(aspect.ratio = 1)
 
-      # --- Create Spatial Windows and Compute Correlation ---
-      dwin <- 0.005  # ~500m window at equator
-      df_win <- create_spatial_windows(stacked_r, dwin = dwin)  # Custom function
-      df_cor <- calculate_correlation_bywin(df_win)             # Custom function
+    # ---- Combine plots ----
+    final_plot <- ((p_dem + p_twi + p_vegh) /
+                     (p_r + p_r2 + p_kg) /
+                     (p_google + p_location + p_scatter)) +
+      plot_annotation(title = regA_id) +
+      plot_layout(heights = c(1, 1, 1))
 
-      # --- cor - Convert to Raster and Save as NetCDF ---
-      cor_r <- terra::rast(
-        df_cor[, c("lon_mid", "lat_mid", "correlation")],
-        type = "xyz",
-        crs = "EPSG:4326"
-      )
-      names(cor_r) <- "correlation"
+    # ---- Save plot ----
+    out_file <- here::here(file.path(paste0("data/figures/04_regA_", regA_id, "_plots.png")))
+    ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
 
-      nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_cor_twi_vegh_500m.nc"))
-      terra::writeCDF(cor_r, nc_path, overwrite = TRUE)
+    # --- Cleanup ---
+    rm(twi_rc, vegh_rc, stacked, df_win, df_cor, cor_r,
+       pval_r, dem_rc, p_dem, p_vegh, p_twi, p_r,
+       p_r2, p_google, p_kg, p_scatter, p_location); gc(verbose = FALSE)
 
-      message("Saved: ", nc_path)
+    # --- Print proccessed time ---
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("Region %s completed [%.1f mins]", regA_id, elapsed_mins))
+    tictoc::toc()
 
-      # --- vegh - Save as NetCDF ---
+    return(TRUE)
 
-      vegh_nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_vegh_30m.nc"))
-      terra::writeCDF(vegh_rr, vegh_nc_path, overwrite = TRUE)
+  }, error = function(e) {
+    regA_id <- paste0(regA_row$strata_A_label, "_", regA_row$sample_id)
+    elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
+    message(sprintf("❌ Tile %s failed after %.1f mins: %s", regA_id, elapsed_mins, e$message))
+    return(FALSE)
+  })
+}
 
-      message("Saved: ", vegh_nc_path)
+# ----------------- Parallel execution -----------------
+# load sample regions info
+regA_info <- readRDS(regA_sample_info_path) |>
+  select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
 
-      # --- twi - Save as NetCDF ---
+# Set up cluster plan
+plan(cluster, workers = workers)
 
-      twi_nc_path <- file.path(regA_cor_twi_vegh_dir, paste0("regA_", reg_id, "_twi_30m.nc"))
-      terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
-
-      message("Saved: ", twi_nc_path)
-
-      # ------------------------------------------------------------------------
-
-      message(sprintf("region %s done [%.1f mins]", reg_id, difftime(Sys.time(), t0, units = "mins")))
-
-    }, error = function(e) {
-      msg <- sprintf("Region %s failed: %s", args$strata_A_label %||% "unknown", conditionMessage(e))
-      message("❌ ", msg)
-      return(list(success = FALSE, error = msg))
-    })
-  },
-  .options = furrr_options(seed = TRUE)
-)
-
+# Run in parallel
+tictoc::tic("🚀 Parallel processing of tiles")
+results <- future_map(seq_len(nrow(regA_info)),
+                      function(i) process_regA_500m(regA_info[i, ]),
+                      .progress = FALSE,
+                      .options = furrr_options(seed=TRUE))
 plan(sequential)
-gc()
+tictoc::toc()
 
-elapsed <- as.numeric(difftime(Sys.time(), t00, units = "mins"))
-message(sprintf("All regions done [%.1f mins]", elapsed))
+# Summarize results
+success_count <- sum(unlist(results))
+fail_count <- length(results) - success_count
+message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
+
+# # ----------- Test on single regions -----------------------------
+#
+# # load sample regions info
+# regA_info <- readRDS(here::here("data/df_samples_A.rds")) |>
+#   select(ends_with("label"), ends_with("min"), ends_with("max"), sample_id)
+#
+# process_regA_500m(regA_info[1, ])
+
+
+# # ----------- Test on smaller regions -----------------------------
+# regA_info <- data.frame(
+#   strata_A_label = c("Aletsch_glacier"),
+#   ymin = c(46.5),
+#   ymax = c(47),
+#   xmin = c(7.5),
+#   xmax = c(8),
+#   sample_id = c(1)
+# )
+#
+# # center location
+# regA_info$xmid <- (regA_info$xmax + regA_info$xmin) / 2
+# regA_info$ymid <- (regA_info$ymax + regA_info$ymin) / 2
+#
+# # process_regA_500m(regA_info[1, ])
+#
+# regA_row <- regA_info[1, ]
+# output_dir = regA_cor_twi_vegh_dir
+# text_size = 12
+# fig_width = 14
+# fig_height = 14
+# dwin = 0.005
 
 
 

@@ -1,4 +1,4 @@
-# ------calculate_window_correlations------------------------------------
+# ------create_spatial_windows------------------------------------
 
 
 #' Create spatial windows from raster data

@@ -1,23 +1,75 @@
-# plot Google satellite imagine by ext
-plot_google_img <- function(ext_test) {
+plot_google_img <- function(extent = NULL, title = "Google Satellite Map",
+                            text_size = 12, x_step = 0.5, y_step = 0.5) {
+
+  # ---- Register Google API key ----
   api_key <- Sys.getenv("GOOGLE_API_KEY")
   register_google(key = api_key)
 
-  earth_circumference <- 40075017  # 赤道周长（米）
-  map_width_pixels <- 640 * 2  # Google Maps 默认高清尺寸（size=640, scale=2）
-  region_width <- xmax(ext_test) - xmin(ext_test)  # 单位：度
+  # ---- Extract extent boundaries ----
+  xmin <- terra::xmin(extent)
+  xmax <- terra::xmax(extent)
+  ymin <- terra::ymin(extent)
+  ymax <- terra::ymax(extent)
+
+  # ---- Compute zoom ----
+  earth_circumference <- 40075017
+  region_width <- xmax - xmin
   region_width_meters <- region_width * 111000
+  zoom_level <- ceiling(log2(earth_circumference / region_width_meters))
+  zoom_level <- max(1, min(zoom_level, 21))
 
-  required_zoom <- log2(earth_circumference / region_width_meters)
-  zm <- ceiling(required_zoom)
-  zm <- max(1, min(zm, 21))  # 限制范围
+  # ---- Fetch map ----
+  bbox <- c(left = xmin, bottom = ymin, right = xmax, top = ymax)
+  satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zoom_level)
 
-  bbox <- c(left = xmin(ext_test), bottom = ymin(ext_test), right = xmax(ext_test), top = ymax(ext_test))
+  # ---- Crop to exact extent ----
+  # 格式化经度标签
+  lon_labels <- function(x) {
+    ifelse(x < 0, paste0(abs(x), "°W"),
+           ifelse(x > 0, paste0(x, "°E"), "0°"))
+  }
 
-  satellite_map <- get_map(location = bbox, source = "google", maptype = "satellite", zoom = zm)
-  p <- ggmap(satellite_map)
+  # 格式化纬度标签
+  lat_labels <- function(y) {
+    ifelse(y < 0, paste0(abs(y), "°S"),
+           ifelse(y > 0, paste0(y, "°N"), "0°"))
+  }
 
-  rm(satellite_map)
-  gc()
+  p <- ggmap(satellite_map) +
+    coord_sf(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) +
+    labs(title = title, x = NULL, y = NULL) +
+    scale_x_continuous(
+      breaks = seq(from = xmin, to = xmax, by = x_step),
+      labels = lon_labels,
+      expand = c(0, 0)
+    ) +
+    scale_y_continuous(
+      breaks = seq(from = ymin, to = ymax, by = y_step),
+      labels = lat_labels,
+      expand = c(0, 0)
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = text_size),
+      axis.text = element_text(size = text_size * 0.8),
+      plot.title = element_text(size = text_size * 1.2, face = "plain",
+                                margin = margin(b = 3)),
+      axis.text.x = element_text(
+        size = text_size * 0.8,
+        hjust = 0,
+        vjust = 1,
+        margin = margin(t = 2, b = 2)
+      ),
+      axis.text.y = element_text(
+        size = text_size * 0.8,
+        hjust = 0.5,
+        vjust = 0.5,
+        angle = 90,
+        margin = margin(r = 0, l = 0)
+      )
+    )
+
+  rm(satellite_map); gc()
+
   return(p)
 }

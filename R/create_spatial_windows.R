@@ -1,45 +1,49 @@
-# ------create_spatial_windows------------------------------------
-
-
-#' Create spatial windows from raster data
+#' Create spatial windows from raster data or data frame
 #'
 #' Divides spatial data into regular windows and calculates window centroids.
 #'
-#' @param raster Input raster object
-#' @param coord_vars names of coordinate variables (default: c("lon","lat"))
-#' @param value_vars names of value variables (default: "lccs_class")
-#' @return A data frame with nested data by spatial window
-create_spatial_windows <- function(raster,
+#' @param input Input raster object or data frame
+#' @param coord_vars Names of coordinate variables (default: c("lon","lat"))
+#' @param value_vars Names of value variables (default: c("twi","vegh"))
+#' @param dwin Window size (default: 0.05)
+#' @return A data frame with window midpoints and value variables
+create_spatial_windows <- function(input,
                                    coord_vars = c("lon", "lat"),
                                    value_vars = c("twi", "vegh"),
                                    dwin = 0.05) {
 
-  # Convert raster to dataframe
-  suppressWarnings({df <- as.data.frame(raster, xy = TRUE, na.rm = TRUE)})
-  colnames(df) <- c(coord_vars, value_vars)
+  # Convert raster to dataframe if needed
+  if (inherits(input, "Raster") || inherits(input, "SpatRaster")) {
+    suppressWarnings({
+      df <- as.data.frame(input, xy = TRUE, na.rm = FALSE)
+    })
+    colnames(df) <- c(coord_vars, value_vars)
+  } else if (is.data.frame(input)) {
+    df <- input
+  } else {
+    stop("Input must be a raster object or a data frame")
+  }
 
   # Create window boundaries
-  lon_breaks <- seq(
-    from = floor(min(df$lon)), to = ceiling(max(df$lon)), by = dwin)
+  lon_breaks <- seq(floor(min(df[[coord_vars[1]]])), ceiling(max(df[[coord_vars[1]]])), by = dwin)
+  lat_breaks <- seq(floor(min(df[[coord_vars[2]]])), ceiling(max(df[[coord_vars[2]]])), by = dwin)
 
-  lat_breaks <- seq(
-    from = floor(min(df$lat)), to = ceiling(max(df$lat)), by = dwin)
-
-  # Create window variables (lon_mid, lat_mid)
+  # Assign windows and compute midpoints
   df_win <- df |>
-    ungroup() |>
-    mutate(ilon = cut(lon, breaks = lon_breaks),
-           ilat = cut(lat, breaks = lat_breaks)
+    dplyr::mutate(
+      ilon = cut(.data[[coord_vars[1]]], breaks = lon_breaks),
+      ilat = cut(.data[[coord_vars[2]]], breaks = lat_breaks)
     ) |>
-    mutate(lon_lower = as.numeric(sub("\\((.+),.*", "\\1", ilon)),
-           lon_upper = as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", ilon)),
-           lat_lower = as.numeric(sub("\\((.+),.*", "\\1", ilat)),
-           lat_upper = as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", ilat))
+    dplyr::mutate(
+      lon_lower = as.numeric(sub("\\((.+),.*", "\\1", ilon)),
+      lon_upper = as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", ilon)),
+      lat_lower = as.numeric(sub("\\((.+),.*", "\\1", ilat)),
+      lat_upper = as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", ilat))
     ) |>
-    mutate(lon_mid = (lon_lower + lon_upper)/2,
-           lat_mid = (lat_lower + lat_upper)/2) |>
-
-    ## create cell name to associate with climate input
+    dplyr::mutate(
+      lon_mid = (lon_lower + lon_upper)/2,
+      lat_mid = (lat_lower + lat_upper)/2
+    ) |>
     dplyr::select(-ilon, -ilat, -lon_lower, -lon_upper, -lat_lower, -lat_upper)
 
   return(df_win)

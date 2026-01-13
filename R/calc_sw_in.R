@@ -1,25 +1,26 @@
 # wrapper function to get annual total
-calc_sw_in <- function(...){
-  sum(
-    unlist(
-      lapply(1:365, function(doy){
-        calc_sw_in_daily(..., doy)
-      })
-    )
-  )
+calc_sw_in <- function(lat, slope = 0, aspect = 0, year = 2020) {
+  doy_seq <- 1:(julian_day(year + 1, 1, 1) - julian_day(year, 1, 1))
+  daily_rad <- calc_sw_in_daily(lat = lat, slope = slope, aspect = aspect,
+                                year = year, doy = doy_seq)
+  rowSums(daily_rad) / 1e6  # MJ/m²
+  # rowSums(daily_rad)  # J/m²
 }
 
+
 calc_sw_in_daily <- function(
-  lat,
-  slope = 0.0,
-  aspect = NA,
-  year = 2001,
-  doy,
-  return_f_toa_terrain = FALSE
-  ){
+    lat,
+    slope = 0.0,
+    aspect = 0,
+    year = 2001,
+    doy
+){
+
+  # (Ting) Safe handling of aspect, default to flat facing south
+  aspect <- ifelse(is.na(aspect), 0, aspect)  # Default to flat terrain facing south if NA
 
   # correction based on SPLASH 2.0
-  aspect <- aspect - 180
+  aspect <- (aspect - 180) %% 360
 
   ###########################################################################
   # Define constants inside functions to avoid exporting one by one to the cluster
@@ -98,17 +99,36 @@ calc_sw_in_daily <- function(
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Calculate variable substitutes (u and v), unitless
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # (Ting) Vectorized computation for multiple latitudes and days
+
+  # Create proper matrices for vectorized operations
+  n_days <- length(doy)
+  n_lats <- length(lat)
+
+  # Expand all inputs to matrices of correct dimensions
+  delta_mat <- matrix(delta, nrow = n_days, ncol = n_lats)
+  lat_mat <- matrix(lat, nrow = n_days, ncol = n_lats, byrow = TRUE)
+  slope_mat <- matrix(slope, nrow = n_days, ncol = n_lats, byrow = TRUE)
+  aspect_mat <- matrix(aspect, nrow = n_days, ncol = n_lats, byrow = TRUE)
+  dr_mat <- matrix(dr, nrow = n_days, ncol = n_lats)
+
   # modification by local slope and aspect
-  a <- dsin(delta) * dcos(lat) * dsin(slope) * dcos(aspect) - dsin(delta) * dsin(lat) * dcos(slope)
-  b <- dcos(delta) * dcos(lat) * dcos(slope) + dcos(delta) * dsin(lat) * dsin(slope) * dcos(aspect)
-  c <- dcos(delta) * dsin(slope) * dsin(aspect)
-  d <- b^2 + c^2 - a^2
+  a <- dsin(delta_mat) * dcos(lat_mat) * dsin(slope_mat) * dcos(aspect_mat) - dsin(delta_mat) * dsin(lat_mat) * dcos(slope_mat)
+  b <- dcos(delta_mat) * dcos(lat_mat) * dcos(slope_mat) + dcos(delta_mat) * dsin(lat_mat) * dsin(slope_mat) * dcos(aspect_mat)
+  c_val <- dcos(delta_mat) * dsin(slope_mat) * dsin(aspect_mat)  # rename
+
+  d <- b^2 + c_val^2 - a^2  # use new name
   d[d <= 0] <- 0.000001
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Calculate sin sunset hour angle after Allen, 2006 doi:10.1016/j.agrformet.2006.05.012 0deg is south!!!
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  sin_hs <- (a*c + b*sqrt(d))/(b^2 + c^2)
+  denominator <- b^2 + c_val^2 # use new name
+  denominator[denominator == 0] <- 1e-6  # Avoid division by zero
+
+  sin_hs <- (a * c_val + b * sqrt(d)) / denominator # use new name
+  sin_hs <- pmin(pmax(sin_hs, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
+
   sin_hs[sin_hs < (-1)] <- -1
   sin_hs[sin_hs > (1)] <- 1
 
@@ -120,15 +140,12 @@ calc_sw_in_daily <- function(
   rv = b
 
   # Corresponding variable substitute for a flat terrain (slope = 0)
-  ru_f <- dsin(delta) * dsin(lat)
-  rv_f <- dcos(delta) * dcos(lat)
+  ru_f <- dsin(delta_mat) * dsin(lat_mat) # (Ting) Vectorized computation for multiple latitudes and days!!
+  rv_f <- dcos(delta_mat) * dcos(lat_mat) # (Ting) Vectorized computation for multiple latitudes and days!!
 
   # correct for anomalous ru, Transparent mountains!
-  ru <- ifelse(
-    ru < ru_f || ru == 0,
-    ru_f,
-    ru
-  )
+  # (Ting) Vectorized computation for multiple latitudes and days!!
+  ru <- ifelse((ru < ru_f) | (ru == 0), ru_f, ru)
 
   # solar$ru <- ru
   # solar$rv <- rv
@@ -138,53 +155,31 @@ calc_sw_in_daily <- function(
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Note: u/v equals tan(delta) * tan(lat)
   ruv <- ru/rv
-  hs <- ifelse(
-    ruv >= 1.0,
-    180, # Polar day (no sunset)
-    ifelse(
-      ruv <= -1.0,
-      0, # Polar night (no sunrise)
-      acos(-1.0*ruv) / pir
-      )
-    )
+  ruv <- pmin(pmax(ruv, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
 
-  # for flat earth
-  ruv_f <- ru_f/rv_f
-
-  hs_f <- ifelse(
-    ruv_f >= 1.0,
-    180, # Polar day (no sunset)
-    ifelse(
-      ruv_f <= -1.0,
-      0, # Polar night (no sunrise)
-      acos(-1.0*ruv_f) / pir
-    )
-  )
+  hs <- acos(-1.0 * ruv) / pir
+  hs[ruv >= 1.0] <- 180    # Polar day (no sunset)
+  hs[ruv <= -1.0] <- 0     # Polar night (no sunrise)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Calculate daily extraterrestrial radiation (ra_d), J/m^2
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   # ref: Eq. 1.10.3, Duffy & Beckman (1993)
-  r_toa <- (86400/pi) * kGsc * dr * (ru * pir * hs + rv * dsin(hs))
+  r_toa <- (kSecInDay/pi) * kGsc * dr_mat * (ru * pir * hs + rv * dsin(hs))
+
   # solar$r_toa <- r_toa
 
   # according to Email David Sandoval 26.05.2025
   r_toa[r_toa < 0] <- 0
 
-  # for flat earth
-  r_toa_f <- (86400/pi) * kGsc * dr * (ru_f * pir * hs_f + rv_f * dsin(hs_f))
-  # solar$r_toa <- r_toa
+  # (Ting)
+  # r_toa is per unit slope-surface area (J m-2 day-1)
+  # convert to horizontal-equivalent by area projection
+  # project slope-surface irradiance to horizontal-equivalent
+  r_toa_horiz_proj <- r_toa / dcos(slope_mat)
 
-  # according to Email David Sandoval 26.05.2025
-  r_toa_f[r_toa_f < 0] <- 0
+  # (Ting) Vectorized computation for multiple latitudes and days!!
+  return(t(r_toa_horiz_proj)) # (Ting) change r_toa to r_toa_horiz_proj
 
-  # ratio of local incident radiation considering slope and aspect over the
-  # hypothetical incident radiation assuming flat earth
-  f_toa_terrain <- r_toa / r_toa_f
-
-  if (return_f_toa_terrain){
-    return(f_toa_terrain)
-  } else {
-    return(r_toa)
-  }
 }

@@ -712,7 +712,7 @@ plot_corr <- function(correlation_df, xmin, xmax, ymin, ymax, x_breaks = 5, y_br
 
 
 # plot correlation (mark NA) with window size (how many pixels in it)
-plot_correlation_vs_pixel_count <- function(correlation_df) {
+plot_cor_with_n_pixel <- function(correlation_df) {
 
   # data clean
   df <- correlation_df |>
@@ -769,7 +769,7 @@ plot_window_distribution <- function(windowed_data) {
   return(p)
 }
 
-plot_window_pixel_counts <- function(windowed_data) {
+plot_n_pixel_bywin <- function(windowed_data) {
   window_counts <- windowed_data |>
     group_by(window_id) |>
     summarise(pixel_count = n(), .groups = "drop")
@@ -798,7 +798,7 @@ plot_window_pixel_counts <- function(windowed_data) {
 }
 
 
-plot_random_windows <- function(correlation_results, seed = 123) {
+plot_vegh_with_twi_in_window <- function(correlation_results, seed = 123) {
   set.seed(seed)
 
   valid_windows <- correlation_results |>
@@ -840,7 +840,7 @@ plot_random_windows <- function(correlation_results, seed = 123) {
   return(plots)
 }
 
-plot_overview <- function(windowed_data) {
+plot_vegh_with_twi_bydf <- function(windowed_data) {
 
   p <- ggplot(windowed_data, aes(x = twi, y = vegh)) +
     geom_hex(bins = 50) +  # 调整 bins 以控制六边形大小
@@ -877,7 +877,7 @@ plot_peak <- function(correlation_df_peak) {
 
 
 
-save_combined_plot <- function(
+save_combined_plot_byregion <- function(
     plots,
     region_name,
     title_text,

@@ -1,25 +1,50 @@
-# ---- Setup -------------------------------------------------------------------
+# ==============================================================================
+# Protected Areas (PA) Rasterization and Aggregation (0.02° → 0.5°)
+#
+# Purpose:
+#   1. Convert multiple PA shapefiles into 0.02° rasters
+#   2. Merge them using GDAL (max overlap)
+#   3. Aggregate to 0.5° resolution to represent PA coverage fraction
+#
+# Input:
+#   - pa_shp0, pa_shp1, pa_shp2 : Shapefiles of protected areas (from config.R)
+#   - mi_55km_file              : Target 0.5° grid for alignment
+#
+# Output:
+#   - fpa_55km_path             : Fraction of protected area (0.5° resolution)
+#
+# Steps:
+#   1. Setup environment and paths
+#   2. Rasterize shapefiles with gdal_rasterize
+#   3. Merge rasters using gdal_calc.py (maximum overlap)
+#   4. Aggregate to 0.5° grid (fraction of coverage)
+#   5. (Optional) Check and visualize
+#   6. Cleanup
+# ==============================================================================
 
-# load library
+# -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-# library(rnaturalearth)
+# library(rnaturalearth) # optional if using shapefile data
 
-# Load configuration and functions
 source(here::here("config.R"))
-source(here::here("R/aggregate_byfile.R"))
+source(here::here("R/raster_preprocess_save.R"))
 
-# ---- Configuration -----------------------------------------
+message("Starting PA rasterization and aggregation process...")
 
-# Define input shapefile paths
+# -------------------- 2. Define Input & Temp Paths ----------------------------
+message("Configuring file paths...")
+
+# Shapefiles of protected areas
 shp_files <- c(pa_shp0, pa_shp1, pa_shp2)
 
-# Define output raster paths
-out_files <- file.path(veg_topo_extr_dir, "/data_temp/pa_shp", paste0("pa_", 0:2, ".tif"))
-pa_merged_22km_path <- file.path(veg_topo_extr_dir, "/data_temp/pa_shp/pa_merged_22km.tif")
+# Temporary directory for intermediate rasters
+temp_dir <- tempdir()
+out_files <- file.path(temp_dir, paste0("pa_", 0:2, ".tif"))
+pa_merged_22km_path <- file.path(temp_dir, "pa_merged_22km.tif")
 
-# ----convert vect to raster with bash -----------------------------------------
+# -------------------- 3. Rasterize Shapefiles ---------------------------------
+message("Rasterizing shapefiles to 0.02° grid using GDAL...")
 
-# Rasterize function
 rasterize_shp <- function(shp_path, out_tif) {
   cmd <- sprintf(
     "gdal_rasterize -burn 1 -tr 0.02 0.02 -te -180 -60 180 90 -ot Byte -of GTiff '%s' '%s'",
@@ -29,10 +54,12 @@ rasterize_shp <- function(shp_path, out_tif) {
   system(cmd)
 }
 
-# Rasterize all shapefiles
+# Apply rasterization to all shapefiles
 mapply(rasterize_shp, shp_files, out_files)
 
-# Merge rasters with gdal_calc.py
+# -------------------- 4. Merge Rasters ----------------------------------------
+message("Merging rasterized shapefiles using gdal_calc.py...")
+
 merge_cmd <- sprintf(
   paste(
     "gdal_calc.py",
@@ -40,62 +67,52 @@ merge_cmd <- sprintf(
     "-B '%s'",
     "-C '%s'",
     "--outfile='%s'",
-    '--calc=\"maximum(A,B,C)\"',
+    "--calc=\"maximum(A,B,C)\"",
     "--NoDataValue=0",
     "--overwrite"
   ),
-  out_files[1], out_files[2], out_files[3],
-  pa_merged_22km_path
+  out_files[1], out_files[2], out_files[3], pa_merged_22km_path
 )
 
 cat("Running:", merge_cmd, "\n")
 system(merge_cmd)
 
-cat("All done! Merged raster saved at:\n", pa_merged_22km_path, "\n")
+message("✅ Raster merging completed.")
+message("Intermediate merged raster saved at: ", pa_merged_22km_path)
 
+# -------------------- 5. Aggregate to 0.5° Resolution -------------------------
+message("Aggregating merged PA raster to 0.5° grid (fraction coverage)...")
 
-# ---- Mask with land vect -------------------------------------------------------------
-
-# # Download land polygons from Natural Earth
-# land <- ne_countries(scale = 110, returnclass = "sf")
-# land_vect <- vect(land)
-#
-# # Load merged raster
-# r_pa <- rast(pa_merged_22km_path)
-#
-# # Crop and mask using the land polygons (in memory)
-# r_crop <- crop(r_pa, land_vect)       # optional but faster
-# r_masked <- mask(r_crop, land_vect)   # apply land-only mask
-#
-# # Save masked raster
-# writeRaster(r_masked, pa_merged_22km_path, overwrite = TRUE)
-
-
-# ---- Mask and Aggregate to 55km -------------------------------------------------------------
-
-# Aggregation
-aggregate_byfile(
-  input_path = pa_merged_22km_path,
-  output_path = fpa_55km_path,
-  target_path = ai_55km_file,
-  varname = "fpa",
-  if_resample = TRUE,
+r_out <- raster_preprocess_save(
+  input        = pa_merged_22km_path,
+  output       = fpa_55km_path,
+  target       = mi_55km_file,
+  varname      = "fpa",
+  if_aggregate = TRUE,
+  if_resample  = TRUE,
   fun = function(x, na.rm) {
     if (all(is.na(x))) {
       return(0)
     } else {
       return(sum(x == 1, na.rm = na.rm) / length(x))
     }
-  }
+  },
+  if_return_raster = TRUE
 )
 
-# check the data
-# r_out <- rast(fpa_55km_path)
-# r_out
-#
-# plot(r_out)
+message("✅ Aggregation completed successfully.")
+message("Output file: ", fpa_55km_path)
 
-# ------ Cleanup ---------------------------------------------------------------
+# -------------------- 6. Optional Check ---------------------------------------
+# Uncomment to inspect results
+# message("Checking output raster...")
+# r_out <- rast(fpa_55km_path)
+# print(r_out)
+# plot(r_out, main = "Fraction of Protected Area (0.5°)")
+# message("✅ Visualization complete.")
+
+# -------------------- 7. Cleanup ----------------------------------------------
+message("Cleaning up environment...")
 rm(list = ls())
 gc()
-
+message("✅ Script finished successfully.")

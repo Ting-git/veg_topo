@@ -1,11 +1,18 @@
-plot_cci_land_cover <- function(cci_landcover_path, xmin, xmax, ymin, ymax, x_breaks = 5, y_breaks = 5) {
+plot_cci_land_cover <- function(cci_landcover_path, extent = NULL,
+                                title_text = "Land Cover Type",
+                                text_size = 12, x_step = 10, y_step = 10) {
 
-  # Load and crop the raster
-  lc <- rast(cci_landcover_path)
-  print(names(lc))
+  # Load raster
+  lc <- terra::rast(cci_landcover_path)
   lccs_class <- lc[["lccs_class"]]
-  extent_crop <- ext(xmin, xmax, ymin, ymax)
-  landcover_crop <- crop(lccs_class, extent_crop)
+
+  # Handle extent
+  if (!inherits(extent, "SpatExtent")) {
+    stop("`extent` must be a SpatExtent object.")
+  }
+
+  # Crop raster to extent
+  landcover_crop <- terra::crop(lccs_class, extent)
 
   # Convert to categorical raster and assign labels/colors
   landcover_crop <- as.factor(landcover_crop)
@@ -40,39 +47,41 @@ plot_cci_land_cover <- function(cci_landcover_path, xmin, xmax, ymin, ymax, x_br
               "#FFF5D7", "#0046C8", "#FFFFFF")
   )
 
-  print(levels(landcover_crop))
-
-  # Plot with tidyterra and ggplot2
+  # Plot
   p <- ggplot() +
-    geom_spatraster(data = landcover_crop) +
+    tidyterra::geom_spatraster(data = landcover_crop) +
     scale_fill_manual(
       values = setNames(levels(landcover_crop)[[1]]$color,
                         levels(landcover_crop)[[1]]$value),
       labels = levels(landcover_crop)[[1]]$label,
       name = "Land Cover Class"
     ) +
-    scale_x_continuous(
-      name = "Longitude",
-      expand = c(0, 0),
-      limits = c(xmin, xmax),
-      breaks = seq(xmin, xmax, length.out = x_breaks)
+    ggplot2::labs(
+      title = title_text,
+      x = "Longitude",
+      y = "Latitude",
+      fill = NULL
     ) +
-    scale_y_continuous(
-      name = "Latitude",
-      expand = c(0, 0),
-      limits = c(ymin, ymax),
-      breaks = seq(ymin, ymax, length.out = y_breaks)
+    ggplot2::scale_x_continuous(
+      limits = c(terra::xmin(extent), terra::xmax(extent)),
+      breaks = seq(terra::xmin(extent), terra::xmax(extent), by = x_step),
+      expand = c(0, 0)
     ) +
-    labs(title = "CCI Land Cover Classification (2020)") +
-    theme_classic() +
-    theme(
-      plot.title = element_text(face = "bold"),
-      legend.position = "none"  # Set to "right" to enable legend
+    ggplot2::scale_y_continuous(
+      limits = c(terra::ymin(extent), terra::ymax(extent)),
+      breaks = seq(terra::ymin(extent), terra::ymax(extent), by = y_step),
+      expand = c(0, 0)
+    ) +
+    ggplot2::theme_bw(base_size = text_size) +
+    ggplot2::theme(
+      legend.position = "none",
+      legend.text = ggplot2::element_text(size = text_size * 0.9),
+      legend.title = ggplot2::element_text(size = text_size),
+      axis.title = ggplot2::element_text(size = text_size),
+      axis.text = ggplot2::element_text(size = text_size  * 0.9),
+      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
+      plot.title.position = "panel"
     )
-
-  # Clean memory
-  rm(lc, lccs_class, extent_crop)
-  gc(verbose = FALSE)
 
   return(p)
 }
