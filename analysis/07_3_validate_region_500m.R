@@ -1,4 +1,4 @@
-# ~ UBELIX with 8 workers: 8.5 min for 34 sample regions
+# ~ UBELIX: 8.5 min for 34 sample regions
 # ------ Load required libraries -------------------------------------------------------------
 library(terra)          # For raster data
 library(dplyr)
@@ -55,7 +55,8 @@ source(here::here("R/plot_rin.R"))
 source(here::here("R/plot_fused.R"))
 source(here::here("R/plot_kmeans_map.R"))
 source(here::here("R/plot_mi.R"))
-
+source(here::here("R/plot_cci_land_cover.R"))
+source(here::here("R/plot_scatter_r_validation.R"))
 # Optional (uncomment if needed)
 
 # source(here::here("R/plot_aspect.R"))
@@ -99,7 +100,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
     # --- TWI Raster ---
     twi_rc <- terra::rast(twi_30m_path) |> terra::crop(reg_extent)
-    twi_nc_path <- file.path(output_dir, paste0("tile_", reg_id, "_twi_30m.nc"))
+    twi_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_twi_30m.nc"))
     terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
     rm(twi_rc); gc()
     twi_rc <- terra::rast(twi_nc_path)
@@ -130,13 +131,13 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
       if_mask = TRUE,
       if_return_raster = TRUE
     )
-    vegh_nc_path <- file.path(output_dir, paste0("tile_", reg_id, "_vegh_30m.nc"))
+    vegh_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_vegh_30m.nc"))
     terra::writeCDF(vegh_rc, vegh_nc_path, varnames="vegh", overwrite = TRUE)
     rm(vegh_rc); gc()
     vegh_rc <- terra::rast(vegh_nc_path)
     message("Saved: ", vegh_nc_path)
 
-    # --- Stack and correlation ---
+    # --- Stack and correlation using 30-m input data and 500m window---
     stacked <- c(twi_rc, vegh_rc)
     df_win <- create_spatial_windows(stacked, value_vars = c("twi", "vegh"), dwin = 0.005)
     df_cor <- calculate_correlation_bywin(df_win, x = "twi", y = "vegh")
@@ -144,18 +145,35 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     # --- Save correlation ---
     corA_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
     names(corA_r) <- "r_H_TWI"
-    corA_nc_path <- file.path(output_dir, paste0("tile_", reg_id, "_r_H_TWI_500m_map.nc"))
+    corA_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_500m_map.nc"))
     terra::writeCDF(corA_r, corA_nc_path, overwrite = TRUE)
     message("Saved: ", corA_nc_path)
 
     # --- Save p-value ---
     pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type="xyz", crs="EPSG:4326")
     names(pval_r) <- "pval_r_H_TWI"
-    pval_nc_path <- file.path(output_dir, paste0("tile_", reg_id, "_r_H_TWI_500m_pval.nc"))
+    pval_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_500m_pval.nc"))
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
-    rm(df_win, df_cor, pval_r);gc()
+    # --- Stack and correlation using 30-m input data and 5km window---
+    # stacked <- c(twi_rc, vegh_rc)
+    df_win <- create_spatial_windows(stacked, value_vars = c("twi", "vegh"), dwin = 0.05)
+    df_cor <- calculate_correlation_bywin(df_win, x = "twi", y = "vegh")
+
+    # --- Save correlation ---
+    corA_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
+    names(corA_r) <- "r_H_TWI"
+    corA_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc"))
+    terra::writeCDF(corA_r, corA_nc_path, overwrite = TRUE)
+    message("Saved: ", corA_nc_path)
+
+    # --- Save p-value ---
+    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type="xyz", crs="EPSG:4326")
+    names(pval_r) <- "pval_r_H_TWI"
+    pval_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_pval.nc"))
+    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
+    message("Saved: ", pval_nc_path)
 
     # --- Elevation and radiation Raster ---
     dem_rc <- extent_to_tile_ids(reg_extent, tile_size = 1, return_raster = TRUE,
@@ -239,7 +257,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     rin <- terra::rast(df_calc[, c("lon", "lat", "rin")], type = "xyz", crs = crs_out)
     rin <- terra::extend(rin, twi_rc)
 
-    # --- Stack and Correalation---
+    # --- Stack and Correalation using 30-m input data and 0.005-degree window---
     stacked <- c(rin, vegh_rc)
     names(stacked) <- c("rin", "vegh")
     df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.005)
@@ -248,14 +266,34 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     # --- Save correlation ---
     corB_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
     names(corB_r) <- "r_H_R"
-    corB_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_500m.nc"))
+    corB_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_500m_map.nc"))
     terra::writeCDF(corB_r, corB_nc_path, overwrite = TRUE)
     message("Saved: ", corB_nc_path)
 
     # --- Save p-value ---
     pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type = "xyz", crs = "EPSG:4326")
     names(pval_r) <- "pval_r_H_R"
-    pval_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_pval_r_H_R_500m.nc"))
+    pval_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_500m_pval.nc"))
+    terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
+    message("Saved: ", pval_nc_path)
+
+    # --- Stack and Correalation using 30-m input data and 0.05-degree window---
+    # stacked <- c(rin, vegh_rc)
+    # names(stacked) <- c("rin", "vegh")
+    df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.05)
+    df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
+
+    # --- Save correlation ---
+    corB_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
+    names(corB_r) <- "r_H_R"
+    corB_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_5000m_map.nc"))
+    terra::writeCDF(corB_r, corB_nc_path, overwrite = TRUE)
+    message("Saved: ", corB_nc_path)
+
+    # --- Save p-value ---
+    pval_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "cor_pval")], type = "xyz", crs = "EPSG:4326")
+    names(pval_r) <- "pval_r_H_R"
+    pval_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_5000m_pval.nc"))
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
@@ -279,8 +317,9 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     terra::writeCDF(aligned[["aspect"]], aspect_nc_path, overwrite = TRUE)
     message("Saved: ",  aspect_nc_path)
 
-    # --- reset theme for plots ---
+    rm(stacked, df_win, df_calc, df_cor, corA_r, corB_r);gc
 
+    # --- reset theme for plots, change the layout for better visualization ---
     re_theme0 <- list(
       ggplot2::theme(
         aspect.ratio = 1,
@@ -292,13 +331,11 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
         legend.text = ggplot2::element_text(size = text_size * 0.9,
                                             angle = 90,
                                             hjust = 0.5, vjust = 0.5,
-                                            margin = margin(r = 0, l = 0)),
+                                            margin = margin(r = 0, b = 0, l = 0)),
         legend.title = ggplot2::element_text(size = text_size,
                                              angle = 0,   hjust = 0, vjust = 1 ),
         legend.margin = margin(0, 0, 0, 0),
         legend.box.margin = margin(-45, 0, 0, 0),
-        axis.title.x = ggplot2::element_blank(),
-        axis.title.y = ggplot2::element_blank(),
         axis.text.x = ggplot2::element_text(
           angle = 90,
           size = text_size * 0.8,
@@ -306,10 +343,15 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
           vjust = 0.5,
           margin = margin(t = 0, b = 0),
         ),
-        axis.text.y = ggplot2::element_blank(),
+        axis.text.y = ggplot2::element_text(
+          angle = 90,
+          size = text_size * 0.8,
+          hjust = 0.5,
+          vjust = 0.5,
+          margin = margin(r = 2, l = 0)
+        ),
         panel.spacing = unit(0, "cm"),
         panel.border = ggplot2::element_rect(linewidth = 0.3, fill = NA),
-        plot.margin = margin(4, 4, 4, 4), # important set to reduce the space between 2 plot
         plot.title = ggplot2::element_text(
           size = text_size * 1.2,
           face = "plain",
@@ -321,80 +363,103 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
     re_theme <- list(
       guides(fill = guide_colorbar(barwidth = 8, barheight = 0.8)),
+      ggplot2::theme(  axis.title.x = ggplot2::element_blank(),
+                       axis.title.y = ggplot2::element_blank()),
       re_theme0
     )
 
-    # The left indentation of the y-axis label should be removed from the first image in each row;
-    # otherwise, the y-axis text will be clipped.
-    re_theme_left <- ggplot2::theme(
-      axis.text.y = ggplot2::element_text(
-        angle = 90,
-        size = text_size * 0.8,
-        hjust = 0.5,
-        vjust = 0.5,
-        margin = margin(r = 2, l = 0)
-      )
-    )
+    # re_theme_margin_r for the first fig in each rows
+    # re_theme_margin_r <- ggplot2::theme( plot.margin = margin(t = 0, r = 20, b = 0, l = 0))
 
-    # --- Plotting, change the layout for better visualization ---
+    # --- Plotting ---
+    p_location <- plot_single_sample_location(reg_xmid, reg_ymid, title_text = "   Location", text_size = text_size) +
+      labs(tag = "a)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.13, 1)
+      ) + re_theme0 + ggplot2::theme(plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
 
-    p_twi <- plot_twi(twi_rc, extent = reg_extent, title_text = "30-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "a") +
+    p_google <- plot_google_img(extent = reg_extent, title_text = "   Google Satellite Map", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "b)") +
       theme(
         plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.08, 0.91)  # 自定义位置
-      ) +
-      re_theme + re_theme_left
-    p_rin <- plot_rin(rin, extent = reg_extent, title_text = "30-m Rᵢₙ",  text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "b") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.91)  # 自定义位置
-      ) + re_theme
-    p_vegh <- plot_vegh(vegh_rc, extent = reg_extent, title_text = expression("30-m " * italic(H)[veg]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "c") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.91)  # 自定义位置
-      ) + re_theme
+        plot.tag.position = c(0.06, 1)) + re_theme0 +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
 
-    p_google <- plot_google_img(extent = reg_extent, text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "d") +
+    p_dem <- plot_dem(file.path(output_dir, paste0("reg_", reg_id, "_dem_30m.nc")), extent = reg_extent, title_text = "   30-m Elevation", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "c)") +
       theme(
         plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.09, 0.91)  # 自定义位置
-      ) + re_theme
+        plot.tag.position = c(0.12, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
 
-    p_rA <- plot_cor_twi_vegh(corA_r, extent = reg_extent,  title_text <- bquote("500-m Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "e") +
+    p_vegh <- plot_vegh(file.path(output_dir, paste0("reg_", reg_id, "_vegh_30m.nc")), extent = reg_extent, title_text = expression("   30-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "d)") +
       theme(
         plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.08, 0.92)  # 自定义位置
-      ) +
-      re_theme + re_theme_left
-    p_rB <- plot_r_H_R(corB_r, extent = reg_extent, title_text = bquote("500-m Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "f") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      ) + re_theme
-    p_dem <- plot_dem(dem_rc, extent = reg_extent, title_text = "30-m Elevation", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "g") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      ) + re_theme
-    p_location <- plot_single_sample_location(reg_xmid, reg_ymid,  reg_id, text_size = text_size) +
-      labs(tag = "h") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.09, 0.92)  # 自定义位置
-      ) + ggplot2::theme( aspect.ratio = 1)
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
 
-    final_plot1 <- wrap_plots(
-      p_twi, p_rin, p_vegh,  p_google,
-      p_rA, p_rB, p_dem, p_location,
-      ncol = 4, nrow = 2
+    p_twi <- plot_twi(file.path(output_dir, paste0("reg_", reg_id, "_twi_30m.nc")), extent = reg_extent, title_text = "   30-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "e)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.13, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+
+    p_rA <- plot_cor_twi_vegh(file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_500m_map.nc")), extent = reg_extent,  title_text <- bquote("   500-m Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "f)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    p_rin <- plot_rin(file.path(output_dir, paste0("reg_", reg_id, "_rin_30m.nc")), extent = reg_extent, title_text = "   30-m Rᵢₙ",  text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "g)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.12, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+
+    p_rB <- plot_r_H_R(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_500m_map.nc")), extent = reg_extent, title_text = bquote("   500-m Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "h)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    p_validA <- plot_scatter_r_validation(file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")), cor_twi_vegh_mosaic_file, title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]), text_size = text_size) +
+      labs(tag = "i)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.13, 1)
+      ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 20, b = 0, l = 0))
+
+    p_rA2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = reg_extent, title_text = bquote("   5-km Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "j)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme + ggplot2::theme(legend.box.margin = margin(-75, 0, 0, 0), plot.margin = margin(t = 4, r = 10, b = 0, l = 0))
+
+    p_validB <- plot_scatter_r_validation(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_5000m_map.nc")), r_H_R_5km_path, title_text = bquote("   Comparison " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size) +
+      labs(tag = "k)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.12, 1)
+      ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 0, b = 0, l = 0))
+
+    p_rB2 <- plot_r_H_R(r_H_R_5km_path, extent = reg_extent, title_text = bquote("   5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step)+
+      labs(tag = "l)") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme  +  ggplot2::theme(legend.box.margin = margin(-75, 0, 0, 0), plot.margin = margin(t = 4, r = 0, b = 0, l = 0))
+
+    final_plot1 <- patchwork::wrap_plots(
+      p_location, p_google,  p_dem, p_vegh,
+      p_twi, p_rA, p_rin, p_rB,
+      p_validA, p_rA2,  p_validB, p_rB2,
+      ncol = 4, nrow = 3
     ) &
       theme(
         panel.background = element_rect(fill = "white", color = NA),
@@ -402,79 +467,8 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
         legend.background = element_blank(),
         legend.box.background = element_blank()
       )
-    out_file1 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_8plots.png")))
-    ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 8.5, dpi = 600)
-
-
-    p_rA2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = reg_extent, title_text = bquote("5-km Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "a") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.1, 0.92)  # 自定义位置
-      ) +
-      re_theme  + re_theme_left
-
-    p_rB2 <- plot_r_H_R(r_H_R_5km_path, extent = reg_extent, title_text = bquote("5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "b") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      ) + re_theme
-
-    p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file,  extent = reg_extent, text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "c") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      ) + re_theme0
-
-
-    p_mi <- plot_mi(mi_5km_file,  extent = reg_extent, title_text = "5-km MI", text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "d") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.1, 0.92)  # 自定义位置
-      ) + re_theme
-
-    p_fused <- plot_fused(fused_5km_file, extent = reg_extent, text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "e") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      )  + re_theme
-
-    p_cluster <- plot_kmeans_map(kmeans_map_8c_path,  extent = reg_extent, title_text = "K-means cluster",  text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "f") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.04, 0.92)  # 自定义位置
-      ) + re_theme0 + ggplot2::theme( legend.position = "none")
-
-    # p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh", title_text = "H vs TWI",
-    #                               x_text = "Topographic Wetness Index", y_text = "Vegetation height (m)",
-    #                               text_size = text_size)  + ggplot2::theme(aspect.ratio = 1)
-
-    # ---- Combine plots 1----
-    final_plot2 <- wrap_plots(p_rA2, p_rB2, p_kg, p_mi, p_fused, p_cluster,
-                              ncol = 3, nrow = 2
-    ) &
-      theme(
-        panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-        plot.background  = element_blank(),                            # plot 外部透明
-        legend.background = element_blank(),
-        legend.box.background = element_blank()
-      )
-    out_file2 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_6plots.png")))
-    ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8.5, dpi = 600)
-
-
-    # --- Cleanup ---
-    rm(twi_rc, vegh_rc, dem_rc, aligned,
-       df, chunks, df_calc, stacked, df_win, df_cor, corA_r, pval_r, corB_r,
-       p_dem, p_vegh, p_twi, p_rin, p_rB, p_rA, p_google, p_location,
-       p_rA2, p_fused, p_rB2, p_mi, p_kg,
-       final_plot1, final_plot2)
-    gc(verbose = FALSE)
+    out_file1 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_12plots.png")))
+    ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, dpi = 600)
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
@@ -493,7 +487,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 # ------------ validation region define ----------------------------------------
 reg_info1 <- readRDS(reg_sample_info_path) |>
   select(ends_with("label"), ends_with("min"), ends_with("max"), -starts_with("dem")) |>
-  slice(c(1, 3, 7, 9, 13, 15))
+  slice(c(1, 3, 6, 9, 13, 15))
 
 
 reg_info2 <- tribble(
@@ -502,11 +496,10 @@ reg_info2 <- tribble(
   "b1_Loetschental",                    46.4,    46.5,      7.8,       7.9,
   "b3_equatorial_rainforest_CongoBasin",-1.0,    -0.5,     17.0,      17.5,
   "a1_waterlogged_pantanal",            -17.5,   -16.5,   -57.5,     -56.5,
-  "3_dry_subhumid_1_low_lat_rugged_relief", -16,  -15.5,  125,      125.5,
-  "4_moisture_subhumid_1_low_lat_rugged_relief", -9, -8.5,  38,    38.5,
   "1_hyper_arid_1_low_lat_rugged_relief", -9,  -8.5,      38,      38.5,
   "b25_Finland",                        67.5,    68.5,     25,        26,
-  "b26_Guiana",                            0,       1,      9,        10,
+  "b26_Monte_Alen_Guiana",          1.2,       1.7,      9.8,        10.3,
+  "a19_arctic_tundra_alaska",           68.5,    69,   -146,    -145.5,
 
   # ------------------ Subsurface flow validation (Fan et al., 2019) -----------
   "3a_desert_riparian",                 31,       32,      -110.5,   -109.5,
@@ -535,7 +528,6 @@ reg_info2 <- tribble(
   "a16_basque_coastal_forest_spain",    41.5,    42.5,     -2,        -1,
   "a17_yungas_cloud_forest_bolivia",   -23.3,   -22.3,    -65.3,     -64.3,
   "a18_gran_chaco_dry_savanna",        -26.6,   -25.6,    -60,       -59,
-  "a19_arctic_tundra_alaska",           68.3,    69.3,   -146.8,    -145.8,
   "a20_jiangxi_lowlands_china",         28,      29,      114,       115,
   "a21_fujian_jiangxi_hills_china",     25.5,    26.5,    115.3,     116.3,
 
@@ -581,8 +573,11 @@ reg_info2 <- tribble(
 reg_info <- bind_rows(reg_info1, reg_info2)
 
 # ----------- Test on single regions -----------------------------
+for (i in 1:13) {
+  process_reg_500m(reg_info[i, ])
+}
 
-for (i in 1:14) {
+for (i in 14:66) {
   process_reg_500m(reg_info[i, ])
 }
 
@@ -606,4 +601,33 @@ for (i in 1:14) {
 # output_dir = reg_validate_dir
 # text_size = 14
 
+
+# # 逐个打印每个图形
+# print(p_location)
+# print(p_google)
+# print(p_dem)
+# print(p_vegh)
+# print(p_twi)
+# print(p_rA)
+# print(p_rin)
+# print(p_rB)
+# print(p_validA)
+# print(p_rA2)
+# print(p_validB)
+# print(p_rB2)
+
+#
+# # ---- Combine plots 1----
+# final_plot2 <- wrap_plots(p_pvA, p_pvB, p_rA2, p_rB2,
+#                           p_mi, p_kg, p_cluster, p_cci,
+#                           ncol = 4, nrow = 2
+# ) &
+#   theme(
+#     panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
+#     plot.background  = element_blank(),                            # plot 外部透明
+#     legend.background = element_blank(),
+#     legend.box.background = element_blank()
+#   )
+# out_file2 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_8plots_s.png")))
+# ggsave(filename = out_file2, plot = final_plot2, width = 16, height = 8.5, dpi = 600)
 
