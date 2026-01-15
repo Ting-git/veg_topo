@@ -48,15 +48,17 @@ plot_box_or_violin <- function(data, xvar, yvar, type = "boxplot", ylab = NULL, 
     geom_fun +  # Add the chosen geom
     list(if (yvar == "cor") geom_hline(yintercept = 0, linetype = "dashed", color = "red")) +  # Optional reference line for correlation
     scale_fill_manual(values = fill_colors, name = "Cluster", guide = if (show_legend) "legend" else "none") +  # Conditional legend
-    labs(title = title_text, y = ylab, x = NULL) +  # Labels
+    labs(title = title_text, y = ylab, x = "Cluster") +  # Labels
     scale_x_discrete(drop = TRUE, expand = c(0, 0)) +  # Adjust x-axis spacing
-    scale_y_continuous(position = "right") +
-    theme_bw() +
+    scale_y_continuous() +
+    theme_bw(base_size = text_size) +
     theme(
-      strip.text = element_text(size = text_size),             # Facet label size
-      axis.text.x = element_blank(),                    # Remove x-axis text
-      axis.ticks.x = element_blank(),                   # Remove x-axis ticks
-      axis.text = element_text(size = text_size * 0.8),             # Axis text size
-      plot.title = element_text(hjust = 0.5)           # Center plot title
+      legend.position = "none",
+      legend.text = element_text(size = text_size * 0.9),
+      legend.title = element_text(size = text_size),
+      axis.title = element_text(size = text_size),
+      axis.text.x = element_blank(),
+      axis.text = element_text(size = text_size * 0.9),
+      plot.title = element_blank()
     )
 }

@@ -49,7 +49,7 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢ
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "vik",
-      direction = 1,
+      direction = -1,
       limits = c(-1, 1),
       breaks = seq(-1, 1, by = 0.5),
       midpoint = 0,

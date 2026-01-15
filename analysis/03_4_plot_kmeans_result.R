@@ -1,69 +1,135 @@
 # ========================================================
 #  Script: K-means 8-cluster analysis and biome composition
-#  Purpose: Load raster data, summarize clusters, generate box/violin plots,
-#           and plot absolute biome composition per cluster.
-#  Author: Ting Tan
-#  Date: 2025-09-01
+#  Purpose:
+#    - Load raster datasets
+#    - Summarize K-means (K=8) clusters
+#    - Visualize spatial patterns and statistical distributions
+#    - Quantify absolute biome composition per cluster
 # ========================================================
 
-# ---- 1. Load Packages ----
+# ========================================================
+# 1. Load required packages
+# ========================================================
+
 library(terra)        # raster processing
 library(dplyr)        # data manipulation
 library(ggplot2)      # plotting
-library(patchwork)    # combine multiple plots
-library(tidyterra)    # ggplot-friendly terra functions
-# library(RColorBrewer) # color palettes
-library(rnaturalearth)
-library(sf)
+library(patchwork)    # multi-panel layouts
+library(tidyterra)    # terra + ggplot2 bridge
+library(rnaturalearth)# coastline data
+library(sf)           # vector data handling
 
-# Load custom config and plotting functions
+
+# ========================================================
+# 2. Load configuration and custom functions
+# ========================================================
+
+# Paths, global extent, and shared parameters
 source(here::here("config.R"))
+
+# Reusable plotting utilities
 source(here::here("R/plot_box_or_violin.R"))
 source(here::here("R/plot_kmeans_map.R"))
-# ---- 2. Load Raster Data ----
-mi_5km_r <- terra::rast(mi_5km_file) * 0.0001
-fused_5km_r <- terra::rast(fused_5km_file)
-cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)
-kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
-ecoregion_r <- terra::rast(ecoregion_5km_path)
 
+
+# ========================================================
+# 3. Load raster datasets
+# ========================================================
+
+# Environmental variables and cluster map (5 km resolution)
+mi_5km_r           <- terra::rast(mi_5km_file) * 0.0001
+fused_5km_r        <- terra::rast(fused_5km_file)
+cor_twi_vegh_5km_r <- terra::rast(cor_twi_vegh_mosaic_file)
+
+# K-means (K = 8) result and biome classification
+kmeans_8c_r  <- terra::rast(kmeans_map_8c_path)
+ecoregion_r  <- terra::rast(ecoregion_5km_path)
+
+# Quick sanity checks
 mi_5km_r
 fused_5km_r
 cor_twi_vegh_5km_r
 kmeans_8c_r
 ecoregion_r
 
-# Stack rasters and convert to dataframe
-stacked <- c(cor_twi_vegh_5km_r, fused_5km_r, mi_5km_r, kmeans_8c_r, ecoregion_r)
+
+# ========================================================
+# 4. Raster stacking and dataframe conversion
+# ========================================================
+
+# Stack all rasters into a single object
+stacked <- c(
+  cor_twi_vegh_5km_r,
+  fused_5km_r,
+  mi_5km_r,
+  kmeans_8c_r,
+  ecoregion_r
+)
+
+# Convert raster stack to point-wise dataframe
 df <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE)
-colnames(df) <- c("lon", "lat", "cor", "fused", "mi", "cluster8c", "BIOME_NUM")
 
-# Clean memory
-rm(mi_5km_r, fused_5km_r, cor_twi_vegh_5km_r, ecoregion_r, stacked); gc()
+# Explicit column naming for downstream clarity
+colnames(df) <- c(
+  "lon", "lat",
+  "cor", "fused", "mi",
+  "cluster8c",
+  "BIOME_NUM"
+)
 
-# ---- 3. Rename Clusters ----
+# Free memory (large rasters no longer needed)
+rm(
+  mi_5km_r,
+  fused_5km_r,
+  cor_twi_vegh_5km_r,
+  ecoregion_r,
+  stacked
+)
+gc()
+
+
+# ========================================================
+# 5. Cluster-level statistics
+# ========================================================
+
+# Summarize distribution of key variables per cluster
 df_summary <- df |>
   group_by(cluster8c) |>
   summarise(
-    Q1_mi = quantile(mi, 0.25),
-    median_mi = median(mi),
-    Q3_mi = quantile(mi, 0.75),
-    Q1_cor = quantile(cor, 0.25),
+    count      = n(),
+    percentage = n() / nrow(df) * 100,
+
+    Q1_mi      = quantile(mi, 0.25),
+    median_mi  = median(mi),
+    Q3_mi      = quantile(mi, 0.75),
+
+    Q1_cor     = quantile(cor, 0.25),
     median_cor = median(cor),
-    Q3_cor = quantile(cor, 0.75),
-    Q1_fused = quantile(fused, 0.25),
+    Q3_cor     = quantile(cor, 0.75),
+
+    Q1_fused   = quantile(fused, 0.25),
     median_fused = median(fused),
-    Q3_fused = quantile(fused, 0.75),
+    Q3_fused   = quantile(fused, 0.75),
+
     .groups = "drop"
   ) |>
-  arrange(median_mi)
+  mutate(percentage = round(percentage, 2)) |>
+  arrange(median_mi)   # order clusters along MI gradient
 
+# Inspect ordering
 df_summary$median_mi
 df_summary$cluster8c
+df_summary$percentage
 
-# Manually set the cluster labels according to their median_mi value
+
+# ========================================================
+# 6. Assign descriptive cluster labels and colors
+# ========================================================
+
+# Cluster IDs ordered by median MI
 cluster_values <- df_summary$cluster8c
-cluster_values
+
+# Human-readable labels (interpretation-driven)
 cluster_labels <- c(
   "Arid downslope \nsuppression",
   "Arid downslope \nsupport",
@@ -72,266 +138,158 @@ cluster_labels <- c(
   "Downslope \nland use",
   "Moist downslope \nsupression",
   "Moist downslope \nsupport",
-  "Super-moist downslope \nsuppression"
+  "Super-moist \ndownslope suppression"
 )
 
-# Save the cluster name and value for following global mapping
-names(cluster_labels) = cluster_values
-save(cluster_values, cluster_labels, file = here::here("data/cluster_data.RData"))
+# Map labels to original cluster IDs
+names(cluster_labels) <- cluster_values
 
-# Assign descriptive labels and order for clusters
-df$cluster8c <- factor(df$cluster8c,
-                       levels = cluster_values,
-                       labels = cluster_labels)
-
-# ---- 4. Cluster Box/Violin Plots ----
-
-text_size = 14
-
-# pvio_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "violin",  NULL, show_legend = TRUE)
-pbox_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "boxplot", expression(MI), text_size = text_size, show_legend = FALSE)+
-  labs(tag = "b") +
-  theme(
-    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-    plot.tag.position = c(0.05, 0.92)  # 自定义位置
-  )
-
-# sub-plotting
-pbox_cor    <- plot_box_or_violin(df, "cluster8c", "cor",    "boxplot", bquote(r[.("H, TWI")]), text_size = text_size, show_legend = FALSE)+
-  labs(tag = "c") +
-  theme(
-    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-    plot.tag.position = c(0.05, 0.92)  # 自定义位置
-  )
-
-# pvio_mi     <- plot_box_or_violin(df, "cluster8c", "mi",     "violin",  NULL, show_legend = TRUE)
-pbox_fused  <- plot_box_or_violin(df, "cluster8c", "fused",  "boxplot", bquote(f[.("used")]), text_size = text_size, show_legend = FALSE)+
-  labs(tag = "d") +
-  theme(
-    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-    plot.tag.position = c(0.05, 0.92)  # 自定义位置
-  )
-
-boxplot <- (
-  (pbox_mi) /
-    (pbox_cor)  /
-    (pbox_fused)
-) +
-  plot_layout(guides = "collect") &
-  theme(
-    legend.position = NULL,
-    plot.margin = margin(5, 5, 5, 5),
-    axis.text = element_text(size = 10),
-    axis.title = element_text(size = 14),
-    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-    plot.background  = element_blank(),                            # plot 外部透明
-    legend.background = element_blank(),
-    legend.box.background = element_blank()
-  )
-
-ggsave(
-  filename = here::here("data/figures/03_kmeans_8c_boxplot.png"),
-  plot = boxplot,
-  width = 3, height = 4, dpi = 300
+# Fixed color palette for all figures
+fill_colors <- setNames(
+  c(
+    "#E78AC3", "#FC8D62", "#FFD92F", "#E5C494",
+    "#B3B3B3", "#66C2A5", "#8DA0CB", "#A6D854"
+  ),
+  cluster_labels
 )
 
-# ----5. Plot-K-Means-Global-Map----
+# Apply ordered factor with descriptive labels
+df$cluster8c <- factor(
+  df$cluster8c,
+  levels = cluster_values,
+  labels = cluster_labels
+)
 
-tictoc::tic()
-# ----Result-Data-Load-----
-# Load cluster8c raster
-# kmeans_8c_r <- terra::rast(kmeans_map_8c_path)
+# Apply the same factor ordering to summary table
+df_summary <- df_summary |>
+  mutate(
+    cluster8c = factor(
+      cluster_labels[as.character(cluster8c)],
+      levels = cluster_labels
+    )
+  )
 
-# load coast outline, vector data
-coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
-source(here::here("R/plot_kmeans_map.R"))
-# plot k-means map
-p_8c  <- plot_kmeans_map(
+
+# ========================================================
+# 7. Global K-means cluster map
+# ========================================================
+
+text_size <- 14
+
+# Load global coastline for map context
+coast <- rnaturalearth::ne_coastline(
+  scale = 110,
+  returnclass = "sf"
+)
+
+# Base global cluster map
+p_8c <- plot_kmeans_map(
   kmeans_8c_r,
-  text_size = text_size,
-  extent = ext_global,
+  text_size  = text_size,
+  extent     = ext_global,
   title_text = "K-means Cluster Map (K=8)",
   land_color = "white"
 ) +
-  geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
+  geom_sf(data = coast, colour = "black", linewidth = 0.1) +
   coord_sf(
-    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    xlim   = c(xmin(ext_global), xmax(ext_global)),
+    ylim   = c(ymin(ext_global), ymax(ext_global)),
     expand = FALSE,
-    clip = "on"
+    clip   = "on"
   ) +
-  ggplot2::theme(
-    legend.position = "bottom",
-    legend.margin = margin(0, 0, 0, 0),
-    legend.box.margin = margin(-8, 0, 0, 0),
-    axis.title.x = ggplot2::element_blank(),
-    axis.title.y = ggplot2::element_blank(),
-    panel.spacing = unit(0, "pt"),
-    plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_blank(),
-    legend.background = element_blank(),
-    legend.box.background = element_blank()
-  ) +
-  labs(tag = "a") +
   theme(
-    plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-    plot.tag.position = c(0.05, 0.94)  # 自定义位置
-  )
-
-p_8c_add <- p_8c +
-  inset_element(boxplot,
-                left = 0,   # 左边位置 (0-1)
-                bottom = 0, # 底部位置
-                right = 0.19, # 右边位置
-                top = 0.66)   # 顶部位置
-
-# Save plot
-ggsave(
-  filename = here::here("data/figures/03_kmeans_gl_map_8c_inset.png"),
-  plot = p_8c_add, width = 14, height = 7, dpi = 600, units = "in"
-)
-
-tictoc::toc()
-
-
-# ----Plot-Map-Each-Cluster----
-
-tictoc::tic()
-# Loop over 8 clusters and save a map for each one
-for (i in 1:length(cluster_labels)) {
-# for (i in 1:1) {
-    cluster <- gsub("\n", "", cluster_labels[i])
-
-  p_8c  <- plot_kmeans_map(
-    kmeans_8c_r,
-    text_size = text_size,
-    extent = ext_global,
-    title_text = paste0(cluster, " cluster"),
-    highlight_cluster = cluster_values[i]
+    legend.position  = "none",
+    axis.title       = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_blank()
   ) +
-    geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
-    coord_sf(
-      xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-      ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-      expand = FALSE,
-      clip = "on"
-    ) +
-    ggplot2::theme(
-      legend.position = "bottom",
-      legend.margin = margin(0, 0, 0, 0),
-      legend.box.margin = margin(-8, 0, 0, 0),
-      axis.title.x = ggplot2::element_blank(),
-      axis.title.y = ggplot2::element_blank(),
-      panel.spacing = unit(0, "pt"),
-      plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-      panel.background = element_rect(fill = "white", color = NA),
-      plot.background  = element_blank(),
-      legend.background = element_blank(),
-      legend.box.background = element_blank()
-    ) +
-    labs(tag = "a") +
-    theme(
-      plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-      plot.tag.position = c(0.05, 0.94)  # 自定义位置
-    )
-
-  p_8c_add <- p_8c +
-    inset_element(boxplot,
-                  left = 0,   # 左边位置 (0-1)
-                  bottom = 0, # 底部位置
-                  right = 0.19, # 右边位置
-                  top = 0.66)   # 顶部位置
-
-  ggsave(
-    filename = here::here(paste0("data/figures/03_kmeans_gl_map_8c_", i, ".png")),
-    plot = p_8c_add, width = 14, height = 7, dpi = 600, units = "in"
-  )
-  tictoc::toc()
-}
-
-
-# ---- 5. Cluster Biome Composition (Absolute Counts) ----
-# Load biome info
-ecoregion <- vect(ecoregion_path)
-biomes_info <- ecoregion |>
-  as.data.frame() |>
-  select(BIOME_NUM, BIOME_NAME, COLOR_BIO) |>
-  distinct() |>
-  arrange(BIOME_NUM)
-
-# Summarize absolute counts per cluster × biome
-df_biome_summary_counts <- df |>
-  group_by(cluster8c, BIOME_NUM) |>
-  summarise(count = n(), .groups = "drop") |>
-  left_join(
-    biomes_info |> distinct(BIOME_NUM, .keep_all = TRUE) |> select(BIOME_NUM, BIOME_NAME, COLOR_BIO),
-    by = "BIOME_NUM"
-  ) |>
-  # Order factors for consistent plotting
-  mutate(
-    cluster8c = factor(cluster8c, levels = levels(df$cluster8c))
-  ) |>
-  group_by(cluster8c) |>
-  arrange(cluster8c, desc(count)) |>
-  mutate(BIOME_NAME = factor(BIOME_NAME, levels = unique(BIOME_NAME))) |>
-  ungroup()
-
-# 先计算每个cluster的总数和总百分比
-df_total_percent <- df_biome_summary_counts %>%
-  group_by(cluster8c) %>%
-  summarise(total_count = sum(count)) %>%
-  ungroup() %>%
-  mutate(
-    total_percent = total_count / sum(total_count) * 100,
-    label = paste0(round(total_percent, 1), "%")
+  labs(tag = "a)") +
+  theme(
+    plot.tag = element_text(size = text_size, face = "bold"),
+    plot.tag.position = c(0.01, 1)
   )
 
-p_8c_biome_counts <- ggplot(df_biome_summary_counts, aes(x = cluster8c, y = count, fill = BIOME_NAME)) +
-  geom_bar(stat = "identity") +
-  # 在柱子顶部添加总百分比标签
+
+# ========================================================
+# 8. Cluster-wise variable distributions
+# ========================================================
+
+# MI distribution
+pbox_mi <- plot_box_or_violin(
+  df, "cluster8c", "mi", "boxplot",
+  expression(MI),
+  text_size = text_size,
+  show_legend = FALSE
+) + labs(tag = "b)")
+
+# Fused index distribution
+pbox_fused <- plot_box_or_violin(
+  df, "cluster8c", "fused", "boxplot",
+  bquote(f[.("used")]),
+  text_size = text_size,
+  show_legend = FALSE
+) + labs(tag = "c)")
+
+# Correlation distribution
+pbox_cor <- plot_box_or_violin(
+  df, "cluster8c", "cor", "boxplot",
+  bquote(r[.("H, TWI")]),
+  text_size = text_size,
+  show_legend = FALSE
+) + labs(tag = "d)")
+
+
+# ========================================================
+# 9. Cluster area percentage
+# ========================================================
+
+# Percentage of global pixels per cluster
+p_bar <- ggplot(
+  df_summary,
+  aes(x = cluster8c, y = percentage, fill = cluster8c)
+) +
+  geom_col(width = 0.9, color = "black", linewidth = 0.2) +
   geom_text(
-    data = df_total_percent,
-    aes(x = cluster8c, y = total_count, label = label),
-    inherit.aes = FALSE,
-    vjust = -0.5,  # 在柱子上方
-    size = 3.5,
-    fontface = "bold"
+    aes(label = sprintf("%.1f", percentage)),
+    vjust = -0.5,
+    size = 3
   ) +
-  scale_fill_manual(
-    values = setNames(biomes_info$COLOR_BIO, biomes_info$BIOME_NAME),
-    name = "Biome"
+  scale_fill_manual(values = fill_colors) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  theme_bw(base_size = text_size) +
+  theme(
+    legend.position = "none",
+    axis.text.x     = element_blank()
   ) +
   labs(
-    x = "Cluster",
-    y = "Number of Observations",
-    title = "Absolute Biome Composition of Each Cluster"
-  ) +
-  ggplot2::theme_bw(base_size = text_size) +
-  ggplot2::theme(
-    legend.position = "bottom",
-    legend.key.size = unit(0.8, "lines"),
-    legend.text = ggplot2::element_text(size = text_size),
-    legend.title = ggplot2::element_text(size = text_size),
-    axis.title = ggplot2::element_text(size = text_size),
-    axis.text = ggplot2::element_text(size = text_size  * 0.9),
-    axis.text.y = element_text(
-      angle = 90,
-      hjust = 1,  # 水平对齐：右对齐
-      vjust = 0.5  # 垂直对齐：居中
-    ),
-    plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
-    plot.title.position = "panel"
-  ) +
-  guides(fill = guide_legend(ncol = 2))
+    y   = "Percentage (%)",
+    tag = "e)"
+  )
 
-# Save final biome composition plot
-ggsave(
-  filename = here::here("data/figures/03_kmeans_8c_biome_counts.png"),
-  plot = p_8c_biome_counts,
-  width = 14,
-  height = 14,
-  dpi = 300
+
+# ========================================================
+# 10. Combine map and statistics into one figure
+# ========================================================
+
+# Extract legend from map
+p_8c_legend <- p_8c + theme(legend.position = "bottom")
+
+# Final multi-panel layout
+p_8c_stat <- wrap_plots(
+  p_8c,
+  wrap_plots(pbox_mi, pbox_fused, pbox_cor, p_bar, nrow = 1),
+  wrap_elements(cowplot::get_legend(p_8c_legend)),
+  nrow = 3,
+  heights = c(6.5, 2.7, 0.8)
 )
 
+# Save high-resolution figure
+ggsave(
+  filename = here::here("data/figures/03_kmeans_gl_map_8c_stat.png"),
+  plot     = p_8c_stat,
+  width    = 14,
+  height   = 10,
+  dpi      = 600,
+  units    = "in"
+)
 
