@@ -487,9 +487,9 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 # ------------ validation region define ----------------------------------------
 reg_info1 <- readRDS(reg_sample_info_path) |>
   select(ends_with("label"), ends_with("min"), ends_with("max"), -starts_with("dem")) |>
-  slice(c(1, 3, 6, 9, 13, 15))
+  slice(c(1, 3, 5, 9, 13, 15))
 
-
+reg_info <- readRDS(reg_sample_info_path)
 reg_info2 <- tribble(
   ~strata_label,                        ~ymin,   ~ymax,   ~xmin,     ~xmax,
 
@@ -573,6 +573,8 @@ reg_info2 <- tribble(
 reg_info <- bind_rows(reg_info1, reg_info2)
 
 # ----------- Test on single regions -----------------------------
+# process_reg_500m(reg_info[3, ])
+
 for (i in 1:13) {
   process_reg_500m(reg_info[i, ])
 }
