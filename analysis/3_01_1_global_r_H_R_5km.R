@@ -200,7 +200,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
       plot_layout(heights = c( 1, 1, 1))
 
     # ---- Save plot ----
-    out_file <- here::here(file.path(paste0("data/figures/05_tile_", tile_id, "_H_Rin_plots.png")))
+    out_file <- here::here(file.path(paste0("data/figures/3_01_tile_", tile_id, "_H_Rin_plots.png")))
     ggsave(filename = out_file, plot = final_plot, width = 14, height = 14.2, dpi = 600)
 
     # ---- Memory cleanup ----

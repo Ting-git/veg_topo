@@ -61,7 +61,7 @@ p_flat <- plot_sw_in(
 
 # save
 ggsave(
-  filename = file.path(here::here("data/figures/05_flat_surface_sw_in_map.png")),
+  filename = file.path(here::here("data/figures/1_03_flat_surface_sw_in_map.png")),
   plot = p_flat,
   width = 14,
   height = 7,
@@ -96,7 +96,7 @@ p_uneven <- plot_sw_in(
 
 # save
 ggsave(
-  filename = file.path(here::here("data/figures/05_uneven_surface_sw_in_map.png")),
+  filename = file.path(here::here("data/figures/1_03_uneven_surface_sw_in_map.png")),
   plot = p_uneven,
   width = 14,
   height = 7,
@@ -130,7 +130,7 @@ p_te <- plot_rin(
 
 # save
 ggsave(
-  filename = file.path(here::here("data/figures/05_terrain_effect_sw_in_map.png")),
+  filename = file.path(here::here("data/figures/1_03_terrain_effect_sw_in_map.png")),
   plot = p_te,
   width = 14,
   height = 7,

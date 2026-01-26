@@ -61,9 +61,7 @@ fbare_55km_r <- terra::rast(fbare_55km_file)
 fwater_55km_r <- terra::rast(fwater_55km_file)
 fsnow_55km_r <- terra::rast(fsnow_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
-dem_rg_95p_05p_55km_r <- terra::rast(dem_rg_95p_05p_55km_path)
 dem_rg_98p_02p_55km_r <- terra::rast(dem_rg_98p_02p_55km_path)
-dem_rg_max_min_55km_r <- terra::rast(dem_rg_max_min_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
 mat_55km_r <- terra::rast(mat_55km_file)
 fveg_55km_r <- terra::rast(fveg_55km_path)
@@ -76,9 +74,7 @@ stacked <- c(
   fwater_55km_r,
   fsnow_55km_r,
   dem_sd_55km_r,
-  dem_rg_95p_05p_55km_r,
   dem_rg_98p_02p_55km_r,
-  dem_rg_max_min_55km_r,
   fpa_55km_r,
   mat_55km_r,
   fveg_55km_r
@@ -91,11 +87,11 @@ df <- df[complete.cases(df), ]
 # easy to make mistake here!
 colnames(df) <-  c("lon", "lat",
                    "mi", "fused", "fbare", "fwater", "fsnow", "relief", 
-                   "dem_rg_95p_05p", "dem_rg_98p_02p","dem_rg_max_min", "fpa", "mat", "fveg")
+                   "dem_rg_98p_02p", "fpa", "mat", "fveg")
 
 # Clean up
 rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r, dem_sd_55km_r, 
-   dem_rg_95p_05p_55km_r, dem_rg_98p_02p_55km_r, dem_rg_max_min_55km_r, fpa_55km_r,  mat_55km_r, fveg_55km_r)
+   dem_rg_98p_02p_55km_r, fpa_55km_r,  mat_55km_r, fveg_55km_r)
 gc()
 
 
@@ -116,34 +112,21 @@ knitr::include_graphics(files)
 
 ```{r DataOverview}
 # Select columns for plot
-cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_95p_05p", "dem_rg_98p_02p", "dem_rg_max_min", "fpa", "mat", "fveg")
+cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_98p_02p", "fpa", "mat", "fveg")
 # plot input data density
 plot_density_grid(
   df,
   cols,
-  nrow = 3,
-  width = 14,
+  nrow = 2,
+  width = 7,
   height = 3,
-  save_path = here::here("data/figures/04_region_selection_input_data_density.png")
+  save_path = here::here("data/figures/1_99_region_selection_input_data_density.png")
 )
 ```
 
 ---
 
 ## Binning Variables
-
-To classify the global landscape into meaningful categories, we create bins for key drivers:
-
-* **Moisture index (MI)**: split into five equal‐frequency bins (very dry → very humid).
-* **Relief**: split into three equal‐frequency bins (flat → rugged).
-* **Absolute latitude**: split into five equal‐frequency bins (low → high latitude).
-
-From these, we define two sets of strata:
-
-1. **Strata A** – combination of MI bin and relief bin (for lateral subsurface flow patterns).
-2. **Strata B** – combination of latitude bin and relief bin (for insolation‐driven patterns).
-
-Readable text labels (e.g., `"very_dry_flat_relief"`) are assigned for easier interpretation.
 
 ```{r Bin, echo = TRUE}
 df_binned <- df |>
@@ -161,9 +144,9 @@ df_binned <- df |>
   mutate(
     mi_label = case_when(
       mi_bin == levels(mi_bin)[1] ~ "1_hyper_arid",
-      mi_bin == levels(mi_bin)[2] ~ "2_semiarid",
-      mi_bin == levels(mi_bin)[3] ~ "3_dry_subhumid",
-      mi_bin == levels(mi_bin)[4] ~ "4_moist_subhumid",
+      mi_bin == levels(mi_bin)[2] ~ "2_arid",
+      mi_bin == levels(mi_bin)[3] ~ "3_semiarid",
+      mi_bin == levels(mi_bin)[4] ~ "4_dry_subhumid",
       mi_bin == levels(mi_bin)[5] ~ "5_humid",
       mi_bin == levels(mi_bin)[6] ~ "6_perhumid"
     ),
@@ -174,9 +157,9 @@ df_binned <- df |>
     ),
     lat_label = case_when(
       abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_low_lat",
-      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_lower_lat",
+      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_low_to_mid_lat",
       abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_mid_lat",
-      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_higher_lat",
+      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_mid_to_high_lat",
       abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_high_lat"
     )
   ) |>
@@ -204,11 +187,6 @@ table(df_binned$strata_label)
 
 df_filt <- df_binned |>
   
-  # filter(
-  #   abs_lat_bin %in% levels(abs_lat_bin)[c(1, 2)],
-  #   mi_bin %in% levels(mi_bin)[c(1, 2, 3, 4, 5, 6)],
-  #   relief_bin %in% levels(relief_bin)[c(3)],) |>
-
   filter(relief_bin %in% levels(relief_bin)[c(3)],) |>
   
   filter(fused < 0.03) |>  # Exclude the region with high human activity 
@@ -221,11 +199,9 @@ df_filt <- df_binned |>
   
   filter(fveg > 0.7) |> # avoid regions with very limited vegetation
   
-  filter(fpa > 0.5) |> # select regions with 30% protected areas
+  filter(fpa > 0.5) |> # select regions with 50% protected areas
   
-  # filter(dem_rg_95p_05p < 500) |>  # avoid strong influence of elevation differences
-  filter(dem_rg_98p_02p < 500)  # avoid strong influence of elevation differences
-  # filter(dem_rg_max_min < 500) |>   # avoid strong influence of elevation differences
+  filter(dem_rg_98p_02p < 500)  # avoid the strong influence of a large elevation gradient differences
 
 # print the numbers of possible region
 table(df_filt$strata_label)
@@ -236,7 +212,6 @@ table(df_filt$strata_label)
 ## Sampling Representative Locations
 
 ```{r Sampling}
-# Pick one region (coarse gridcell) representing all combination of bins.
 
 set.seed(216)
 
@@ -262,9 +237,6 @@ saveRDS(df_samples, reg_sample_info_path)
 
 ## Export and Visualization
 
-* Bounding boxes are saved as GeoPackage (`.gpkg`) files for GIS use.
-* Locations are plotted on global maps, color‐coded by strata category.
-* Additional maps show the global distribution of bins, filtered areas, and final selected regions.
 
 ```{r loadinfo}
 # load region infos
@@ -286,7 +258,6 @@ reg_gpkg <- reg_info |>
 st_write(reg_gpkg,reg_sample_vect_path, delete_layer = TRUE)
 ```
 
-### region sample for lateral flow analysis
 
 ```{r plot_location}
 
@@ -307,7 +278,7 @@ ggplot(data = world) +
     title = "Location of Sample Region",
     color = "Region"
   ) +
-  scale_color_scico_d(palette = "roma") +  # ← 改成离散调色
+  scale_color_scico_d(palette = "roma") + 
   theme_bw(base_size = text_size) +
   theme(
     legend.position = "right",
@@ -360,9 +331,7 @@ for (i in seq_len(nrow(reg_info))) {
 ```
 
 
-
-
 ```{r, include=FALSE, eval=FALSE}
 # This code will neither run nor show in the output
-rmarkdown::render(here::here("vignettes/07_re1_regions_selection.Rmd"))
+rmarkdown::render(here::here("vignettes/5_01_re1_regions_selection.Rmd"))
 ```

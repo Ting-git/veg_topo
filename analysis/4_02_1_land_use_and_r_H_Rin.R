@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: ~/veg_topo/analysis/05_6_land_use_and_r_H_Rin.R
+# Script: ~/veg_topo/analysis/4_02_3_land_use_and_r_H_Rin.R
 # Author: Ting Tan
 # Date: 2025-10-29
 #
@@ -53,7 +53,7 @@ cor_r <- rast(r_H_R_5km_path)
 cor_used <- mask(cor_r, fused_5km_r >= 0.05, maskvalues = FALSE) # correlation on human-used land
 cor_natural <- mask(cor_r, fused_5km_r < 0.05, maskvalues = FALSE) # correlation on natural land
 
-# ------------------------- 3. Plot Global Correlation Maps (单独保存) ----------
+# ------------------------- 3. Plot Global Correlation Maps ----------
 ## 3.1. Used land (fused ≥ 0.05)
 p_used <- plot_r_H_R(
   input = cor_used,
@@ -75,7 +75,7 @@ p_used <- plot_r_H_R(
   )
 
 ggsave(
-  filename = file.path(project_root, "data/figures/05_r_H_Rin_map_mask_with_used_land.png"),
+  filename = file.path(project_root, "data/figures/4_02_r_H_Rin_map_mask_with_used_land.png"),
   plot = p_used, width = 14, height = 7, dpi = 600, units = "in"
 )
 
@@ -100,7 +100,7 @@ p_natural <- plot_r_H_R(
   )
 
 ggsave(
-  filename = file.path(project_root, "data/figures/05_r_H_Rin_map_mask_with_natural_land.png"),
+  filename = file.path(project_root, "data/figures/4_02_r_H_Rin_map_mask_with_natural_land.png"),
   plot = p_natural, width = 14, height = 7, dpi = 600, units = "in"
 )
 
@@ -274,7 +274,7 @@ final_plot <-
 # ------------------------- 7. Save All Plots -----------------------------------
 # Save combined plot
 ggsave(
-  filename = here::here("data/figures/05_land_use_analysis_r_H_Rin.png"),
+  filename = here::here("data/figures/4_02_land_use_analysis_r_H_Rin.png"),
   plot = final_plot,
   width = 14,
   height = 10,
@@ -283,7 +283,7 @@ ggsave(
 
 message("✅ All plots saved successfully!")
 message("📁 Individual maps saved:")
-message("   - 05_global_r_H_Rin_on_used_land.png")
-message("   - 05_global_r_H_Rin_on_natural_land.png")
+message("   - 4_02_global_r_H_Rin_on_used_land.png")
+message("   - 4_02_global_r_H_Rin_on_natural_land.png")
 message("📊 Combined analysis saved:")
-message("   - 05_combined_analysis_r_H_Rin.png")
+message("   - 4_02_combined_analysis_r_H_Rin.png")

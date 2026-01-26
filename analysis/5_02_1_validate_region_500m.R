@@ -467,7 +467,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
         legend.background = element_blank(),
         legend.box.background = element_blank()
       )
-    out_file1 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_12plots.png")))
+    out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.png")))
     ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, dpi = 600)
 
     # --- Print proccessed time ---
@@ -630,6 +630,6 @@ for (i in 14:66) {
 #     legend.background = element_blank(),
 #     legend.box.background = element_blank()
 #   )
-# out_file2 <- here::here(file.path(paste0("data/figures/07_validate_", reg_id, "_8plots_s.png")))
+# out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_8plots_s.png")))
 # ggsave(filename = out_file2, plot = final_plot2, width = 16, height = 8.5, dpi = 600)
 

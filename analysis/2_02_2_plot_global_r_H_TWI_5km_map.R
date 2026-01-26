@@ -56,15 +56,15 @@ p_cor <- plot_cor_twi_vegh(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-    plot.background  = element_blank(),                            # plot 外部透明
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
   )
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/02_r_H_TWI_5km_map.png"),
+  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_map.png"),
   plot = p_cor,
   width = 14,
   height = 6,
@@ -103,15 +103,15 @@ p_pval <- plot_cor_pval(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-    plot.background  = element_blank(),                            # plot 外部透明
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
   )
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/02_r_H_TWI_5km_pval.png"),
+  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_pval.png"),
   plot = p_pval,
   width = 14,
   height = 5.8,

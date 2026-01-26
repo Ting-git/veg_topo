@@ -285,7 +285,7 @@ p_8c_stat <- wrap_plots(
 
 # Save high-resolution figure
 ggsave(
-  filename = here::here("data/figures/03_kmeans_gl_map_8c_stat.png"),
+  filename = here::here("data/figures/4_03_kmeans_gl_map_8c_stat.png"),
   plot     = p_8c_stat,
   width    = 14,
   height   = 10,
@@ -293,3 +293,113 @@ ggsave(
   units    = "in"
 )
 
+# ========================================================
+# 11. Individual cluster maps (1–8)
+# ========================================================
+
+plot_list <- list()
+
+for (i in seq_along(cluster_labels)) {
+
+  cluster <- gsub("\n", "", cluster_labels[i])
+
+  p <- plot_kmeans_map(
+    kmeans_8c_r,
+    text_size = text_size,
+    extent = ext_global,
+    title_text = paste0(cluster, " cluster"),
+    highlight_cluster = cluster_values[i]
+  ) +
+    geom_sf(data = coast, colour = "black", linewidth = 0.1) +
+    coord_sf(
+      xlim   = c(xmin(ext_global), xmax(ext_global)),
+      ylim   = c(ymin(ext_global), ymax(ext_global)),
+      expand = FALSE
+    ) +
+    theme(
+      legend.position = "none",
+      axis.title      = element_blank(),
+      panel.background = element_rect(fill = "white", color = NA)
+    ) +
+    labs(tag = paste0(letters[i], ")"))
+
+  plot_list[[i]] <- p
+}
+
+p_legend <- plot_list[[1]] + theme(legend.position = "bottom")
+
+p_1_to_8c <- wrap_plots(plot_list, ncol = 2) /
+  wrap_elements(cowplot::get_legend(p_legend)) +
+  plot_layout(heights = c(10, 0.6))
+
+ggsave(
+  filename = here::here("data/figures/4_03_kmeans_gl_map_1_to_8.png"),
+  plot     = p_1_to_8c,
+  width    = 14,
+  height   = 14,
+  dpi      = 600,
+  units    = "in"
+)
+
+
+# ========================================================
+# 12. Biome composition (absolute counts)
+# ========================================================
+
+ecoregion <- vect(ecoregion_path)
+
+biomes_info <- ecoregion |>
+  as.data.frame() |>
+  select(BIOME_NUM, BIOME_NAME, COLOR_BIO) |>
+  distinct() |>
+  arrange(BIOME_NUM)
+
+df_biome_summary_counts <- df |>
+  group_by(cluster8c, BIOME_NUM) |>
+  summarise(count = n(), .groups = "drop") |>
+  left_join(
+    biomes_info |> select(BIOME_NUM, BIOME_NAME, COLOR_BIO),
+    by = "BIOME_NUM"
+  ) |>
+  mutate(cluster8c = factor(cluster8c, levels = levels(df$cluster8c))) |>
+  group_by(cluster8c) |>
+  arrange(cluster8c, desc(count)) |>
+  mutate(BIOME_NAME = factor(BIOME_NAME, levels = unique(BIOME_NAME))) |>
+  ungroup()
+
+
+# ========================================================
+# 13. Plot absolute biome composition
+# ========================================================
+
+p_8c_biome_counts <- ggplot(
+  df_biome_summary_counts,
+  aes(x = cluster8c, y = count, fill = BIOME_NAME)
+) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(
+    values = setNames(biomes_info$COLOR_BIO, biomes_info$BIOME_NAME),
+    name = "Biome"
+  ) +
+  scale_y_continuous(
+    name   = "Number of Observations (×10⁴)",
+    labels = function(x) x / 10000
+  ) +
+  labs(
+    x     = "Cluster",
+    title = "Absolute Biome Composition of Each Cluster"
+  ) +
+  theme_bw(base_size = text_size) +
+  theme(
+    legend.position = "bottom",
+    plot.title      = element_text(size = text_size * 1.2, face = "bold")
+  ) +
+  guides(fill = guide_legend(ncol = 2))
+
+ggsave(
+  filename = here::here("data/figures/4_03_kmeans_8c_biome_counts.png"),
+  plot     = p_8c_biome_counts,
+  width    = 14,
+  height   = 14,
+  dpi      = 300
+)

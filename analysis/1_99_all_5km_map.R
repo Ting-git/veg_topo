@@ -103,8 +103,8 @@ plot_map <- function(r_layer, title_text, output_file) {
 }
 
 # Plot maps
-plot_map(stacked_masked[["fused"]], "Fraction of used land", here::here("data/figures/03_fused_5km_map.png"))
-plot_map(stacked_masked[["fbare"]], "Bare land fraction", here::here("data/figures/03_fbare_5km_map.png"))
-plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/figures/03_fwater_5km_map.png"))
-plot_map(stacked_masked[["fsnow"]], "Permanent snow and ice fraction", here::here("data/figures/03_fsnow_5km_map.png"))
-plot_map(stacked_masked[["mat"]], "Annual mean air temperature (℃)", here::here("data/figures/03_mat_5km_map.png"))
+plot_map(stacked_masked[["fused"]], "Fraction of used land", here::here("data/figures/1_99_fused_5km_map.png"))
+plot_map(stacked_masked[["fbare"]], "Bare land fraction", here::here("data/figures/1_99_fbare_5km_map.png"))
+plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/figures/1_99_fwater_5km_map.png"))
+plot_map(stacked_masked[["fsnow"]], "Permanent snow and ice fraction", here::here("data/figures/1_99_fsnow_5km_map.png"))
+plot_map(stacked_masked[["mat"]], "Annual mean air temperature (℃)", here::here("data/figures/1_99_mat_5km_map.png"))

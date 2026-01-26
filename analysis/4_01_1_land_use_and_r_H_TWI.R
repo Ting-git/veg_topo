@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: ~/veg_topo/analysis/03_2_land_use_and_r_H_TWI.R
+# Script: ~/veg_topo/analysis/4_01_1_land_use_and_r_H_TWI.R
 # Author: Ting Tan
 # Date: 2025-10-29
 #
@@ -76,7 +76,7 @@ p_used <- plot_cor_twi_vegh(
   )
 
 ggsave(
-  filename = file.path(project_root, "data/figures/03_r_H_TWI_map_mask_with_used_land.png"),
+  filename = file.path(project_root, "data/figures/4_01_r_H_TWI_map_mask_with_used_land.png"),
   plot = p_used, width = 14, height = 7, dpi = 600, units = "in"
 )
 
@@ -101,7 +101,7 @@ p_natural <- plot_cor_twi_vegh(
   )
 
 ggsave(
-  filename = file.path(project_root, "data/figures/03_r_H_TWI_map_mask_with_natural_land.png"),
+  filename = file.path(project_root, "data/figures/4_01_r_H_TWI_map_mask_with_natural_land.png"),
   plot = p_natural, width = 14, height = 7, dpi = 600, units = "in"
 )
 
@@ -275,7 +275,7 @@ final_plot <-
 # ------------------------- 7. Save All Plots -----------------------------------
 # Save combined plot
 ggsave(
-  filename = here::here("data/figures/03_land_use_analysis_r_H_TWI.png"),
+  filename = here::here("data/figures/4_01_land_use_analysis_r_H_TWI.png"),
   plot = final_plot,
   width = 14,
   height = 10,
@@ -284,8 +284,8 @@ ggsave(
 
 message("✅ All plots saved successfully!")
 message("📁 Individual maps saved:")
-message("   - 03_global_r_H_TWI_on_used_land.png")
-message("   - 03_global_r_H_TWI_on_natural_land.png")
+message("   - 4_01_global_r_H_TWI_on_used_land.png")
+message("   - 4_01_global_r_H_TWI_on_natural_land.png")
 message("📊 Combined analysis saved:")
-message("   - 03_combined_analysis_r_H-TWI.png")
-message("   - 03_r_H_TWI_comparison_on_natural_used_land.png")
+message("   - 4_01_combined_analysis_r_H-TWI.png")
+message("   - 4_01_r_H_TWI_comparison_on_natural_used_land.png")
