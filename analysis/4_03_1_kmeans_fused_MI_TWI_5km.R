@@ -1,6 +1,5 @@
 
 # ----Set-Up----
-
 library(terra)
 library(tidyr)
 library(dplyr)
@@ -12,12 +11,20 @@ library(patchwork)
 library(tidyterra)
 library(sf)
 
-# Load configuration and functions
-source(here::here("config.R"))
+# Automatically select configuration based on hostname
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected workstation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# Load custom functions
 source(here::here("R/plot_density_grid.R"))
 
 # ----Data-Load-----
-
 # Load resampled raster datasets (AI, TWI, fused)
 mi_5km_r <- terra::rast(mi_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_5km_r <- terra::rast(fused_5km_file)
@@ -37,8 +44,6 @@ tar_crs = terra::crs(mi_5km_r)
 rm(mi_5km_r, fused_5km_r, stacked); gc()
 
 # ----Data-Raw-Density----
-
-# source(here::here("R/plot_density_grid.R"))
 # Select columns
 cols <- c("mi", "cor", "fused")
 plot_density_grid(

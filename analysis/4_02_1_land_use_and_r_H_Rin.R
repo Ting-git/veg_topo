@@ -1,7 +1,5 @@
 # ==============================================================================
 # Script: ~/veg_topo/analysis/4_02_3_land_use_and_r_H_Rin.R
-# Author: Ting Tan
-# Date: 2025-10-29
 #
 # Purpose:
 #   Combined analysis of Rin-VEGH correlation patterns:
@@ -38,8 +36,10 @@ if (hostname == "dash") {
   source(here::here("config_ubelix.R"))
 }
 
+# Custom plotting functions
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_r_H_R.R"))
+
 # ------------------------- 2. Load and Prepare Data ----------------------------
 # Coastline (for map overlay)
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")

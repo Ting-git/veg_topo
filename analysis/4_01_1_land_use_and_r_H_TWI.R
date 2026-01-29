@@ -1,13 +1,11 @@
 # ==============================================================================
 # Script: ~/veg_topo/analysis/4_01_1_land_use_and_r_H_TWI.R
-# Author: Ting Tan
-# Date: 2025-10-29
 #
 # Purpose:
 #   Combined analysis of TWI-VEGH correlation patterns:
 #     1. Mask correlation data into natural and human-used lands
 #     2. Create scatter plots across land-use intensity bins
-#     3. Compare correlation distributions between land types
+#     3. Compare correlation distributions between land types (natural and human-used lands)
 #     4. Combine all visualizations in a comprehensive layout
 #
 # Dependencies:
@@ -38,6 +36,7 @@ if (hostname == "dash") {
   source(here::here("config_ubelix.R"))
 }
 
+# Custom plotting functions
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 
