@@ -5,7 +5,7 @@ This master's project investigates the relationship between vegetation height an
 
 ## Project Structure
 
-The project structure is as follows. The `config.R` and `config_ubelix.R` files record all file paths for raw, intermediate, and output data. They are used by all scripts in the `analysis` folder.
+The project structure is as follows. The `config.R` and `config_ubelix.R` files store all file paths for raw, intermediate, and output data. Although both files contain similar path information, `config.R` is intended for use on WORKSTATION2, which has direct access to all raw data files and thus includes paths to all files used in the project. `config_ubelix.R` is used on UBELIX and contains paths for the later-stage processing of large datasets that were moved there. They are used by all scripts in the `analysis` folder.
 
 All subfolders in `data` and `data-raw` are finally stored outside the project directory, but they are logically part of the project.
 
@@ -53,7 +53,7 @@ project/
 
 The `data-raw` folder contains unprocessed raw data and scripts to download or pre-process the data. These datasets require significant pre-processing before they can be used in analysis.
 
-**Note:** This folder is currently empty. The raw data are stored in a separate shared directory outside the project to:
+**Note:** This folder is currently empty. Non-shared files exist in separate folders with the same names and structure outside the project directory, while shared files for the group are stored in `\data\archive\` and `data_2\archive\`. Detailed paths are recorded in the `config.R` file.
 
 1. Prevent accidentally pushing large files to GitHub.
 2. Reduce memory usage and avoid duplicate work for group members.
