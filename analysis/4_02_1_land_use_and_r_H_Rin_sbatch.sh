@@ -37,7 +37,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 05_6_land_use_and_r_H_Rin.R\n"); source("05_6_land_use_and_r_H_Rin.R")'
+)); cat("Running script: 4_02_1_land_use_and_r_H_Rin.R"); source("4_02_1_land_use_and_r_H_Rin.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

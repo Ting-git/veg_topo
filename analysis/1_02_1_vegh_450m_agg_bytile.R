@@ -64,7 +64,7 @@ results <- future_map(
 
 
       # Set 0 as NA value (0m canopy height represents not vegetated or water according to Lang et al. (2019))
-      # Aggregates using TWI data from Marthews et al. (2015)
+      # Aggregates using TWI data from Marthews et al. (2015) as target resolution
       # Return the saved path
       result <- raster_preprocess_save(
         input = file,

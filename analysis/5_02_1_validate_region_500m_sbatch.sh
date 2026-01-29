@@ -41,8 +41,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 07_3_validate_region_500m.R\n");
-source("07_3_validate_region_500m.R")'
+cat("\nRunning script: 5_02_1_validate_region_500m.R\n");
+source("5_02_1_validate_region_500m.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

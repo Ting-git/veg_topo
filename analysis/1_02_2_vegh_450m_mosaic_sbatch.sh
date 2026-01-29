@@ -36,7 +36,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 02_1_2_vegh_450m_mosaic.R\n"); source("02_1_2_vegh_450m_mosaic.R")'
+)); cat("Running script: 1_02_2_vegh_450m_mosaic.R\n"); source("1_02_2_vegh_450m_mosaic.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

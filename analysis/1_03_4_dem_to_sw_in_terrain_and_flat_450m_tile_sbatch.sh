@@ -36,7 +36,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 05_1_dem_to_sw_in_450m_tile.R\n"); source("05_1_dem_to_sw_in_450m_tile.R")'
+)); cat("Running script: 1_03_4_dem_to_sw_in_terrain_and_flat_450m_tile.R\n"); source("1_03_4_dem_to_sw_in_terrain_and_flat_450m_tile.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

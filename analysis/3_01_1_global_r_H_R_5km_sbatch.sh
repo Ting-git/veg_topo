@@ -41,8 +41,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 05_4_global_r_H_R_5km.R\n");
-source("05_4_global_r_H_R_5km.R")'
+cat("\nRunning script: 3_01_1_global_r_H_R_5km.R\n");
+source("3_01_1_global_r_H_R_5km.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
