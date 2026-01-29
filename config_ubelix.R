@@ -42,9 +42,9 @@ dem_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m
 slope_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/slope_1_1_deg")
 aspect_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/aspect_1_1_deg")
 
-dem_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/dem_450m1.nc")
-slope_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/slope_450m1.nc")
-aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/aspect_450m1.nc")
+dem_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/dem_450m.tif")
+slope_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/slope_450m.tif")
+aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_dem_slope_aspect_450m/aspect_450m.tif")
 
   # Incident shortwave solar radiation and rin
 sw_in_450m_tile_dir <- file.path(veg_topo_extr_dir, "global_sw_in_450m/1_1_deg_tiles")

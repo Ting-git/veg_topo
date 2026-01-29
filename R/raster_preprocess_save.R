@@ -36,9 +36,14 @@
 #'                   output = "output_folder",
 #'                   if_aggregate = TRUE,
 #'                   if_resample = TRUE)
-raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target = NULL,
-                                   varname = "band", if_aggregate = TRUE,
-                                   if_resample = FALSE, if_mask = FALSE,
+raster_preprocess_save <- function(input,
+                                   output = NULL,
+                                   res_tar = NULL,
+                                   target = NULL,
+                                   varname = "band",
+                                   if_aggregate = TRUE,
+                                   if_resample = FALSE,
+                                   if_mask = FALSE,
                                    na_value = NULL, fun = mean,
                                    if_round_fact = TRUE,
                                    if_return_raster = TRUE) {
@@ -49,7 +54,7 @@ raster_preprocess_save <- function(input, output = NULL, res_tar = NULL, target 
   # Replace specified NA value with proper NA
   if (!is.null(na_value)) r_in[r_in == na_value] <- NA
 
-  # --- Handle target raster for resolution ---
+  # --- Get resolution from target raster  ---
   if (!is.null(target)) {
     r_tar <- if (is.character(target)) terra::rast(target)[[1]] else target[[1]]
     res_tar <- c(terra::xres(r_tar), terra::yres(r_tar))

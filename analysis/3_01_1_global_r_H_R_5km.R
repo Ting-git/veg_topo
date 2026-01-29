@@ -1,5 +1,5 @@
 # ~84 min: UBELIX, 20 cores, 500G
-
+# ~30 min: UBELIX, 35 cores, 1000G
 # ------Load required libraries-------------------------------------------------
 
 library(terra)
@@ -9,7 +9,7 @@ library(furrr)
 library(ggplot2)
 library(tidyterra)
 library(patchwork)
-library(ggmap)
+# library(ggmap)
 library(khroma)
 library(RColorBrewer)
 library(rnaturalearth)
@@ -26,7 +26,7 @@ if (hostname == "dash") {
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
-  workers = 17
+  workers = 35
 }
 
 source(here::here("R/create_spatial_windows.R"))
@@ -248,20 +248,20 @@ success_count <- sum(unlist(results))
 fail_count <- length(results) - success_count
 message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
 
-# # -------- Combination ---------------------------------------------------------
-# # mosacing the r(H~TWI) map
-# mosaic_tiles(
-#   input_dir   = r_H_R_tiles_dir,
-#   output_file = r_H_R_5km_path,
-#   pattern = "*_map.nc",
-#   varname = "r_H_R")
-#
-# # mosacing the pval ofr(H~TWI) map
-# mosaic_tiles(
-#   input_dir   = r_H_R_tiles_dir,
-#   output_file = pval_r_H_R_5km_path,
-#   pattern = "*_pval.nc",
-#   varname = "pval_r_H_R")
+# -------- Combination ---------------------------------------------------------
+# mosacing the r(H~Rin) map
+mosaic_tiles(
+  input_dir   = r_H_R_tiles_dir,
+  output_file = r_H_R_5km_path,
+  pattern = "*_map.nc",
+  varname = "r_H_R")
+
+# mosacing the pval ofr(H~Rin) map
+mosaic_tiles(
+  input_dir   = r_H_R_tiles_dir,
+  output_file = pval_r_H_R_5km_path,
+  pattern = "*_pval.nc",
+  varname = "pval_r_H_R")
 
 # ---------- Delete intermediate data ------------------------------------------
 # List all files in the directory r_H_R_tiles_dir that match "*.nc"

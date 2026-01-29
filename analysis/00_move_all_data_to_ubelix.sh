@@ -50,6 +50,12 @@ rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data/reg_sample \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
 
+# global_dem_slope_aspect_450m
+rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
+  --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
+  /data_2/scratch/ting/veg_topo_data/data/global_dem_slope_aspect_450m \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
 # TWI 30m
 rsync -avhP --info=progress2 --no-owner --no-group \
   --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \

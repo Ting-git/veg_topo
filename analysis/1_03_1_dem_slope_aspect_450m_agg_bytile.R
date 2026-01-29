@@ -4,8 +4,6 @@
 
 # =============================================================================
 # Script: Aggregate and Resample Global DEM Tiles
-# Author : [Ting Tan]
-# Date   : [2025-10-16]
 #
 # Description:
 #   This script reads global 30m DEM tiles, computes slope and aspect,
@@ -145,12 +143,15 @@ gc()
 
 message("🔄 Resampling DEM...")
 dem_450m_resampled <- terra::resample(dem_450m_mosaic, twi_450m_r, method = "bilinear")
+dem_450m_resampled <- terra::mask(dem_450m_resampled, twi_450m_r)
 
 message("🔄 Resampling slope...")
 slope_450m_resampled <- terra::resample(slope_450m_mosaic, twi_450m_r, method = "bilinear")
+slope_450m_resampled <- terra::mask(slope_450m_resampled, twi_450m_r)
 
 message("🔄 Resampling aspect...")
 aspect_450m_resampled <- terra::resample(aspect_450m_mosaic, twi_450m_r, method = "bilinear")
+aspect_450m_resampled <- terra::mask(aspect_450m_resampled, twi_450m_r)
 
 # Cleanup intermediate mosaics
 rm(dem_450m_mosaic, slope_450m_mosaic, aspect_450m_mosaic, twi_450m_r)
@@ -158,10 +159,38 @@ gc()
 
 # ---------------------------- Save Final Results -----------------------------
 
-terra::writeCDF(dem_450m_resampled, dem_450m_mosaic_path, overwrite = TRUE, varname = "dem")
-terra::writeCDF(slope_450m_resampled, slope_450m_mosaic_path, overwrite = TRUE, varname = "slope")
-terra::writeCDF(aspect_450m_resampled, aspect_450m_mosaic_path, overwrite = TRUE, varname = "aspect")
+# save DEM
+terra::writeRaster(
+  dem_450m_resampled,
+  dem_450m_mosaic_path,
+  filetype = "GTiff",
+  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+  overwrite = TRUE,
+  datatype = "FLT4S",
+  NAflag = -9999
+)
 
+# save slope
+terra::writeRaster(
+  slope_450m_resampled,
+  slope_450m_mosaic_path,
+  filetype = "GTiff",
+  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+  overwrite = TRUE,
+  datatype = "FLT4S",
+  NAflag = -9999
+)
+
+# save aspect
+terra::writeRaster(
+  aspect_450m_resampled,
+  aspect_450m_mosaic_path,
+  filetype = "GTiff",
+  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+  overwrite = TRUE,
+  datatype = "FLT4S",
+  NAflag = -9999
+)
 if (file.exists(dem_450m_mosaic_path)) message("✅ Saved: ", dem_450m_mosaic_path)
 if (file.exists(slope_450m_mosaic_path)) message("✅ Saved: ", slope_450m_mosaic_path)
 if (file.exists(aspect_450m_mosaic_path)) message("✅ Saved: ", aspect_450m_mosaic_path)
