@@ -1,174 +1,143 @@
-# The GECO R project template
 
-This is a github template for a GECO R project repository. This template can
-be loaded when creating a new project in github. As such you pre-populate a
-project with a standard set of directories. This ensures a project-oriented 
-and consistent workflow across all lab members, and removes some of the mental
-overhead in making decisions on a project structure.
+# MSc Project: Topographic Control on Vegetation Height
 
-It must be noted that some of the functionality as provided by this setup is
-included in the [`usethis`](https://usethis.r-lib.org/) R package, the aim is 
-slightly different. For one, `usethis` is aimed at populating a package structure.
-Second, there is not preset full template, hence many individual decisions still
-need to be made and code executed. This is bypassed by this setup.
+This master's project investigates the relationship between vegetation height and topographic factors.
 
-## Use
+## Project Structure
 
+The project structure is as follows. The `config.R` and `config_ubelix.R` files record all file paths for raw, intermediate, and output data. They are used by all scripts in the `analysis` folder.
 
-## Structure
-
-The structure of the template follows the structure of an R package without
-actually being one. There are several reasons for this.
-- `data`: (pre-)processed data and output data
-- `data-raw`: unprocessing raw data
-- `vignettes`: reporting
-- `manuscript`: academic writing
-- `src`: R code from other scripts (bash / python)
-- `R`: R functions
-
-
-### The R folder
-
-The `R` folder contains R functions, not scripts. This means code wrapped in a
-structure as such
-
-
-### The src folder
-
-The `src` folder contains scripts and code which is not R related, in packages
-this folder often contains Fortran or C code which needs to be compiled. Here,
-it is common to store bash or python functions which might assist in data
-cleaning or data gathering which can't be done in R alone.
-
-### The data-raw folder
-
-The `data-raw` folder contains, as the name suggests, raw data and the scripts
-to download and pre-process the data. This is data which requires significant
-pre-processing to be of use in analysis. In other words, this data is not 
-analysis ready (within the context of the project).
-
-To create full transparency in terms of the source of this raw data it is best
-to include (numbered) scripts to download and pre-process the data. Either in
-these scripts, or in a separate README, include the source of the data (reference)
-Ultimately, the output of the workflow in data-raw is data which is analysis ready.
-
-It is best practice to store various raw data products in their own sub-folder,
-with data downloading and processing scripts in the main `data-raw` folder.
+All subfolders in `data` and `data-raw` are finally stored outside the project directory, but they are logically part of the project.
 
 ```
-data-raw/
-├─ raw_data_product/
-├─ 00_download_raw_data.R
-├─ 01_process_raw_data.R
+project/
+├─ config.R
+├─ config_ubelix.R
+├─ data/
+│  ├─ figures/
+│  ├─ global_twi_450m_clean/   
+│  ├─ global_vegh_450m/ 
+│  ├─ global_fveg_55km/    
+│  ├─ global_dem_slope_aspect_450m/  
+│  ├─ global_sw_in_450m/   
+│  ├─ global_dem_55km/   
+│  ├─ global_mat_5km/    
+│  ├─ global_mat_55km/  
+│  ├─ global_flc_5km/        
+│  ├─ global_flc_55km/       
+│  ├─ global_fpa_55km_2025/  
+│  ├─ global_mi_55km/    
+│  ├─ global_mi_5km/     
+│  ├─ global_ecoregion_5km/    
+│  ├─ global_cor_twi_vegh/           
+│  ├─ global_r_H_R_5km/ 
+│  ├─ global_kmeans_5km/  
+│  ├─ reg_sample/
+│  ├─ reg_validate_500m/
+│  ├─ ...
+├─ data-raw/
+│  ├─ copernicus_dem_30m/
+│  ├─ ecoregion2017/
+│  ├─ wdpa_2025/
+│  ├─ ...
+├─ analysis/
+├─ R/
+├─ src/
+├─ vignettes/
+├─ manuscript/
 ```
 
-Where possible it is good practice to store output data (in `data`) either as human 
-readable CSV files, or as R serialized files 
-(generated using with the `saveRDS()` function).
+---
 
-It is common that raw data is large in size, which limits the option of storing
-the data in a git repository. If this isn't possible this data can be excluded
-from the git repository by explicitly adding directories to `.gitignore` to
-avoid accidentally adding them.
+### `data-raw` folder
 
-When dealing with heterogeneous systems dynamic paths can be set to (soft) link
-to raw-data outside the project directory.
+The `data-raw` folder contains unprocessed raw data and scripts to download or pre-process the data. These datasets require significant pre-processing before they can be used in analysis.
 
-### The data folder
+**Note:** This folder is currently empty. The raw data are stored in a separate shared directory outside the project to:
 
-The `data` folder contains analysis ready data. This is data which you can use,
-as is. This often contains the output of a `data-raw` pre-processing workflow,
-but can also include data which doesn't require any intervention, e.g. a land
-cover map which is used as-is. Output from `data-raw` often undergoes a
-dramatic dimensionality reduction and will often fit github file size limits. In
-some cases however some data products will still be too large, it is recommended
-to use similar practices as describe for `data-raw` to ensure transparency
-on the sourcing of this data (and reproducible acquisition).
+1. Prevent accidentally pushing large files to GitHub.
+2. Reduce memory usage and avoid duplicate work for group members.
 
-It is best to store data in transparently named sub-folders according to the
-product type, once more including references to the source of the data where
-possible. Once more, download scripts can be used to ensure this transparency
-as well.
+---
 
-```
-data/
-├─ data_product/
-├─ 00_download_data.R
-```
+### `data` folder
 
-### The analysis folder
+The `data` folder contains processed and analysis-ready datasets, intermediate outputs, figures, and statistics.
 
-The `analysis` folder contains, *surprise*, R scripts covering analysis of your
-analysis ready data (in the `data` folder). These are R scripts with output
-which is limited to numbers, tables and figures. It should not include R
-markdown code!
+* Subfolders are organized by analysis scripts.
+* The `figures` subfolder prefixes correspond to the source scripts in the `analysis` folder.
+* All intermediate and output datasets are stored outside the project directory to comply with GitHub size limits.
 
-It is often helpful to create additional sub-folders for statistics and figures,
-especially if figures are large and complex (i.e. visualizations, rather than
-graphical representations of statistical properties, such as maps). 
+---
 
-Scripts can have a numbered prefix to indicate an order of execution, but this
-is generally less important as you will work on analysis ready data. If there
-is carry over between analysis, either merge the two files or use numbered
-prefixes.
+### `analysis` folder
 
-```
-analysis/
-├─ statistics/
-│  ├─ 00_random_forest_model.R
-│  ├─ 01_random_forest_tuning.R
-├─ figures/
-│  ├─ global_model_results_map.R
-│  ├─ complex_process_visualization.R
-```
+The `analysis` folder contains R scripts, some of which may have a corresponding UBELIX batch file with the same filename prefix for alternatively execution on the UBELIX cluster. **Note:** Scripts such as `1_02` and `1_03`, which involve large datasets or computationally intensive processing, are best run on UBELIX.
 
-Output of the analysis routines can be written to file (`manuscript` folder) or
-visualized on the console or plot viewer panel.
+1. Pre-processing raw data.
+2. Performing statistical analyses.
+3. Generating plots.
 
-### The manuscript folder
+All outputs from these scripts are saved in the `data` folder.
 
-The `manuscript` folder contains a true working document often written in an 
-external word processing software. It also, at times, contain the output of 
-any analysis script, such as tables and rendered figures.
+The analysis is divided into **five main sessions**. **The first number in each script’s filename corresponds to the session it belongs to.**
 
-Thee can be an R markdown file if for example suitable templates can be found in
-the [`rticles`](https://pkgs.rstudio.com/rticles/) R package to facilitate 
-publication. However, the use of R markdown should be done with much care 
-(see notes on the `vignettes` folder). As before, use sub-folders to organize
-this work neatly.
+#### Data Pre-processing
 
-### The vignettes folder
+These scripts convert raw data from `data-raw` into analysis-ready datasets:
 
-The `vignettes` folder contains dynamic notebooks, i.e. R markdown files. 
+1. Topographic Wetness Index (TWI) and associated data (Marthews et al., 2015)
+2. Vegetation height data and associated variables (Lang et al., 2023)
+3. Copernicus Digital Elevation Model (GLO-30, ESA 2025)
+4. ESA Climate Change Initiative (CCI) Land Cover, 2020 (Copernicus Climate Change Service, 2019)
+5. Moisture Index (MI) (Zomer, Xu, and Trabucco, 2022)
+6. Mean air temperature (Marthews et al., 2015)
+7. Biome data (Dinerstein et al., 2017)
+8. Protected areas datasets (WDPA and WDOECM, UNEP-WCMC and IUCN, 2025)
 
-### Capturing your session state
+Script `99` handles plotting of cleaned datasets.
+**The second number in each script’s filename corresponds to the data type (1–8 above).**
 
-If you want to ensure full reproducibility you will need to capture the state of the system and libraries with which you ran the original analysis. Note that you will have to execute all code and required libraries for `renv` to correctly capture all used libraries.
+#### Session 2
 
-When setting up your project you can run:
+Analysis of correlation between vegetation height and TWI at the global scale.
 
-``` r
-# Initiate a {renv} environment
-renv::init()
-```
+#### Session 3
 
-To initiate your static R environment. Whenever you want to save the state of your project (and its packages) you can call:
+Analysis of correlation between vegetation height and topographic radiation index at the global scale.
 
-``` r
-# Save the current state of the environment / project
-renv::snapshot()
-```
+#### Session 4
 
-To save any changes made to your environment. All data will be saved in a project description file called a lock file (i.e. `renv.lock`). It is advised to update the state of your project regularly, and in particular before closing a project.
+Analysis of correlations under different land use regimes and climate conditions.
 
-When you move your project to a new system, or share a project on github with collaborators, you can revert to the original state of the analysis by calling:
+#### Session 5
 
-``` r
-# On a new system, or when inheriting a project
-# from a collaborator you can use a lock file
-# to restore the session/project state using
-renv::restore()
-```
+Regional validation of vegetation–topography relationships.
 
-> NOTE: As mentioned in the {renv} documentation: "For development and collaboration, the `.Rprofile`, `renv.lock` and `renv/activate.R` files should be committed to your version control system. But the `renv/library` directory should normally be ignored. Note that `renv::init()` will attempt to write the requisite ignore statements to the project `.gitignore`." We refer to \@ref(learning-objectives-6) for details on github and its use.
+---
 
+### `R` folder
+
+The `R` folder contains R functions used throughout the project.
+**Note:** This folder is for functions only, not analysis scripts.
+
+---
+
+### `manuscript` folder
+
+The `manuscript` folder is currently empty. It will contain the main working document of the project (e.g., Word, LaTeX, or R Markdown), including tables and figures generated by analysis scripts.
+
+---
+
+### `vignettes` folder
+
+The `vignettes` folder contains dynamic reports (R Markdown files).
+
+* Prefixes match the analysis scripts for easy cross-referencing.
+* These notebooks document key steps in data processing, analysis, and visualization.
+
+---
+
+### `src` folder
+
+The `src` folder is currently empty. It is intended for scripts in other languages (e.g., Bash, Python) that may be used in the project.
