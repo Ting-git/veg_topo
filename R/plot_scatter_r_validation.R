@@ -33,7 +33,7 @@ plot_scatter_r_validation <- function(r_30_5000,
     # Scatter points
     ggplot2::geom_point(ggplot2::aes(x = r_30_5000, y = r_450_5000),
                         alpha = 0.5,
-                        size = 0.8) +
+                        size = 1.5) +
     # Add trend line with confidence interval
     ggplot2::geom_smooth(ggplot2::aes(x = r_30_5000, y = r_450_5000),
                          method = "lm",           # Linear regression

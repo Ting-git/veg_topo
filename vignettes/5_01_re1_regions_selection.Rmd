@@ -31,7 +31,17 @@ library(sf)
 library(scico)
 
 # Load configuration and functions
-source(here::here("config.R"))
+
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+
+if (hostname == "dash") {
+  message("💻 Detected Workstation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
 source(here::here("R/plot_density_grid.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/plot_vegh.R"))

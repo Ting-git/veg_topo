@@ -1,13 +1,13 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="r_H_R_5km"
-#SBATCH --time=4:00:00 # ~8 min
+#SBATCH --job-name="sel_sam"
+#SBATCH --time=4:00:00 # ~10 min
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=35
-#SBATCH --mem=1000G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=300G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -41,8 +41,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 3_01_1_global_r_H_R_5km.R\n");
-source("3_01_1_global_r_H_R_5km.R")'
+cat("\nRunning script: 5_01_1_automaticlly_sampling_regions.R\n");
+source("5_01_1_automaticlly_sampling_regions.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

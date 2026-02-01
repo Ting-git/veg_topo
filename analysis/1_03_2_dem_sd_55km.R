@@ -22,7 +22,18 @@
 
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-source(here::here("config.R"))
+
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# other custom functions
 source(here::here("R/raster_preprocess_save.R"))
 
 message("Starting DEM standard deviation aggregation (450m → 0.5°)...")

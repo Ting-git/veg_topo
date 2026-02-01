@@ -33,6 +33,7 @@ twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir, "global_twi_450m_clea
 vegh_10m_tiles_dir <- file.path(veg_topo_extr_dir, "vegheight_lang_2023/data/3deg_cogs")  # Path for higher resolution data
 vegh_450m_tiles_dir <- file.path(veg_topo_extr_dir, "global_vegh_450m/3_3_deg")
 vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir, "global_vegh_450m/vegh_450m_2020_mosaic.nc")
+fveg_55km_path <- file.path(veg_topo_extr_dir, "global_fveg_55km/fveg_55km.nc")
 
 # 1_03 Elevation
 dem_30m_copernicus_dir <- file.path(veg_topo_extr_dir, "copernicus_dem_30m/copernicus_dem_30m")
@@ -52,25 +53,38 @@ sw_in_uneven_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_
 sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_flat_450m.tif")
 sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450m/sw_in_terrain_effect_450m.tif")
 
+  # elevation (SD and range)
+dem_sd_55km_path <- file.path(veg_topo_extr_dir, "global_dem_55km/dem_sd_55km.nc")
+dem_rg_98p_02p_55km_path <- file.path(veg_topo_extr_dir, "global_dem_55km/dem_rg_98p_02p_55km.nc") # range of elevation: 98p - 02p
+
 # 1_04 fraction of land cover
 fused_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fused_5km.nc")
 fbare_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fbare_5km.nc")
 fwater_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fwater_5km.nc") # fraction of water body
 fsnow_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fsnow_5km.nc") # fraction of permanent snow and ice
 
+fused_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fused_55km.nc")
+fbare_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fbare_55km.nc") # fraction of bare area
+fwater_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fwater_55km.nc") # fraction of water body
+fsnow_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fsnow_55km.nc") # fraction of permanent snow and ice
+
 # 1_05 Moisture index
 mi_5km_file <- file.path(veg_topo_extr_dir, "global_mi_5km/mi_5km.nc")
-
-valid_tiles_info_path <- file.path(project_root,"data/valid_tiles_info.rds")
-valid_tiles_vect_path <- file.path(project_root, "data/valid_tiles.gpkg")
+mi_55km_file <- file.path(veg_topo_extr_dir, "global_mi_55km/mi_55km.nc")
 
 # 1_06 Mean Annual temperature
-mat_55km_file <- file.path(veg_topo_extr_dir, "global_mat_55km/global_mat_55km_1970_2000.nc")
 mat_5km_file <- file.path(veg_topo_extr_dir, "global_mat_5km/global_mat_5km_1970_2000.nc")
+mat_55km_file <- file.path(veg_topo_extr_dir, "global_mat_55km/global_mat_55km_1970_2000.nc")
 
 # 1_07 BIOME
 ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
 ecoregion_5km_path <- file.path(veg_topo_extr_dir, "data/global_ecoregion_5km/Ecoregions2017_5km.nc")
+
+# 1_08 Protected area
+pa_shp0 <- file.path(veg_topo_extr_dir, "wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+pa_shp1 <- file.path(veg_topo_extr_dir, "wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_1/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+pa_shp2 <- file.path(veg_topo_extr_dir, "wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+fpa_55km_path <- file.path(veg_topo_extr_dir, "global_fpa_55km_2025/WDPA_WDOECM_Jul2025_55km.nc")
 
 # 2_01 Split  tiles for global correlation
 valid_tiles_info_path <- file.path(project_root,"data/valid_tiles_info.rds")

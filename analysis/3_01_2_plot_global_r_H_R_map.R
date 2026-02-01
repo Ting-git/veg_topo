@@ -59,6 +59,7 @@ p_r <- plot_r_H_R(
     legend.background = element_blank(),
     legend.box.background = element_blank()
   )
+
 # save
 ggsave(
   filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_map.png"),
@@ -67,6 +68,16 @@ ggsave(
   height = 6,
   dpi = 600,
   units = "in"
+)
+
+# save for presentation
+ggsave(
+  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_map.svg"),
+  plot = p_r,
+  width = 14,
+  height = 6,
+  device = "svg",
+  bg = "transparent"
 )
 
 # --------- plot P value ----------------------------

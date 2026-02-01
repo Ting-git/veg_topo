@@ -1,6 +1,6 @@
 #! /usr/bin/bash -l
 #SBATCH --job-name="r_H_TWI_5km"
-#SBATCH --time=4:00:00
+#SBATCH --time=4:00:00 # ~8 min
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1

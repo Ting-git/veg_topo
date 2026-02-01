@@ -58,7 +58,7 @@ sw_in_flat_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_
 sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_in_450m/sw_in_terrain_effect_450m.nc") # Radiation index r_terrain/r_flat
 
   # elevation (SD and range)
-dem_sd_55km_path <- file.path(veg_topo_extr_dir, "/data/global_dem_55km/dem_sd_55km.nc")
+dem_sd_55km_path <- file.path(veg_topo_extr_dir, "data/global_dem_55km/dem_sd_55km.nc")
 dem_rg_98p_02p_55km_path <- file.path(veg_topo_extr_dir, "data/global_dem_55km/dem_rg_98p_02p_55km.nc") # range of elevation: 98p - 02p
 
 # 1_04 fraction of land cover

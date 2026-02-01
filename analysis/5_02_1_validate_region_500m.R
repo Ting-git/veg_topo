@@ -59,9 +59,9 @@ source(here::here("R/plot_cci_land_cover.R"))
 source(here::here("R/plot_scatter_r_validation.R"))
 # Optional (uncomment if needed)
 
-# source(here::here("R/plot_aspect.R"))
-# source(here::here("R/plot_slope.R"))
-# source(here::here("R/plot_sw_in.R"))
+source(here::here("R/plot_aspect.R"))
+source(here::here("R/plot_slope.R"))
+source(here::here("R/plot_sw_in.R"))
 
 
 # ------ File Configuration ---------------------------------------------
@@ -141,6 +141,8 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     stacked <- c(twi_rc, vegh_rc)
     df_win <- create_spatial_windows(stacked, value_vars = c("twi", "vegh"), dwin = 0.005)
     df_cor <- calculate_correlation_bywin(df_win, x = "twi", y = "vegh")
+
+    p_H_TWI_30 <- plot_hex_scatter(df_win,x_var="twi",y_var = "vegh", x_text = "Topographic wetness index", y_text = "Vegetation height (m)", text_size = text_size, title_text="TWI vs H at 30 m")
 
     # --- Save correlation ---
     corA_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type="xyz", crs="EPSG:4326")
@@ -263,6 +265,8 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     df_win <- create_spatial_windows(stacked, value_vars = c("rin", "vegh"), dwin = 0.005)
     df_cor <- calculate_correlation_bywin(df_win, x = "rin", y = "vegh")
 
+    p_H_R_30 <- plot_hex_scatter(df_win,x_var="rin",y_var = "vegh", x_text = "Topographic radaition index", y_text = "Vegetation height (m)", text_size = text_size, title_text="Rin vs H at 30 m")
+
     # --- Save correlation ---
     corB_r <- terra::rast(df_cor[, c("lon_mid", "lat_mid", "correlation")], type = "xyz", crs = "EPSG:4326")
     names(corB_r) <- "r_H_R"
@@ -377,7 +381,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
       theme(
         plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
         plot.tag.position = c(0.13, 1)
-      ) + re_theme0 + ggplot2::theme(plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
+      ) + ggplot2::theme(aspect.ratio = 1, plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
 
     p_google <- plot_google_img(extent = reg_extent, title_text = "   Google Satellite Map", text_size = text_size, x_step = x_step, y_step = y_step) +
       labs(tag = "b)") +
@@ -467,8 +471,81 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
         legend.background = element_blank(),
         legend.box.background = element_blank()
       )
+
     out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.png")))
     ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, dpi = 600)
+
+    out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.svg")))
+    ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, device = "svg", bg = "transparent")
+
+    # --- additional plots ---
+    p_vegh450 <- plot_vegh(vegh_450m_mosaic_path, extent = reg_extent, title_text = expression("   450-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
+
+    p_twi450 <- plot_twi(twi_450m_mosaic_clean_path, extent = reg_extent, title_text = "   450-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.13, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+
+    p_slope30 <- plot_slope(file.path(output_dir, paste0("reg_", reg_id, "_slope_30m.nc")), extent = reg_extent, title_text = "   30-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.13, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+
+    p_slope450 <- plot_slope(slope_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    p_aspect30 <- plot_aspect(file.path(output_dir, paste0("reg_", reg_id, "_aspect_30m.nc")), extent = reg_extent,  title_text <- "30-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    p_aspect450 <- plot_aspect(aspect_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    p_rin450 <- plot_rin(sw_in_terrain_effect_450m_path, extent = reg_extent,  title_text <- "450-m Rin", text_size = text_size, x_step = x_step, y_step = y_step) +
+      labs(tag = "") +
+      theme(
+        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+        plot.tag.position = c(0.06, 1)
+      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+
+    final_plot2 <- patchwork::wrap_plots(
+      p_vegh450, p_twi450, p_rin450, patchwork::plot_spacer(),
+      p_slope30, p_slope450, p_aspect30, p_aspect450,
+      ncol = 4, nrow = 2
+    ) &
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_blank(),
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+      )
+
+    out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_7plots.png")))
+    ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8, dpi = 600)
+
+    out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_7plots.svg")))
+    ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8, device = "svg", bg = "transparent")
+
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
@@ -485,18 +562,22 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 }
 
 # ------------ validation region define ----------------------------------------
+# all samples regions from 5_01
+reg_info_all_samples <- readRDS(reg_sample_info_path)
+print(reg_info_all_samples )
+
+# select 6 samples from 5_01 combined all MI bins and abs_lat bins
 reg_info1 <- readRDS(reg_sample_info_path) |>
   select(ends_with("label"), ends_with("min"), ends_with("max"), -starts_with("dem")) |>
   slice(c(1, 3, 5, 9, 13, 15))
+print(reg_info1)
 
-reg_info <- readRDS(reg_sample_info_path)
 reg_info2 <- tribble(
   ~strata_label,                        ~ymin,   ~ymax,   ~xmin,     ~xmax,
-
+  "hyper_arid_low_lat_rugged_relief", -9,  -8.5,      38,      38.5,
   "b1_Loetschental",                    46.4,    46.5,      7.8,       7.9,
   "b3_equatorial_rainforest_CongoBasin",-1.0,    -0.5,     17.0,      17.5,
   "a1_waterlogged_pantanal",            -17.5,   -16.5,   -57.5,     -56.5,
-  "1_hyper_arid_1_low_lat_rugged_relief", -9,  -8.5,      38,      38.5,
   "b25_Finland",                        67.5,    68.5,     25,        26,
   "b26_Monte_Alen_Guiana",          1.2,       1.7,      9.8,        10.3,
   "a19_arctic_tundra_alaska",           68.5,    69,   -146,    -145.5,
@@ -572,10 +653,14 @@ reg_info2 <- tribble(
 
 reg_info <- bind_rows(reg_info1, reg_info2)
 
-# ----------- Test on single regions -----------------------------
-# process_reg_500m(reg_info[3, ])
+# ----------- Process sample regionsand other validation regions-----------------------------
+# process_reg_500m(reg_info[8, ]) # smallest one, best for single region test
 
-for (i in 1:13) {
+for (i in 1:6) {
+  process_reg_500m(reg_info[i, ])
+}
+
+for (i in 7:13) {
   process_reg_500m(reg_info[i, ])
 }
 
@@ -585,7 +670,7 @@ for (i in 14:66) {
 
 # # ----------- Test on smaller regions -----------------------------
 # reg_info <- data.frame(
-#   strata_label = c("Loetschental"),
+#   strata_label = c("b1_Loetschental"),
 #   ymin = c(46.4),
 #   ymax = c(46.5),
 #   xmin = c(7.8),
@@ -604,7 +689,7 @@ for (i in 14:66) {
 # text_size = 14
 
 
-# # 逐个打印每个图形
+# # print the plots one by one
 # print(p_location)
 # print(p_google)
 # print(p_dem)
@@ -617,19 +702,11 @@ for (i in 14:66) {
 # print(p_rA2)
 # print(p_validB)
 # print(p_rB2)
-
+# print(p_aspect30)
+# print(p_aspect450)
+# print(p_slope30)
+# print(p_slope450)
+# print(p_H_R_30)
+# print(p_H_TWI_30)
 #
-# # ---- Combine plots 1----
-# final_plot2 <- wrap_plots(p_pvA, p_pvB, p_rA2, p_rB2,
-#                           p_mi, p_kg, p_cluster, p_cci,
-#                           ncol = 4, nrow = 2
-# ) &
-#   theme(
-#     panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-#     plot.background  = element_blank(),                            # plot 外部透明
-#     legend.background = element_blank(),
-#     legend.box.background = element_blank()
-#   )
-# out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_8plots_s.png")))
-# ggsave(filename = out_file2, plot = final_plot2, width = 16, height = 8.5, dpi = 600)
 
