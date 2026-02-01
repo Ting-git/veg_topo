@@ -79,9 +79,8 @@ rsync --human-readable -i --info=progress2 -avhP \
 rsync --human-readable -i --info=progress2 -avhP \
   --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
   --no-owner --no-group \
-  --include="*/" --include="*Map.tif" --exclude="*" \
-  /data_2/archive/vegheight_lang_2023/ \
-  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/vegheight_lang_2023/
+  /data_2/archive/vegheight_lang_2023 \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
 
 # DEM 30m
 rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
