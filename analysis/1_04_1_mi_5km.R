@@ -17,12 +17,24 @@
 library(terra)
 library(here)
 
-# Load configuration and helper functions
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# Load custom functions
 source(here::here("R/raster_preprocess_save.R"))
 
-message("🌍 Starting Moisture Index aggregation: 950m → 5km...")
+# Create output directory
+if (!dir.exists(dirname(mi_5km_file))) dir.create(dirname(mi_5km_file), recursive = TRUE)
+message("✅  Output directory:", dirname(mi_5km_file))
 
+message("🌍 Starting Moisture Index aggregation: 950m → 5km...")
 # -------------------- 2. Aggregation & Resampling -----------------------------
 message("🔧 Aggregating MI raster and resampling to reference grid...")
 

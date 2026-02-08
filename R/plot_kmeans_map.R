@@ -5,7 +5,7 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
   land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
 
   # Reorder cluster_value and cluster_labels with an defined order
-  load(here::here("data/cluster_data.RData")) # cluster_values, cluster_labels
+  # load(here::here("data/cluster_data.RData")) # cluster_values, cluster_labels
 
   # fill_color for dry to wet cluster
   fill_colors <- c(

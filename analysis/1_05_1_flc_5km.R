@@ -1,5 +1,4 @@
 # ==============================================================================
-# 03_1_1_flc_5km.R
 #
 # Purpose:
 #   Process global land cover tiles to calculate fractions of:
@@ -27,23 +26,37 @@ library(purrr)
 library(furrr)
 library(fs)
 
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+  workers = 8
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+  workers = 49
+}
+
+# Load custom functions
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_fraction_land_cover.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
+# Create output directory
+if (!dir.exists(flc_tile_dir)) dir.create(flc_tile_dir, recursive = TRUE)
+message("✅ Tile output directory: ", flc_tile_dir)
+
 message("🌍 Starting land-cover fraction pipeline...")
 
 # -------------------- 2. Load Tile Information --------------------------------
 tiles_info <- readRDS(valid_tiles_info_path)
-tile_output_dir <- file.path(veg_topo_extr_dir, "data/global_flc_5km/30_30_deg")
-if (!dir.exists(tile_output_dir)) dir.create(tile_output_dir, recursive = TRUE)
-message("✅ Tile output directory: ", tile_output_dir)
+tile_output_dir <- flc_tile_dir
 
 # -------------------- 3. Parallel Tile Processing -----------------------------
 gc()
-plan(multisession, workers = 8)
+plan(multisession, workers = workers)
 t_start <- Sys.time()
 message("⏱ Pipeline started at: ", format(t_start, "%Y-%m-%d %H:%M:%S"))
 

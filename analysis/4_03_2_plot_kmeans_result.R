@@ -24,8 +24,15 @@ library(sf)           # vector data handling
 # 2. Load configuration and custom functions
 # ========================================================
 
-# Paths, global extent, and shared parameters
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
 
 # Reusable plotting utilities
 source(here::here("R/plot_box_or_violin.R"))
@@ -51,7 +58,6 @@ fused_5km_r
 cor_twi_vegh_5km_r
 kmeans_8c_r
 ecoregion_r
-
 
 # ========================================================
 # 4. Raster stacking and dataframe conversion
@@ -262,6 +268,7 @@ p_bar <- ggplot(
     axis.text.x     = element_blank()
   ) +
   labs(
+    x = "Cluster",
     y   = "Percentage (%)",
     tag = "e)"
   )
@@ -292,6 +299,7 @@ ggsave(
   dpi      = 600,
   units    = "in"
 )
+
 
 # ========================================================
 # 11. Individual cluster maps (1–8)
@@ -340,7 +348,6 @@ ggsave(
   dpi      = 600,
   units    = "in"
 )
-
 
 # ========================================================
 # 12. Biome composition (absolute counts)
@@ -403,3 +410,4 @@ ggsave(
   height   = 14,
   dpi      = 300
 )
+

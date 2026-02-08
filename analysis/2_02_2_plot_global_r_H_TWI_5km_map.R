@@ -72,14 +72,6 @@ ggsave(
   units = "in"
 )
 
-ggsave(
-  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_map.svg"),
-  plot = p_cor,
-  width = 14,
-  height = 6,
-  device = "svg",
-  bg = "transparent"
-)
 
 # --------- plot P value ----------------------------
 

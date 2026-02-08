@@ -23,11 +23,25 @@
 
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-source(here::here("config.R"))
+
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# Load custom functions
 source(here::here("R/raster_preprocess_save.R"))
 
-message("🌍 Starting Mean Annual Temperature (MAT) aggregation...")
+# Create output directory
+if (!dir.exists(dirname(mat_55km_file))) dir.create(dirname(mat_55km_file), recursive = TRUE)
+message("Output directory:", dirname(mat_55km_file))
 
+message("🌍 Starting Mean Annual Temperature (MAT) aggregation...")
 # -------------------- 2. Load & Compute MAT -----------------------------------
 message("📦 Loading monthly WorldClim rasters and computing annual mean...")
 

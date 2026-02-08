@@ -70,15 +70,7 @@ ggsave(
   units = "in"
 )
 
-# save for presentation
-ggsave(
-  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_map.svg"),
-  plot = p_r,
-  width = 14,
-  height = 6,
-  device = "svg",
-  bg = "transparent"
-)
+
 
 # --------- plot P value ----------------------------
 

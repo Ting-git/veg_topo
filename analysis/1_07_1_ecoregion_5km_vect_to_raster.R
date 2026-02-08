@@ -20,8 +20,11 @@ library(sf)
 # Load configuration and helper functions
 source(here::here("config.R"))
 
-message("🌍 Starting ecoregion rasterization...")
+# Create output directory
+if (!dir.exists(dirname(ecoregion_5km_path))) dir.create(dirname(ecoregion_5km_path), recursive = TRUE)
+message("✅  Output directory:", dirname(ecoregion_5km_path))
 
+message("🌍 Starting ecoregion rasterization...")
 # -------------------- 2. Rasterization ----------------------------------------
 # Read target raster (for matching resolution/extent)
 r_tar <- rast(cor_twi_vegh_mosaic_file)[[1]]

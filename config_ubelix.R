@@ -57,7 +57,12 @@ sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "global_sw_in_450
 dem_sd_55km_path <- file.path(veg_topo_extr_dir, "global_dem_55km/dem_sd_55km.nc")
 dem_rg_98p_02p_55km_path <- file.path(veg_topo_extr_dir, "global_dem_55km/dem_rg_98p_02p_55km.nc") # range of elevation: 98p - 02p
 
-# 1_04 fraction of land cover
+# 1_04 Moisture index
+mi_5km_file <- file.path(veg_topo_extr_dir, "global_mi_5km/mi_5km.nc")
+mi_55km_file <- file.path(veg_topo_extr_dir, "global_mi_55km/mi_55km.nc")
+
+# 1_05 fraction of land cover
+flc_tile_dir <- file.path(veg_topo_extr_dir, "global_flc_5km/30_30_deg")
 fused_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fused_5km.nc")
 fbare_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fbare_5km.nc")
 fwater_5km_file <- file.path(veg_topo_extr_dir, "global_flc_5km/fwater_5km.nc") # fraction of water body
@@ -68,17 +73,13 @@ fbare_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fbare_55km.nc")
 fwater_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fwater_55km.nc") # fraction of water body
 fsnow_55km_file <- file.path(veg_topo_extr_dir, "global_flc_55km/fsnow_55km.nc") # fraction of permanent snow and ice
 
-# 1_05 Moisture index
-mi_5km_file <- file.path(veg_topo_extr_dir, "global_mi_5km/mi_5km.nc")
-mi_55km_file <- file.path(veg_topo_extr_dir, "global_mi_55km/mi_55km.nc")
-
 # 1_06 Mean Annual temperature
 mat_5km_file <- file.path(veg_topo_extr_dir, "global_mat_5km/global_mat_5km_1970_2000.nc")
 mat_55km_file <- file.path(veg_topo_extr_dir, "global_mat_55km/global_mat_55km_1970_2000.nc")
 
 # 1_07 BIOME
-ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
-ecoregion_5km_path <- file.path(veg_topo_extr_dir, "data/global_ecoregion_5km/Ecoregions2017_5km.nc")
+ecoregion_path <- file.path(veg_topo_extr_dir, "ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
+ecoregion_5km_path <- file.path(veg_topo_extr_dir, "global_ecoregion_5km/Ecoregions2017_5km.nc")
 
 # 1_08 Protected area
 pa_shp0 <- file.path(veg_topo_extr_dir, "wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
@@ -102,7 +103,6 @@ pval_r_H_R_5km_path <- file.path(veg_topo_extr_dir, "global_r_H_R_5km/pval_r_H_R
 
 # 4_03 Kmeans clustering
 kmeans_map_8c_path <- file.path(veg_topo_extr_dir, "global_kmeans_5km/kmeans_corth_fused_mi_5km_8c.nc")
-
 
 # 5_01 Random sample region extent
 reg_sample_dir <- file.path(veg_topo_extr_dir, "reg_sample")

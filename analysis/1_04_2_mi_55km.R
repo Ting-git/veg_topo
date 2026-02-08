@@ -12,11 +12,24 @@
 
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-source(here::here("config.R"))
+
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# Load custom functions
 source(here::here("R/raster_preprocess_save.R"))
 
+# Create output directory
+if (!dir.exists(dirname(mi_55km_file))) dir.create(dirname(mi_55km_file), recursive = TRUE)
+message("Output directory:", dirname(mi_55km_file))
 message("Starting moisture index aggregation (0.05° → 0.5°)...")
-
 # -------------------- 2. Load Input Raster ------------------------------------
 message("Loading 5km moisture index raster...")
 r_in <- terra::rast(mi_5km_file)

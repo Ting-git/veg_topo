@@ -55,6 +55,11 @@ rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data/global_dem_slope_aspect_450m \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
 
+# ecoregion_5km
+rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
+  /data_2/scratch/ting/veg_topo_data/data/global_ecoregion_5km \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
 # TWI 30m
 rsync -avhP --info=progress2 --no-owner --no-group \
   --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
@@ -72,8 +77,8 @@ rsync --human-readable -i --info=progress2 -avhP \
 rsync --human-readable -i --info=progress2 -avhP \
   --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
   --no-owner --no-group \
-  /data/archive/landcover_defourny_2023/ \
-  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/landcover_defourny_2023/
+  /data/archive/landcover_defourny_2023 \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
 
 # VEGH 10m
 rsync --human-readable -i --info=progress2 -avhP \
@@ -87,10 +92,12 @@ rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m/ \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/copernicus_dem_30m/
 
-# WDPA: Protected area
+# WDPA: world database on Protected area
 rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025 \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/
+
+
 
 # dem 55km: dem_sd_55km, dem_rg_55km
 rsync -avhP --info=progress2 --no-perms --no-owner --no-group \

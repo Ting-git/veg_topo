@@ -61,7 +61,13 @@ sw_in_terrain_effect_450m_path <- file.path(veg_topo_extr_dir, "data/global_sw_i
 dem_sd_55km_path <- file.path(veg_topo_extr_dir, "data/global_dem_55km/dem_sd_55km.nc")
 dem_rg_98p_02p_55km_path <- file.path(veg_topo_extr_dir, "data/global_dem_55km/dem_rg_98p_02p_55km.nc") # range of elevation: 98p - 02p
 
-# 1_04 fraction of land cover
+# 1_04 Moisture index
+mi_950m_file <- file.path("/data/archive/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
+mi_5km_file <- file.path(veg_topo_extr_dir, "data/global_mi_5km/mi_5km.nc")
+mi_55km_file <- file.path(veg_topo_extr_dir, "data/global_mi_55km/mi_55km.nc")
+
+# 1_05 fraction of land cover
+flc_tile_dir <- file.path(veg_topo_extr_dir, "data/global_flc_5km/30_30_deg")
 fused_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fused_5km.nc")
 fbare_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fbare_5km.nc") # fraction of bare area
 fwater_5km_file <- file.path(veg_topo_extr_dir, "data/global_flc_5km/fwater_5km.nc") # fraction of water body
@@ -71,12 +77,6 @@ fused_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fused_55km
 fbare_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fbare_55km.nc") # fraction of bare area
 fwater_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fwater_55km.nc") # fraction of water body
 fsnow_55km_file <- file.path(veg_topo_extr_dir, "data/global_flc_55km/fsnow_55km.nc") # fraction of permanent snow and ice
-
-# 1_05 Moisture index
-mi_950m_file <- file.path("/data/archive/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
-
-mi_5km_file <- file.path(veg_topo_extr_dir, "data/global_mi_5km/mi_5km.nc")
-mi_55km_file <- file.path(veg_topo_extr_dir, "data/global_mi_55km/mi_55km.nc")
 
 # 1_06 Mean Annual temperature
 mat_55km_file <- file.path(veg_topo_extr_dir, "data/global_mat_55km/global_mat_55km_1970_2000.nc")

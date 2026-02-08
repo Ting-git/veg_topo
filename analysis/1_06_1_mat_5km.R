@@ -14,10 +14,22 @@
 library(terra)
 library(here)
 
-# Load configuration and helper functions
-source(here::here("config.R"))
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
+# Load custom functions
 source(here::here("R/raster_preprocess_save.R"))
 
+# Create output directory
+if (!dir.exists(dirname(mat_5km_file))) dir.create(dirname(mat_5km_file), recursive = TRUE)
+message("Output directory:", dirname(mat_5km_file))
 # ------ Load Data and Compute Annual Mean Temperature -------------------------
 
 # Folder containing the monthly .tif files

@@ -21,11 +21,24 @@
 
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
-source(here::here("config.R"))
+
+# Automatically select configuration file
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  message("💻 Detected Worksation: dash → using config.R")
+  source(here::here("config.R"))
+} else {
+  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
+  source(here::here("config_ubelix.R"))
+}
+
 source(here::here("R/raster_preprocess_save.R"))
 
-message("Starting fused raster aggregation (0.05° → 0.5°)...")
+# Create output directory
+if (!dir.exists(dirname(fused_55km_file))) dir.create(dirname(fused_55km_file), recursive = TRUE)
+message("✅ Output directory:", dirname(fused_55km_file))
 
+message("Starting fused raster aggregation (0.05° → 0.5°)...")
 # -------------------- 2. Aggregation & Resampling -----------------------------
 
 input_files <- c(fused_5km_file, fbare_5km_file, fwater_5km_file, fsnow_5km_file)

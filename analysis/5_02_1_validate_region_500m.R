@@ -431,12 +431,32 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
         plot.tag.position = c(0.06, 1)
       ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
 
-    p_validA <- plot_scatter_r_validation(file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")), cor_twi_vegh_mosaic_file, title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]), text_size = text_size) +
+    # ---- x=r30; y=r450 ----
+    p_validA <- plot_scatter_r_validation(input_x = file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")),
+                                          input_y = cor_twi_vegh_mosaic_file,
+                                          title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]),
+                                          x_text = expression(r[30]),
+                                          y_text = expression(r[450]),
+                                          text_size = text_size) +
       labs(tag = "i)") +
       theme(
         plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
         plot.tag.position = c(0.13, 1)
       ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 20, b = 0, l = 0))
+
+    # ---- x=r450; y=r30 ----
+    # p_validA <- plot_scatter_r_validation(input_x = cor_twi_vegh_mosaic_file,
+    #                                       input_y = file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")),
+    #                                       title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]),
+    #                                       x_text = expression(r[450]),
+    #                                       y_text = expression(r[30]),
+    #                                       text_size = text_size) +
+    #   labs(tag = "i)") +
+    #   theme(
+    #     plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
+    #     plot.tag.position = c(0.13, 1)
+    #   ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 20, b = 0, l = 0))
+
 
     p_rA2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = reg_extent, title_text = bquote("   5-km Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
       labs(tag = "j)") +
@@ -655,6 +675,7 @@ reg_info <- bind_rows(reg_info1, reg_info2)
 
 # ----------- Process sample regionsand other validation regions-----------------------------
 # process_reg_500m(reg_info[8, ]) # smallest one, best for single region test
+# process_reg_500m(reg_info[3, ])
 
 for (i in 1:6) {
   process_reg_500m(reg_info[i, ])

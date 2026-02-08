@@ -52,7 +52,7 @@ plot_density_grid(
   nrow = 1,
   width = 6,
   height = 2,
-  save_path = here::here("data/figures/03_4_kmeans_data_raw_ds.png")
+  save_path = here::here("data/figures/4_03_1_kmeans_data_raw_ds.png")
 )
 
 # ----Data-Pre----
@@ -81,7 +81,7 @@ plot_density_grid(
   nrow = 1,
   width = 7,
   height = 2.5,
-  save_path = here::here("data/figures/03_4_kmeans_data_pre_ds.png")
+  save_path = here::here("data/figures/4_03_1_kmeans_data_pre_ds.png")
 )
 
 # ----K-Means----

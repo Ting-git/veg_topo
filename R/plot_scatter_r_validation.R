@@ -1,25 +1,26 @@
-plot_scatter_r_validation <- function(r_30_5000,
-                                      r_450_5000,
-                                      text_size = 6,
+# ---- x=r30,y=r450 -----
+plot_scatter_r_validation <- function(input_x,
+                                      input_y,
                                       title_text = "Comparison r",
                                       x_text = expression(r[30]),
-                                      y_text = expression(r[450])
+                                      y_text = expression(r[450]),
+                                      text_size = 6
 ) {
 
   # ---- Load raster ----
-  if (is.character(r_30_5000)) r_30_5000 <- terra::rast(r_30_5000)
-  if (!inherits(r_30_5000, "SpatRaster")) stop("r_30_5000 must be a SpatRaster or valid file path.")
+  if (is.character(input_x)) input_x <- terra::rast(input_x)
+  if (!inherits(input_x, "SpatRaster")) stop("input_x must be a SpatRaster or valid file path.")
 
-  if (is.character(r_450_5000)) r_450_5000 <- terra::rast(r_450_5000)
-  if (!inherits(r_450_5000, "SpatRaster")) stop("r_450_5000 must be a SpatRaster or valid file path.")
+  if (is.character(input_y)) input_y <- terra::rast(input_y)
+  if (!inherits(input_y, "SpatRaster")) stop("input_y must be a SpatRaster or valid file path.")
 
   # ---- Handle extent and resampling ----
-  r_450_5000 <- terra::resample(r_450_5000, r_30_5000, method = "near")
+  input_y <- terra::resample(input_y, input_x, method = "near")
 
   # ---- Create dataframe ----
-  stacked <- c(r_30_5000, r_450_5000)
+  stacked <- c(input_x, input_y)
   df <- as.data.frame(stacked, xy = FALSE, na.rm = FALSE)
-  colnames(df) <- c("r_30_5000", "r_450_5000")
+  colnames(df) <- c("input_x", "input_y")
   df_clean <- na.omit(df)  # 移除NA值
 
   df_clean
@@ -31,11 +32,11 @@ plot_scatter_r_validation <- function(r_30_5000,
                          linetype = "dashed",
                          linewidth = 0.5) +
     # Scatter points
-    ggplot2::geom_point(ggplot2::aes(x = r_30_5000, y = r_450_5000),
+    ggplot2::geom_point(ggplot2::aes(x = input_x, y = input_y),
                         alpha = 0.5,
                         size = 1.5) +
     # Add trend line with confidence interval
-    ggplot2::geom_smooth(ggplot2::aes(x = r_30_5000, y = r_450_5000),
+    ggplot2::geom_smooth(ggplot2::aes(x = input_x, y = input_y),
                          method = "lm",           # Linear regression
                          formula = y ~ x,         # Formula
                          se = TRUE,               # Show confidence interval
@@ -43,6 +44,7 @@ plot_scatter_r_validation <- function(r_30_5000,
                          fill = "lightblue",      # Confidence interval fill color
                          alpha = 0.3,             # Transparency
                          linewidth = 0.8) +       # Line width
+
     # Labels
     ggplot2::labs(
       title = title_text,

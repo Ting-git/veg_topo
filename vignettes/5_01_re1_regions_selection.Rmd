@@ -276,7 +276,7 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 
 text_size <- 12
 
-ggplot(data = world) +
+p_loc <- ggplot(data = world) +
   geom_sf(fill = "gray95", color = "gray70") +
   geom_point(
     data = reg_info,
@@ -299,9 +299,60 @@ ggplot(data = world) +
     plot.title = element_text(size = text_size * 1.2, face = "bold", margin = margin(b = 3)),
     plot.title.position = "panel",
     panel.grid.major = element_line(color = "gray80", linewidth = 0.5),
-    panel.grid.minor = element_line(color = "gray90", linewidth = 0.25)
+    panel.grid.minor = element_line(color = "gray90", linewidth = 0.25),
+    axis.line = element_blank()
+  )
+reg_info
+ggsave(
+  filename = here::here("data/figures/5_01_sample_region_location.svg"),
+  plot     = p_loc,
+  width    = 10,
+  height   = 5,
+  device = "svg",
+  bg = "transparent"
+)
+```
+
+```{r plot_6location}
+reg_info1 <- reg_info |>
+  slice(c(1, 3, 5, 9, 13, 15))
+reg_info1
+
+p_loc6 <- ggplot(data = world) +
+  geom_sf(fill = "gray95", color = "gray70") +
+  geom_point(
+    data = reg_info1,
+    aes(x = xmid, y = ymid, color = strata_label),
+    size = 1.5
+  ) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-60, 90), expand = FALSE) +
+  labs(
+    title = "Location of Sample Region",
+    color = "Region"
+  ) +
+  scale_color_scico_d(palette = "batlow") + 
+  theme_bw(base_size = text_size) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(size = text_size * 0.8, vjust = 1),
+    axis.text.y = element_text(size = text_size * 0.8, hjust = 0.5, vjust = 0.5),
+    plot.title = element_text(size = text_size * 1.2, face = "bold", margin = margin(b = 3)),
+    plot.title.position = "panel",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_blank()
   )
 
+ggsave(
+  filename = here::here("data/figures/5_01_sample_region_location_6s.svg"),
+  plot     = p_loc6,
+  width    = 12,
+  height   = 5,
+  device = "svg",
+  bg = "transparent"
+)
 ```
 
 ```{r}

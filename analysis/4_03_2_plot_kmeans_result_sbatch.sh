@@ -1,12 +1,12 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="validation"
-#SBATCH --time=24:00:00 # ~ more than 12 h
+#SBATCH --job-name="map_kmeans"
+#SBATCH --time=2:00:00 # ~ 10 min
+#SBATCH --ntasks=1
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=300G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -41,8 +41,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 5_02_1_validate_region_500m.R\n");
-source("5_02_1_validate_region_500m.R")'
+cat("\nRunning script: 4_03_2_plot_kmeans_result.R\n");
+source("4_03_2_plot_kmeans_result.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
@@ -56,3 +56,4 @@ echo "=================================================="
 # Exit with the same status as the R script
 exit $EXIT_STATUS
 
+#
