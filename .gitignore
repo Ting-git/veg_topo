@@ -22,6 +22,7 @@
 R-proj-template.Rproj
 
 # produced figures and other data
+data/*/
 data/figures/
 data/*.csv
 data/*.rds
