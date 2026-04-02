@@ -6,16 +6,7 @@
 #     - Bare ground (fbare)
 #     - Water (fwater)
 #     - Snow/ice (fsnow)
-#   at 5km resolution. Steps:
-#     1. Setup environment and directories
-#     2. Load tile information and helper functions
-#     3. Parallel process each tile to compute fractions
-#     4. Save tile-level results
-#     5. Mosaic all tiles into a global map
-#     6. Resample to reference raster and Save final global outputs as NetCDF
-#     7. Clean intermediate files
-#
-# Dependencies: terra, dplyr, tidyr, purrr, furrr, fs
+#   at 5km resolution.
 # ==============================================================================
 
 # -------------------- 1. Setup Environment ------------------------------------
@@ -31,15 +22,16 @@ hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   message("💻 Detected Worksation: dash → using config.R")
   source(here::here("config.R"))
-  workers = 8
+  workers = 8 # ~20 min
 } else {
   message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
   source(here::here("config_ubelix.R"))
-  workers = 49
+  workers = 49 # ~8 min
 }
 
 # Load custom functions
 source(here::here("R/create_spatial_windows.R"))
+source(here::here("R/create_aligned_template.R"))
 source(here::here("R/calculate_fraction_land_cover.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
@@ -49,7 +41,6 @@ if (!dir.exists(flc_tile_dir)) dir.create(flc_tile_dir, recursive = TRUE)
 message("✅ Tile output directory: ", flc_tile_dir)
 
 message("🌍 Starting land-cover fraction pipeline...")
-
 # -------------------- 2. Load Tile Information --------------------------------
 tiles_info <- readRDS(valid_tiles_info_path)
 tile_output_dir <- flc_tile_dir
@@ -111,22 +102,28 @@ message("🗺 Mosaicing all tiles into global raster...")
 mosaic_r <- mosaic_tiles(input_dir = tile_output_dir)
 message("✅ Mosaic created successfully.")
 
-# -------------------- 5. Resample to Reference Raster -------------------------
-# Set output files and varnames for seperately saving
+# -------------------- 5. Save to Single Layer Raster -------------------------
+# Set output files and variable names
 output_files <- c(fused_5km_file, fbare_5km_file, fwater_5km_file, fsnow_5km_file)
 varnames     <- c("fused", "fbare", "fwater", "fsnow")
 
-message("🔧 Resampling mosaic to match reference raster...")
+message("🔧 Saving single-layer rasters...")
+
+# Create template raster aligned to 5km grid
+align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
+
+# Resample and save rasters
 raster_preprocess_save(
   input            = mosaic_r,
   output           = output_files,
-  target           = cor_twi_vegh_mosaic_file,
+  target           = align_template_5km,
   varname          = varnames,
   if_aggregate     = FALSE,
   if_resample      = TRUE,
   if_return_raster = FALSE
 )
-message("✅ Resampling completed.")
+
+message("✅ Saved single-layer rasters.")
 
 # -------------------- 6. Cleanup Intermediate Tiles ---------------------------
 tiles_path <- fs::dir_ls(path = tile_output_dir, glob = "*.nc")
