@@ -29,6 +29,10 @@ fveg_450m_mosaic <- mosaic_tiles(
   )
 
 tictoc::toc()
-# check result
+
+# ----------------- Check result (Optional) -----------------
 # r <- rast(vegh_450m_mosaic_path)
 # plot(r)
+
+# ----------------- Delete intermedia files  (Optional) -----------------
+# unlink(vegh_450m_tiles_dir, recursive = TRUE)

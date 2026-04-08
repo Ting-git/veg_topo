@@ -29,18 +29,23 @@ r_out <- raster_preprocess_save(
   output       = fveg_55km_path,
   target       = align_template_55km,
   varname      = "fveg",
-  if_aggregate = TRUE,
-  if_resample  = TRUE,
+  if_zonal = TRUE,
+  fun = function(x) {
+    if (all(is.na(x))) return(NA_real_) # Returns NA only if all elements are NA, otherwise
+    sum(x, na.rm = TRUE) / length(x) # Memory-efficient mean treating NA as 0: sum(non-NA)/total_n, returns NA if all NA
+  },
+  if_aggregate = FALSE,
+  if_resample  = FALSE,
   if_return_raster = FALSE
 )
 
 # # -------------------- 3. Optional Check ---------------------------------------
 # Uncomment this section to verify results visually
 # message("Checking input and output rasters...")
-r_in  <- rast(fveg_450m_mosaic_path)
+# r_in  <- rast(fveg_450m_mosaic_path)
 # r_out <- rast(fveg_55km_path)
 #
-print(r_in)
+# print(r_in)
 # print(r_out)
 #
 # par(mfrow = c(1, 2))
@@ -49,7 +54,6 @@ print(r_in)
 # par(mfrow = c(1, 1))
 #
 # summary(r_out)
-
 
 # -------------------- 4. Cleanup ----------------------------------------------
 message("Cleaning up environment...")

@@ -158,3 +158,8 @@ gc()
 # r3 <- terra::rast("/storage/scratch/giub_geco/tting/data/global_dem_450m/aspect_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_aspect.nc")
 # plot(r3)
 
+# # ----------------- Delete intermedia files  (Optional) -----------------
+# unlink(dem_450m_tiles_dir, recursive = TRUE)
+# unlink(slope_450m_tiles_dir, recursive = TRUE)
+# unlink(aspect_450m_tiles_dir, recursive = TRUE)
+

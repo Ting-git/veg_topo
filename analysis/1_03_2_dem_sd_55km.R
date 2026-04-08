@@ -24,9 +24,10 @@ raster_preprocess_save(
   output       = dem_sd_55km_path,
   target       = align_template_55km,
   varname      = "dem_sd",
-  if_aggregate = TRUE,
-  if_resample  = TRUE,
+  if_zonal = TRUE,
   fun          = sd,
+  if_aggregate = FALSE,
+  if_resample  = FALSE,
   if_return_raster = FALSE
 )
 

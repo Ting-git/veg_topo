@@ -13,71 +13,43 @@
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
-# Load custom functions
+source(here::here("config.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
 # Create output directory
 if (!dir.exists(dirname(mi_55km_file))) dir.create(dirname(mi_55km_file), recursive = TRUE)
-message("Output directory:", dirname(mi_55km_file))
-message("Starting moisture index aggregation (0.05° → 0.5°)...")
-# -------------------- 2. Load Input Raster ------------------------------------
-message("Loading 5km moisture index raster...")
-r_in <- terra::rast(mi_5km_file)
-plot(r_in, main = "Original Moisture Index (0.05°)")
 
-# -------------------- 3. Define Target Resolution & Extent --------------------
-message("Preparing target resolution and extent...")
-res_tar <- c(0.5, 0.5)  # 0.5° target resolution
+# ---------------- 2. Create template grid ------------------------
+# Create template raster aligned to 55km grid
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
 
-# Align to 0.5° grid boundaries
-aligned_extent <- terra::ext(-180, 180, -56.5, 86.5)
-r_in_ext <- terra::extend(r_in, aligned_extent)
-
-# -------------------- 4. Aggregate Raster -------------------------------------
-message("Aggregating raster to 0.5° resolution...")
-r_out <- raster_preprocess_save(
-  input        = r_in_ext,
-  output       = mi_55km_file,
-  res_tar      = res_tar,
-  varname      = "moisture_index",
-  if_aggregate = TRUE,
-  if_round_fact = TRUE,
-  if_resample  = FALSE,
-  fun          = mean,
-  if_return_raster = TRUE
+# ---------------- 3. aggregation (0.05° → 0.5°) -----------------
+message("Aggregation MI (0.05° → 0.5°)")
+raster_preprocess_save(
+  input   = mi_5km_file,
+  output  = mi_55km_file,
+  target  = align_template_55km,
+  varname = "mi",
+  if_zonal = TRUE,
+  if_aggregate = FALSE,
+  fun = mean,
+  if_resample    = FALSE,
+  if_return_raster = FALSE
 )
 
-message("✅ Aggregation completed successfully.")
-message("Output file: ", mi_55km_file)
-
-# -------------------- 5. Quick Check & Visualization --------------------------
-message("Checking input and output rasters...")
-
-mi_5km_r  <- terra::rast(mi_5km_file)
-mi_55km_r <- terra::rast(mi_55km_file)
-
-print(mi_5km_r)
-print(mi_55km_r)
-
-par(mfrow = c(1, 2))
-plot(mi_5km_r, main = "Moisture Index (0.05°)")
-plot(mi_55km_r, main = "Moisture Index (0.5°)")
-par(mfrow = c(1, 1))
-
-message("✅ Visualization complete.")
-
-# -------------------- 6. Cleanup ----------------------------------------------
-rm(list = ls())
-gc()
-message("✅ Script finished successfully.")
+# # -------------------- 4. Quick Check & Visualization --------------------------
+# message("Checking input and output rasters...")
+#
+# mi_5km_r  <- terra::rast(mi_5km_file)
+# mi_55km_r <- terra::rast(mi_55km_file)
+#
+# print(mi_5km_r)
+# print(mi_55km_r)
+#
+# par(mfrow = c(1, 2))
+# plot(mi_5km_r, main = "Moisture Index (0.05°)")
+# plot(mi_55km_r, main = "Moisture Index (0.5°)")
+# par(mfrow = c(1, 1))
+#
+# message("✅ Visualization complete.")
 

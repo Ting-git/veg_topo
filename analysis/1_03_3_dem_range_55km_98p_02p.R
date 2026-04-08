@@ -25,13 +25,13 @@ dem_98p <- raster_preprocess_save(
   output  = NULL,
   target  = align_template_55km,
   varname = "dem_98p",
-  if_aggregate = TRUE,
+  if_zonal = TRUE,
+  if_aggregate = FALSE,
   fun = function(x, ...) {
     x <- x[!is.na(x)]
     if (length(x) == 0) return(NA_real_)
-    as.numeric(quantile(x, 0.95))
+    as.numeric(quantile(x, 0.98))
   },
-  if_round_fact  = TRUE,
   if_resample    = FALSE,
   if_return_raster = TRUE
 )
@@ -43,11 +43,12 @@ dem_02p <- raster_preprocess_save(
   output  = NULL,
   target  = align_template_55km,
   varname = "dem_02p",
-  if_aggregate = TRUE,
+  if_zonal = TRUE,
+  if_aggregate = FALSE,
   fun = function(x, ...) {
     x <- x[!is.na(x)]
     if (length(x) == 0) return(NA_real_)
-    as.numeric(quantile(x, 0.05))
+    as.numeric(quantile(x, 0.02))
   },
   if_round_fact  = TRUE,
   if_resample    = FALSE,
@@ -55,26 +56,15 @@ dem_02p <- raster_preprocess_save(
 )
 
 # ---------------- 4. Compute elevation range -----------------
+
 message("Computing elevation range (98p - 02p)...")
 dem_rg <- dem_98p - dem_02p
 
-# ---------------- 5. Resample to target grid & save ----------
-message("Resampling elevation range to 0.5° grid...")
-dem_rg <- raster_preprocess_save(
-  input   = dem_rg,
-  output  = dem_rg_98p_02p_55km_path,
-  target  = mi,
-  varname = "dem_rg",
-  if_aggregate = FALSE,
-  if_resample  = TRUE,
-  if_return_raster = TRUE
-)
-
-message("✅ Elevation range computation completed.")
-message("Saved : ", dem_rg_98p_02p_55km_path)
+terra::writeCDF(dem_rg, dem_rg_98p_02p_55km_path, overwrite = TRUE, varname = "dem_rg_98p_02p")
+if (file.exists(dem_rg_98p_02p_55km_path)) message("✅ Saved : ", dem_rg_98p_02p_55km_path)
 
 # ---------------- 6 (optional ). Check the output ----------
-# r <- terra::rast(dem_rg_55km_path)
+# r <- terra::rast(dem_rg_98p_02p_55km_path)
 # r
 # summary(r)
 # plot(r)
