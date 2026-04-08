@@ -1,52 +1,34 @@
 # ～ 15 min： on UBELIX
-# --------------- Setup --------------------------------------------------------
+# rely on the output from ~/veg_topo/analysis/1_01_1_twi_450m_clean.R !!!!
 
+# --------------- Setup --------------------------------------------------------
 library(terra)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
+source(here::here("R/config.R"))
 source(here::here("R/mosaic_tiles.R"))
-# --------------- Load Data ----------------------------------------------------
 
-# Load target grid and create mask
-twi_450m_r <- rast(twi_450m_mosaic_clean_path)
+# --------------- Mosaic, resample and save ------------------------------------
+tictoc::tic()
 
-# --------------- Mosaic and Resample ------------------------------------------
-# Mosaicing
-message("Starting mosaicing...")
+message("Vegetation height...")
 vegh_450m_mosaic <- mosaic_tiles(
   input_dir   = vegh_450m_tiles_dir,
-  output_file = NULL,
+  output_file = vegh_450m_mosaic_path, # Save as GeoTiff
   pattern = "*_Map_to450m.nc",
-  varname = "vegh")
+  target_grid = twi_450m_mosaic_clean_path,
+  if_resample = TRUE
+  )
 
-# Check mosaicing result
-if (is.null(vegh_450m_mosaic) || terra::ncell(vegh_450m_mosaic) == 0) {
-  stop("Mosaicing failed - no data produced")
-}
-message("Mosaicing completed. Starting resample...")
+message("Fraction of vegetated area...")
+fveg_450m_mosaic <- mosaic_tiles(
+  input_dir   = vegh_450m_tiles_dir,
+  output_file = fveg_450m_mosaic_path,  # Save as GeoTiff
+  pattern = "*_Map_to450m_fveg.nc",
+  target_grid = twi_450m_mosaic_clean_path,
+  if_resample = TRUE
+  )
 
-# Resample to target grid
-vegh_450m_resampled <- terra::resample(vegh_450m_mosaic, twi_450m_r, method = "bilinear")
-
-rm(vegh_450m_mosaic, twi_450m_r); gc()
-
-# ---------- Save Results ------------------------------------------------------
-
-# Save output files
-terra::writeCDF(vegh_450m_resampled, vegh_450m_mosaic_path, overwrite = TRUE, varname = "vegh")
-if(file.exists(vegh_450m_mosaic_path)) message("✅ Saved: ", vegh_450m_mosaic_path)
-
-rm(list = ls())
-gc()
-
+tictoc::toc()
 # check result
 # r <- rast(vegh_450m_mosaic_path)
 # plot(r)

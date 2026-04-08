@@ -101,11 +101,12 @@ if (hostname == "dash") {
 # ----------------------- Processed data ------------------------
 
 # 1_01 Topographic Wetness Index (cleaned)
-twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_clean/ga2_clean.nc")
+twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_clean/ga2_clean.tif")
 
-# 1_02 Vegetation height
-vegh_450m_tiles_dir   <- file.path(veg_topo_extr_dir,"data/global_vegh_450m/3_3_deg")
-vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_450m/vegh_450m_2020_mosaic.nc")
+# 1_02 Vegetation height and fraction of vegetated area
+vegh_450m_tiles_dir   <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/3_3_deg")
+vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/vegh_450m_2020_mosaic.tif")
+fveg_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/fveg_450m_2020_mosaic.tif")
 fveg_55km_path        <- file.path(veg_topo_extr_dir,"data/global_fveg_55km/fveg_55km.nc")
 
 # 1_03 Elevation (DEM, slope, aspect at ~450 m)

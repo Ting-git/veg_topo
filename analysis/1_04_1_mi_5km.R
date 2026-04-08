@@ -17,45 +17,32 @@
 library(terra)
 library(here)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
 # Load custom functions
+source(here::here("R/config.R"))
 source(here::here("R/raster_preprocess_save.R"))
+source(here::here("R/create_aligned_template.R"))
 
 # Create output directory
 if (!dir.exists(dirname(mi_5km_file))) dir.create(dirname(mi_5km_file), recursive = TRUE)
-message("✅  Output directory:", dirname(mi_5km_file))
 
-message("🌍 Starting Moisture Index aggregation: 950m → 5km...")
 # -------------------- 2. Aggregation & Resampling -----------------------------
 message("🔧 Aggregating MI raster and resampling to reference grid...")
+
+# Create template raster aligned to 5km grid
+align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
 
 raster_preprocess_save(
   input            = mi_950m_file,
   output           = mi_5km_file,
-  target           = cor_twi_vegh_mosaic_file,
+  target           = align_template_5km,
   varname          = "moisture_index",
+  na_value         = 0,
   if_aggregate     = TRUE,
   if_resample      = TRUE,
-  na_value         = 0,
   if_return_raster = FALSE
 )
 
-# Check if output exists and print message
-if (file.exists(mi_5km_file)) {
-  message("✅ Moisture Index aggregation completed successfully!")
-  message("📁 Output saved at: ", mi_5km_file)
-} else {
-  message("❌ Aggregation failed: output file not found.")
-}
+message("✅ Completed.")
 
 # -------------------- 3. Optional Visualization & Summary --------------------
 # Uncomment below for quick visual inspection

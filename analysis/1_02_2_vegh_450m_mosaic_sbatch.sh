@@ -3,11 +3,11 @@
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
-#SBATCH --time=4:00:00     #
+#SBATCH --time=8:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=512G  # 216G is enough
+#SBATCH --mem=512G  # >500G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis

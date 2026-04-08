@@ -1,13 +1,13 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="VEGH2651"
-#SBATCH --time=12:00:00
+#SBATCH --job-name="twi450mClean"
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
+#SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=64
-#SBATCH --mem=512G  #
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=400G  # > 400 G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -25,7 +25,7 @@ module load R/4.4.2-gfbf-2024a
 echo "=================================================="
 echo "Job started on: $(date --rfc-3339=seconds)"
 echo "Job ID: $SLURM_JOB_ID"
-echo "Job name: $SLURM_JOB_NAME"
+echo "Job name: $SLURM_JOB_NAME"  # 输出job name
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
@@ -36,7 +36,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 1_02_1_vegh_450m_agg_bytile.R\n"); source("1_02_1_vegh_450m_agg_bytile.R")'
+)); cat("Running script: 1_01_1_twi_450m_clean.R\n"); source("1_01_1_twi_450m_clean.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

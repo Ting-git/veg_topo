@@ -25,7 +25,7 @@ if (hostname == "dash") {
 
 # Input: read all 10m vegetation data paths (2651)
 vegh_10m_tiles_path <- fs::dir_ls(path = vegh_10m_tiles_dir, glob = "*_Map.tif")
-vegh_10m_tiles_path_sub <- vegh_10m_tiles_path[1:1]  # subset for testing (limit number of tiles)!!!!!!
+vegh_10m_tiles_path_sub <- vegh_10m_tiles_path[1:2651]  # subset for testing (limit number of tiles)!!!!!!
 
 # Output: 2651 tiles with 450m resolution
 if (!dir.exists(vegh_450m_tiles_dir)) {
@@ -61,7 +61,7 @@ agg_vegh_fveg <- function(vegh_10m_file) {
     )
 
     # Check if files have been processed
-    if (fs::file_exists(vegh_450m_file) && fs::file_size(vegh_450m_file) > 0 && fs::file_exists(fveg_450m_file) && fs::file_size(fveg_450m_file) > 0) {
+    if (fs::file_exists(vegh_450m_file) && fs::file_exists(fveg_450m_file)) {
       return(TRUE)
     }
 
@@ -69,7 +69,8 @@ agg_vegh_fveg <- function(vegh_10m_file) {
     # Set 0 as NA value (0m canopy height represents not vegetated or water according to Lang et al. (2019))
     # Aggregates using TWI data from Marthews et al. (2015) as target resolution
     # Return the saved path
-    agg_vegh <- raster_preprocess_save(
+    agg_vegh <- suppressMessages(
+      raster_preprocess_save(
       input = vegh_10m_file,
       output = vegh_450m_file,
       res_tar = res_tar,
@@ -81,13 +82,14 @@ agg_vegh_fveg <- function(vegh_10m_file) {
       if_resample = FALSE,
       if_mask = FALSE,
       if_return_raster = FALSE
-    )
+      ))
 
     # --- Aggregate fraction of vegetated area ---
     # Compute the fraction of pixels with vegetation (height > 0)
     # while treating 0 and NA as non-vegetated.
     # Aggregation is done at the target resolution defined by TWI data (Marthews et al., 2015).
-    r_out <- raster_preprocess_save(
+    r_out <- suppressMessages(
+      raster_preprocess_save(
       input        = vegh_10m_file,
       output       = fveg_450m_file,
       res_tar      = res_tar,
@@ -103,7 +105,7 @@ agg_vegh_fveg <- function(vegh_10m_file) {
       if_resample = FALSE,
       if_mask = FALSE,
       if_return_raster = FALSE
-    )
+      ))
 
     # --- Print proccess time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")

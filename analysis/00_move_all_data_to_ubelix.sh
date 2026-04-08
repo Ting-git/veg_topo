@@ -59,6 +59,11 @@ rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
   /data_2/scratch/ting/veg_topo_data/data_raw/wdpa_2025 \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data_raw/
 
+# Ecoregions (biomes)
+rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
+  /data_2/scratch/ting/veg_topo_data/data_raw/ecoregion2017 \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data_raw/
+
 # ========= Processed data ===========
 
 # TWI (clean) 450m

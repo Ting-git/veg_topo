@@ -10,32 +10,20 @@
 
 library(terra)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
-# other custom functions
+source(here::here("R/config.R"))
+source(here::here("R/create_aligned_template.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
-# ---------------- 1. Load raster data ------------------------
-message("Loading input rasters...")
-mi  <- terra::rast(mi_55km_file)             # Target 0.5° grid
-dem <- terra::rast(dem_450m_mosaic_path)     # High-resolution DEM
-
-plot(dem, main = "Original DEM (450m)")
+# ---------------- 1. Create template grid ------------------------
+# Create template raster aligned to 55km grid
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
 
 # ---------------- 2. Compute 98th percentile -----------------
 message("Calculating 98th percentile elevation...")
 dem_98p <- raster_preprocess_save(
-  input   = dem,
+  input   = dem_450m_mosaic_path,
   output  = NULL,
-  target  = mi,
+  target  = align_template_55km,
   varname = "dem_98p",
   if_aggregate = TRUE,
   fun = function(x, ...) {
@@ -51,9 +39,9 @@ dem_98p <- raster_preprocess_save(
 # ---------------- 3. Compute 2th percentile ------------------
 message("Calculating 2th percentile elevation...")
 dem_02p <- raster_preprocess_save(
-  input   = dem,
+  input   = dem_450m_mosaic_path,
   output  = NULL,
-  target  = mi,
+  target  = align_template_55km,
   varname = "dem_02p",
   if_aggregate = TRUE,
   fun = function(x, ...) {
@@ -69,7 +57,6 @@ dem_02p <- raster_preprocess_save(
 # ---------------- 4. Compute elevation range -----------------
 message("Computing elevation range (98p - 02p)...")
 dem_rg <- dem_98p - dem_02p
-plot(dem_rg, main = "Elevation Range (98p - 02p)")
 
 # ---------------- 5. Resample to target grid & save ----------
 message("Resampling elevation range to 0.5° grid...")
@@ -92,56 +79,3 @@ message("Saved : ", dem_rg_98p_02p_55km_path)
 # summary(r)
 # plot(r)
 
-# ============================================================
-# Optional: test in a smaller region (for quick verification)
-# ============================================================
-
-# message("Running small-region test (optional)...")
-#
-# ext <- terra::ext(6, 10, 44, 48)
-# mi_test  <- terra::crop(mi,  ext)
-# dem_test <- terra::crop(dem, ext)
-#
-# plot(dem_test, main = "DEM (test region)")
-#
-# # Compute 98p and 02p for test region
-# dem_98p_test <- raster_preprocess_save(
-#   input   = dem_test,
-#   output  = NULL,
-#   target  = mi_test,
-#   varname = "dem_98p",
-#   if_aggregate = TRUE,
-#   fun = function(x, ...) {
-#     x <- x[!is.na(x)]
-#     if (length(x) == 0) return(NA_real_)
-#     as.numeric(quantile(x, 0.95))
-#   },
-#   if_round_fact = TRUE
-# )
-#
-# dem_02p_test <- raster_preprocess_save(
-#   input   = dem_test,
-#   output  = NULL,
-#   target  = mi_test,
-#   varname = "dem_02p",
-#   if_aggregate = TRUE,
-#   fun = function(x, ...) {
-#     x <- x[!is.na(x)]
-#     if (length(x) == 0) return(NA_real_)
-#     as.numeric(quantile(x, 0.05))
-#   },
-#   if_round_fact = TRUE
-# )
-#
-# dem_rg_test <- dem_98p_test - dem_02p_test
-# plot(dem_rg_test, main = "Test Region: Elevation Range (98p - 02p)")
-#
-# dem_rg_test <- raster_preprocess_save(
-#   input   = dem_rg_test,
-#   output  = NULL,
-#   target  = mi_test,
-#   varname = "dem_rg",
-#   if_resample = TRUE
-# )
-#
-# message("✅ Small-region test completed.")

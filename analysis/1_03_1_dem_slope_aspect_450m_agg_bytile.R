@@ -20,24 +20,22 @@ library(future)
 library(fs)
 library(here)
 
-# Detect host and load configuration
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-
-if (hostname == "dash") {
-  message("💻 Workstation detected ('dash') → loading config.R")
-  source(here::here("config.R"))
-  workers <- 8
-} else {
-  message("🖥️ HPC environment detected (", hostname, ") → loading config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-  workers <- 110
-}
-
 # Load project functions
+source(here::here("R/config.R"))
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/mosaic_tiles.R"))
-source(here::here("R/mosaic_tiles_gdal.R"))
+
+# Set worker numbers for different system
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  workers = 8
+  message("→ using ", workers, " workers")
+
+} else {
+  workers = 110
+  message("→ using ", workers, " workers")
+}
 
 # ---------------------------- Input / Output Paths ---------------------------
 
@@ -118,81 +116,32 @@ gc()
 message(sprintf("Processing completed [%.1fs]", difftime(Sys.time(), t0, units = "secs")))
 
 # ---------------------------- Mosaic Tiles -----------------------------------
-
 message("🗺️ Mosaicing DEM...")
-dem_450m_mosaic <- mosaic_tiles(input_dir = dem_450m_tiles_dir,
-                                output_file = NULL,
+dem_450m_mosaic <- mosaic_tiles(input_dir   = dem_450m_tiles_dir,
+                                output_file = dem_450m_mosaic_path, # Save as GeoTiff
                                 pattern = "*_DEM_to450m_dem.nc",
-                                varname = "dem")
+                                target_grid = twi_450m_mosaic_clean_path,
+                                if_resample = TRUE
+                                )
+if (file.exists(dem_450m_mosaic_path)) message("✅ Saved: ", dem_450m_mosaic_path)
+
 
 message("🗺️ Mosaicing slope...")
-slope_450m_mosaic <- mosaic_tiles(input_dir = slope_450m_tiles_dir,
-                                  output_file = NULL,
-                                  pattern = "*_DEM_to450m_slope.nc",
-                                  varname = "slope")
+slope_450m_mosaic <- mosaic_tiles(input_dir   = slope_450m_tiles_dir,
+                                output_file = slope_450m_mosaic_path, # Save as GeoTiff
+                                pattern = "*_DEM_to450m_slope.nc",
+                                target_grid = twi_450m_mosaic_clean_path,
+                                if_resample = TRUE
+                                )
+if (file.exists(slope_450m_mosaic_path)) message("✅ Saved: ", slope_450m_mosaic_path)
 
 message("🗺️ Mosaicing aspect...")
-aspect_450m_mosaic <- mosaic_tiles(input_dir = aspect_450m_tiles_dir,
-                                   output_file = NULL,
-                                   pattern = "*_DEM_to450m_aspect.nc",
-                                   varname = "aspect")
-
-gc()
-
-# ---------------------------- Resample to Target Grid ------------------------
-
-message("🔄 Resampling DEM...")
-dem_450m_resampled <- terra::resample(dem_450m_mosaic, twi_450m_r, method = "bilinear")
-dem_450m_resampled <- terra::mask(dem_450m_resampled, twi_450m_r)
-
-message("🔄 Resampling slope...")
-slope_450m_resampled <- terra::resample(slope_450m_mosaic, twi_450m_r, method = "bilinear")
-slope_450m_resampled <- terra::mask(slope_450m_resampled, twi_450m_r)
-
-message("🔄 Resampling aspect...")
-aspect_450m_resampled <- terra::resample(aspect_450m_mosaic, twi_450m_r, method = "bilinear")
-aspect_450m_resampled <- terra::mask(aspect_450m_resampled, twi_450m_r)
-
-# Cleanup intermediate mosaics
-rm(dem_450m_mosaic, slope_450m_mosaic, aspect_450m_mosaic, twi_450m_r)
-gc()
-
-# ---------------------------- Save Final Results -----------------------------
-
-# save DEM
-terra::writeRaster(
-  dem_450m_resampled,
-  dem_450m_mosaic_path,
-  filetype = "GTiff",
-  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
-  overwrite = TRUE,
-  datatype = "FLT4S",
-  NAflag = -9999
-)
-
-# save slope
-terra::writeRaster(
-  slope_450m_resampled,
-  slope_450m_mosaic_path,
-  filetype = "GTiff",
-  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
-  overwrite = TRUE,
-  datatype = "FLT4S",
-  NAflag = -9999
-)
-
-# save aspect
-terra::writeRaster(
-  aspect_450m_resampled,
-  aspect_450m_mosaic_path,
-  filetype = "GTiff",
-  gdal = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
-  overwrite = TRUE,
-  datatype = "FLT4S",
-  NAflag = -9999
-)
-if (file.exists(dem_450m_mosaic_path)) message("✅ Saved: ", dem_450m_mosaic_path)
-if (file.exists(slope_450m_mosaic_path)) message("✅ Saved: ", slope_450m_mosaic_path)
+aspect_450m_mosaic <- mosaic_tiles(input_dir   = aspect_450m_tiles_dir,
+                                  output_file = aspect_450m_mosaic_path, # Save as GeoTiff
+                                  pattern = "*_DEM_to450m_aspect.nc",
+                                  target_grid = twi_450m_mosaic_clean_path,
+                                  if_resample = TRUE
+                                  )
 if (file.exists(aspect_450m_mosaic_path)) message("✅ Saved: ", aspect_450m_mosaic_path)
 
 # Final cleanup
@@ -200,12 +149,12 @@ rm(list = ls())
 gc()
 
 # ----------------------------
-# r1 <- terra::rast("/storage/scratch/giub_geco/tting/global_dem_slope_aspect_450m/dem_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_dem.nc")
+# r1 <- terra::rast("/storage/scratch/giub_geco/tting/data/global_dem_slope_aspect_450m/dem_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_dem.nc")
 # plot(r1)
 #
-# r2 <- terra::rast("/storage/scratch/giub_geco/tting/global_dem_450m/slope_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_slope.nc")
+# r2 <- terra::rast("/storage/scratch/giub_geco/tting/data/global_dem_450m/slope_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_slope.nc")
 # plot(r2)
 #
-# r3 <- terra::rast("/storage/scratch/giub_geco/tting/global_dem_450m/aspect_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_aspect.nc")
+# r3 <- terra::rast("/storage/scratch/giub_geco/tting/data/global_dem_450m/aspect_1_1_deg/Copernicus_DSM_COG_10_N00_00_E012_00_DEM_to450m_aspect.nc")
 # plot(r3)
 
