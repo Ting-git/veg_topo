@@ -3,14 +3,10 @@
 #
 # Purpose:
 #   Aggregate fine-resolution (950m) global Moisture Index (MI) data
-#   to 5km resolution, aligned with reference vegetation raster.
+#   to 5km resolution, aligned with reference raster (0.05°).
 #
-# Input:
-#   - mi_950m_file             : Original 950m resolution MI raster
-#   - cor_twi_vegh_mosaic_file : Reference raster for alignment/resampling
-#
-# Output:
-#   - mi_5km_file              : Aggregated 5km resolution MI raster
+# Run time:
+# ~ 42 mins on UBELIX
 # ==============================================================================
 
 # -------------------- 1. Setup Environment ------------------------------------
@@ -25,20 +21,21 @@ source(here::here("R/create_aligned_template.R"))
 # Create output directory
 if (!dir.exists(dirname(mi_5km_file))) dir.create(dirname(mi_5km_file), recursive = TRUE)
 
-# -------------------- 2. Aggregation & Resampling -----------------------------
+# -------------------- 2. Aggregation (950m to 5km) -----------------------------
 message("🔧 Aggregating MI raster and resampling to reference grid...")
 
-# Create template raster aligned to 5km grid
+# Create template raster aligned to 5km grid and zonal aggregation
 align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
-
 raster_preprocess_save(
   input            = mi_950m_file,
   output           = mi_5km_file,
   target           = align_template_5km,
   varname          = "moisture_index",
   na_value         = 0,
-  if_aggregate     = TRUE,
-  if_resample      = TRUE,
+  if_zonal         = TRUE,
+  fun              = "mean",
+  if_aggregate     = FALSE,
+  if_resample      = FALSE,
   if_return_raster = FALSE
 )
 

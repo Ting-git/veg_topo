@@ -14,6 +14,9 @@ source(here::here("R/config.R"))
 source(here::here("R/create_aligned_template.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
+# Create output directory
+if (!dir.exists(dirname(dem_rg_98p_02p_55km_path))) dir.create(dirname(dem_rg_98p_02p_55km_path), recursive = TRUE)
+
 # ---------------- 1. Create template grid ------------------------
 # Create template raster aligned to 55km grid
 align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
@@ -27,10 +30,8 @@ dem_98p <- raster_preprocess_save(
   varname = "dem_98p",
   if_zonal = TRUE,
   if_aggregate = FALSE,
-  fun = function(x, ...) {
-    x <- x[!is.na(x)]
-    if (length(x) == 0) return(NA_real_)
-    as.numeric(quantile(x, 0.98))
+  fun = function(values, coverage_fractions) {
+    as.numeric(quantile(values, 0.98, na.rm = TRUE))
   },
   if_resample    = FALSE,
   if_return_raster = TRUE
@@ -44,12 +45,10 @@ dem_02p <- raster_preprocess_save(
   target  = align_template_55km,
   varname = "dem_02p",
   if_zonal = TRUE,
-  if_aggregate = FALSE,
-  fun = function(x, ...) {
-    x <- x[!is.na(x)]
-    if (length(x) == 0) return(NA_real_)
-    as.numeric(quantile(x, 0.02))
+  fun = function(values, coverage_fractions) {
+    as.numeric(quantile(values, 0.02, na.rm = TRUE))
   },
+  if_aggregate = FALSE,
   if_round_fact  = TRUE,
   if_resample    = FALSE,
   if_return_raster = TRUE
@@ -63,9 +62,9 @@ dem_rg <- dem_98p - dem_02p
 terra::writeCDF(dem_rg, dem_rg_98p_02p_55km_path, overwrite = TRUE, varname = "dem_rg_98p_02p")
 if (file.exists(dem_rg_98p_02p_55km_path)) message("✅ Saved : ", dem_rg_98p_02p_55km_path)
 
-# ---------------- 6 (optional ). Check the output ----------
+# # ---------------- 5 (optional ). Check the output ----------
 # r <- terra::rast(dem_rg_98p_02p_55km_path)
 # r
 # summary(r)
-# plot(r)
+# plot(r,  main = "Elevation range (0.5°)")
 

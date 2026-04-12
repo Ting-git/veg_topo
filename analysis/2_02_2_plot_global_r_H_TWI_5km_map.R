@@ -6,23 +6,13 @@ library(scico)
 library(rnaturalearth)
 library(sf)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
+source(here::here("R/config.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 source(here::here("R/plot_cor_pval.R"))
 
 # ---------- data pre ----------------------------------------------------------
 # load coast outline, vector data
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
-
 
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
 
@@ -33,7 +23,7 @@ p_cor <- plot_cor_twi_vegh(
   text_size = 14,
   x_step = 30,
   y_step = 30,
-  land_color = "#EFECE4"
+  land_color = "#f5f6f7"
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
@@ -56,7 +46,7 @@ p_cor <- plot_cor_twi_vegh(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "#f5f6f7", color = NA),
     plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
@@ -104,7 +94,7 @@ p_pval <- plot_cor_pval(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "#f5f6f7", color = NA),
     plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()

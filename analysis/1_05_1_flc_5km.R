@@ -1,5 +1,4 @@
 # ==============================================================================
-#
 # Purpose:
 #   Process global land cover tiles to calculate fractions of:
 #     - Vegetation cover (fused)
@@ -7,6 +6,8 @@
 #     - Water (fwater)
 #     - Snow/ice (fsnow)
 #   at 5km resolution.
+#
+# Run Time: ~7 mins on UBELIX with 16 core
 # ==============================================================================
 
 # -------------------- 1. Setup Environment ------------------------------------
@@ -17,46 +18,55 @@ library(purrr)
 library(furrr)
 library(fs)
 
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-  workers = 8 # ~20 min
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-  workers = 49 # ~8 min
-}
-
 # Load custom functions
+source(here::here("R/config.R"))
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/create_aligned_template.R"))
 source(here::here("R/calculate_fraction_land_cover.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
+# Set worker numbers for different system
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  workers = 4
+  message("→ using ", workers, " workers")
+
+} else {
+  workers = 16
+  message("→ using ", workers, " workers")
+}
 # Create output directory
 if (!dir.exists(flc_tile_dir)) dir.create(flc_tile_dir, recursive = TRUE)
-message("✅ Tile output directory: ", flc_tile_dir)
-
-message("🌍 Starting land-cover fraction pipeline...")
-# -------------------- 2. Load Tile Information --------------------------------
-tiles_info <- readRDS(valid_tiles_info_path)
-tile_output_dir <- flc_tile_dir
 
 # -------------------- 3. Parallel Tile Processing -----------------------------
 gc()
 plan(multisession, workers = workers)
-t_start <- Sys.time()
-message("⏱ Pipeline started at: ", format(t_start, "%Y-%m-%d %H:%M:%S"))
 
+t_start <- Sys.time()
+message("⏱ Land-cover fraction pipeline started at: ", format(t_start, "%Y-%m-%d %H:%M:%S"))
+
+# Load Tile Information
+tiles_info <- readRDS(valid_tiles_info_path)
+
+# Parallel process
 results <- future_pmap(
   tiles_info,
   function(...) {
     args <- list(...)
     tryCatch({
+
+      # set output per tile
       tile_id <- args$tile_id
+      output_file <- file.path(flc_tile_dir, paste0("flc_5km_", tile_id, ".nc"))
+
+      # Check if files have been processed
+      if (fs::file_exists(output_file)) {
+        message("Existed: ", tile_id)
+        return(list(success = TRUE, error = NULL))
+      }
+
+      # ---- Start process the tile -----
       message("🔹 Processing tile: ", tile_id)
 
       # Define tile extent and crop land cover raster
@@ -69,7 +79,6 @@ results <- future_pmap(
 
       # Create spatial windows and calculate fractions
       df_win <- create_spatial_windows(rc, value_vars = "lccs_class", dwin = 0.05)
-      output_file <- file.path(tile_output_dir, paste0("flc_5km_", tile_id, ".nc"))
       df_flc <- calculate_fraction_land_cover(df_win, output_file = output_file)
 
       # Log tile completion
@@ -93,45 +102,68 @@ results <- future_pmap(
 
 plan(sequential)
 gc()
+
 elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
 message(sprintf("📦 All tiles processed [%.1f mins]", elapsed_total))
 
 # -------------------- 4. Mosaic All Tiles -------------------------------------
 message("🗺 Mosaicing all tiles into global raster...")
 
-mosaic_r <- mosaic_tiles(input_dir = tile_output_dir)
-message("✅ Mosaic created successfully.")
+# Create template raster aligned to 5km grid and mosaic
+align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
+mosaic_r <- mosaic_tiles(
+  input_dir   = flc_tile_dir,
+  output_file = NULL,
+  pattern = "*.nc",
+  target_grid = align_template_5km,
+  if_resample = TRUE
+)
 
 # -------------------- 5. Save to Single Layer Raster -------------------------
+message("🔧 Saving single-layer rasters...")
+
 # Set output files and variable names
 output_files <- c(fused_5km_file, fbare_5km_file, fwater_5km_file, fsnow_5km_file)
 varnames     <- c("fused", "fbare", "fwater", "fsnow")
 
-message("🔧 Saving single-layer rasters...")
-
-# Create template raster aligned to 5km grid
-align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
-
-# Resample and save rasters
+# save rasters to single-layer rasters
 raster_preprocess_save(
   input            = mosaic_r,
   output           = output_files,
-  target           = align_template_5km,
   varname          = varnames,
   if_aggregate     = FALSE,
-  if_resample      = TRUE,
+  if_resample      = FALSE,
   if_return_raster = FALSE
 )
 
-message("✅ Saved single-layer rasters.")
-
-# -------------------- 6. Cleanup Intermediate Tiles ---------------------------
-tiles_path <- fs::dir_ls(path = tile_output_dir, glob = "*.nc")
-if (length(tiles_path) > 0) {
-  message("🧹 Cleaning intermediate tile files...")
-  file.remove(tiles_path)
-  message("✅ Intermediate files removed.")
-}
-
 elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
 message(sprintf("🎉 Pipeline completed successfully [%.1f mins]", elapsed_total))
+
+# # -------------------- 6. Cleanup Intermediate Tiles ---------------------------
+# tiles_path <- fs::dir_ls(path = flc_tile_dir, glob = "*.nc")
+# if (length(tiles_path) > 0) {
+#   message("🧹 Cleaning intermediate tile files...")
+#   file.remove(tiles_path)
+#   message("✅ Intermediate files removed.")
+# }
+
+# -------------------- 7. Optional Check ---------------------------
+# r <- rast(fused_5km_file)
+# print(r)
+# summary(r)
+# plot(r, main = "Used land fraction (5km)")
+#
+# r <- rast(fbare_5km_file)
+# print(r)
+# summary(r)
+# plot(r, main = "Bare land fraction (5km)")
+#
+# r <- rast(fwater_5km_file)
+# print(r)
+# summary(r)
+# plot(r, main = "Water body fraction (5km)")
+#
+# r <- rast(fsnow_5km_file)
+# print(r)
+# summary(r)
+# plot(r, main = "Permanent snow and ice fraction (5km)")

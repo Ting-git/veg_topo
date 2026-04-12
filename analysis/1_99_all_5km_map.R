@@ -5,13 +5,8 @@
 #   Visualize global fraction land cover layers and annual mean temperature (MAT)
 #   using rasters produced from the processing pipeline.
 #
-# Output:
-#   - High-resolution PNG maps of:
-#       * Fraction of used land (fused)
-#       * Bare land fraction (fbare)
-#       * Water bodies fraction (fwater)
-#       * Permanent snow and ice fraction (fsnow)
-#       * Annual mean temperature (mat)
+# Runtime:
+#   ~ 10 mins
 # ==============================================================================
 
 # ------------------------- 1. Setup ---------------------------------------------
@@ -24,19 +19,10 @@ library(tidyterra)
 library(here)
 
 # Load configuration and plotting helper
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
+source(here::here("R/config.R"))
 source(here::here("R/plot_var.R"))
 
-message("🌍 Starting visualization of fraction land cover and MAT maps...")
+message("🌍 Starting visualization maps...")
 
 # ------------------------- 2. Load Data ----------------------------------------
 # Load coastlines and land polygons
@@ -44,17 +30,10 @@ coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 land  <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
 land_vect <- vect(land)
 
-# Load raster outputs
-input_files <- c(fused_5km_file, fbare_5km_file, fwater_5km_file, fsnow_5km_file, mat_5km_file)
-rasters <- lapply(input_files, rast)
-stacked <- rast(rasters)
-names(stacked) <- c("fused", "fbare", "fwater", "fsnow", "mat")
-
-# Mask to land extent
-stacked_masked <- mask(crop(stacked, land_vect), land_vect)
-
 # ------------------------- 3. Plot & Save --------------------------------------
-plot_map <- function(r_layer, title_text, output_file) {
+plot_map <- function(input, title_text, output_file) {
+  r_layer <- rast(input)
+  #  r_layer <- mask(crop(r_layer, land_vect), land_vect)
   p <- plot_var(
     input     = r_layer,
     title_text = title_text,
@@ -103,8 +82,11 @@ plot_map <- function(r_layer, title_text, output_file) {
 }
 
 # Plot maps
-plot_map(stacked_masked[["fused"]], "Fraction of used land", here::here("data/figures/1_99_fused_5km_map.png"))
-plot_map(stacked_masked[["fbare"]], "Bare land fraction", here::here("data/figures/1_99_fbare_5km_map.png"))
-plot_map(stacked_masked[["fwater"]], "Water body fraction", here::here("data/figures/1_99_fwater_5km_map.png"))
-plot_map(stacked_masked[["fsnow"]], "Permanent snow and ice fraction", here::here("data/figures/1_99_fsnow_5km_map.png"))
-plot_map(stacked_masked[["mat"]], "Annual mean air temperature (℃)", here::here("data/figures/1_99_mat_5km_map.png"))
+plot_map(fused_5km_file, "Fraction of used land", here::here("data/figures/1_99_fused_5km_map.png"))
+plot_map(fbare_5km_file, "Bare land fraction", here::here("data/figures/1_99_fbare_5km_map.png"))
+plot_map(fwater_5km_file, "Water body fraction", here::here("data/figures/1_99_fwater_5km_map.png"))
+plot_map(fsnow_5km_file, "Permanent snow and ice fraction", here::here("data/figures/1_99_fsnow_5km_map.png"))
+plot_map(mat_5km_file, "Annual mean surface temperature (℃)", here::here("data/figures/1_99_mat_5km_map.png"))
+plot_map(map_5km_file, "Annual mean precipitation (mm)", here::here("data/figures/1_99_map_5km_map.png"))
+plot_map(srad_5km_file, "Incident solar radiation (kJ m⁻² day⁻¹)", here::here("data/figures/1_99_srad_5km_map.png"))
+plot_map(ecoregion_5km_path, "Biomes distribution", here::here("data/figures/1_99_biome_5km_map.png"))

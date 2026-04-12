@@ -13,6 +13,9 @@ source(here::here("R/config.R"))
 source(here::here("R/create_aligned_template.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
+# Create output directory
+if (!dir.exists(dirname(dem_sd_55km_path))) dir.create(dirname(dem_sd_55km_path), recursive = TRUE)
+
 # -------------------- 2. Aggregation & Resampling -----------------------------
 message("Aggregating DEM using standard deviation (sd)...")
 
@@ -25,7 +28,7 @@ raster_preprocess_save(
   target       = align_template_55km,
   varname      = "dem_sd",
   if_zonal = TRUE,
-  fun          = sd,
+  fun          = "stdev",
   if_aggregate = FALSE,
   if_resample  = FALSE,
   if_return_raster = FALSE
@@ -33,19 +36,20 @@ raster_preprocess_save(
 
 message("✅ Completed.")
 
-# -------------------- 3. Optional Check ---------------------------------------
-# Uncomment this section to verify results visually
+# # -------------------- 3. Optional Check ---------------------------------------
+# # Uncomment this section to verify results visually
 # message("Checking input and output rasters...")
 # r_in  <- rast(dem_450m_mosaic_path)
 # r_out <- rast(dem_sd_55km_path)
 #
 # print(r_in)
 # print(r_out)
+# summary(r_out)
 #
 # par(mfrow = c(1, 2))
 # plot(r_in,  main = "DEM (450m)")
 # plot(r_out, main = "DEM SD (0.5°)")
 # par(mfrow = c(1, 1))
-#
-# summary(r_out)
-# message("✅ Visualization complete.")
+
+
+message("✅ Visualization complete.")

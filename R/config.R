@@ -43,6 +43,9 @@ if (hostname == "dash") {
   # Aridity / Moisture Index
   mi_950m_file <- file.path("/data/archive/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 
+  # WorldClim 2
+  worldclim_1km_dir <- file.path("/data/archive/worldclim_fick_2017/data/")
+
   # ESA CCI Land Cover (300 m, 2020)
   cci_landcover_path <- file.path("/data/archive/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 
@@ -50,9 +53,9 @@ if (hostname == "dash") {
   ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
 
   # Protected areas (WDPA, split shapefiles)
-  pa_shp0 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._0/...polygons.shp")
-  pa_shp1 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._1/...polygons.shp")
-  pa_shp2 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._2/...polygons.shp")
+  pa_shp0 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+  pa_shp1 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_1/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+  pa_shp2 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
 
   # Köppen–Geiger climate classification
   kg_present_0p0083_file <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")  # ~1 km
@@ -80,6 +83,9 @@ if (hostname == "dash") {
   # Aridity / Moisture Index
   mi_950m_file <- file.path(veg_topo_extr_dir, "/data_raw/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 
+  # WorldClim 2
+  worldclim_1km_dir <- file.path(veg_topo_extr_dir, "/data_raw/worldclim_fick_2017/data/")
+
   # ESA CCI Land Cover (300 m, 2020)
   cci_landcover_path <- file.path(veg_topo_extr_dir, "/data_raw/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 
@@ -87,9 +93,9 @@ if (hostname == "dash") {
   ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
 
   # Protected areas (WDPA, split shapefiles)
-  pa_shp0 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._0/...polygons.shp")
-  pa_shp1 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._1/...polygons.shp")
-  pa_shp2 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/..._2/...polygons.shp")
+  pa_shp0 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_0/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+  pa_shp1 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_1/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
+  pa_shp2 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
 
   # Köppen–Geiger climate classification
   kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")  # ~1 km
@@ -106,7 +112,8 @@ twi_450m_mosaic_clean_path <- file.path(veg_topo_extr_dir,"data/global_twi_450m_
 # 1_02 Vegetation height and fraction of vegetated area
 vegh_450m_tiles_dir   <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/3_3_deg")
 vegh_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/vegh_450m_2020_mosaic.tif")
-fveg_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/fveg_450m_2020_mosaic.tif")
+fveg_real_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_vegh_fveg_450m/fveg_real_450m_2020_mosaic.tif")
+fveg_real_55km_path   <- file.path(veg_topo_extr_dir,"data/global_fveg_55km/fveg_real_55km.nc")
 fveg_55km_path        <- file.path(veg_topo_extr_dir,"data/global_fveg_55km/fveg_55km.nc")
 
 # 1_03 Elevation (DEM, slope, aspect at ~450 m)
@@ -119,10 +126,11 @@ slope_450m_mosaic_path  <- file.path(veg_topo_extr_dir,"data/global_dem_slope_as
 aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_dem_slope_aspect_450m/aspect_450m.tif")
 
 # Shortwave radiation (terrain vs flat)
-sw_in_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/1_1_deg_tiles")
-sw_in_uneven_450m_path           <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_uneven_450m.nc")   # terrain
-sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.nc")     # flat
-sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.nc")  # ratio
+sw_in_uneven_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/uneven_1_1_deg")
+sw_in_uneven_450m_path           <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_uneven_450m.tif")   # terrain
+sw_in_flat_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/flat_1_1_deg")
+sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.tif")     # flat
+sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
 
 # Elevation variability (~55 km)
 dem_sd_55km_path            <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_sd_55km.nc")
@@ -144,9 +152,18 @@ fbare_55km_file <- file.path(veg_topo_extr_dir,"data/global_flc_55km/fbare_55km.
 fwater_55km_file<- file.path(veg_topo_extr_dir,"data/global_flc_55km/fwater_55km.nc")
 fsnow_55km_file <- file.path(veg_topo_extr_dir,"data/global_flc_55km/fsnow_55km.nc")
 
-# 1_06 Mean annual temperature (1970–2000)
-mat_55km_file <- file.path(veg_topo_extr_dir,"data/global_mat_55km/global_mat_55km_1970_2000.nc")
-mat_5km_file  <- file.path(veg_topo_extr_dir,"data/global_mat_5km/global_mat_5km_1970_2000.nc")
+# 1_06 Climatic variables (1970–2000)
+mat_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_mat_450m_1970_2000.tif")
+mat_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_mat_5km_1970_2000.nc")
+mat_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_mat_55km_1970_2000.nc")
+
+map_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_map_450m_1970_2000.tif")
+map_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_map_5km_1970_2000.nc")
+map_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_map_55km_1970_2000.nc")
+
+srad_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_srad_450m_1970_2000.tif")
+srad_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_srad_5km_1970_2000.nc")
+srad_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_srad_55km_1970_2000.nc")
 
 # 1_07 Biomes (ecoregions)
 ecoregion_5km_path <- file.path(veg_topo_extr_dir,"data/global_ecoregion_5km/Ecoregions2017_5km.nc")

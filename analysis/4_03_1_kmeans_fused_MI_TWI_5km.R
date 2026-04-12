@@ -11,20 +11,14 @@ library(patchwork)
 library(tidyterra)
 library(sf)
 
-# Automatically select configuration based on hostname
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected workstation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
-# Load custom functions
+source(here::here("R/config.R"))
 source(here::here("R/plot_density_grid.R"))
 
+# Create output directory
+if (!dir.exists(dirname(kmeans_map_8c_path))) dir.create(dirname(kmeans_map_8c_path), recursive = TRUE)
+
 # ----Data-Load-----
+message("Data pre...")
 # Load resampled raster datasets (AI, TWI, fused)
 mi_5km_r <- terra::rast(mi_5km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
 fused_5km_r <- terra::rast(fused_5km_file)
@@ -86,9 +80,9 @@ plot_density_grid(
 
 # ----K-Means----
 
+message("K-means...")
 tictoc::tic()
 set.seed(123)
-
 # Use Mini-Batch K-Means
 mb_km <- MiniBatchKmeans(
   df_k,                # scaled data
@@ -106,6 +100,7 @@ rm(mb_km, df_k); gc()
 
 # ----Save-Cluster-Raster----
 
+message("Save k-means result...")
 # Reload an original raster as template
 template_raster <- terra::rast(cor_twi_vegh_5km_r)
 
@@ -128,3 +123,5 @@ terra::writeCDF(kmeans_8c_r,
                 overwrite = TRUE)
 
 message(paste0("Cluster map saved to: ", kmeans_map_8c_path))
+
+kmeans_map_8c_path

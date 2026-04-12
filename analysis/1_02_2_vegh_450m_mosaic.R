@@ -22,7 +22,7 @@ vegh_450m_mosaic <- mosaic_tiles(
 message("Fraction of vegetated area...")
 fveg_450m_mosaic <- mosaic_tiles(
   input_dir   = vegh_450m_tiles_dir,
-  output_file = fveg_450m_mosaic_path,  # Save as GeoTiff
+  output_file = fveg_real_450m_mosaic_path,  # Save as GeoTiff
   pattern = "*_Map_to450m_fveg.nc",
   target_grid = twi_450m_mosaic_clean_path,
   if_resample = TRUE

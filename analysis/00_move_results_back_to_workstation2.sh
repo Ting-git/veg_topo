@@ -2,6 +2,14 @@
 set -e  # if error, stop
 
 echo "=== START DATA TRANSFER ==="
+
+# Move all processed data
+rsync -avhP --no-perms --no-owner --no-group \
+  --human-readable -i --info=progress2 \
+  --exclude='*_deg/' \
+  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data/ \
+  /data_2/scratch/ting/veg_topo_data/data/
+
 # TWI 450m clean
 rsync -avhP --no-perms --no-owner --no-group \
   --human-readable -i --info=progress2 \

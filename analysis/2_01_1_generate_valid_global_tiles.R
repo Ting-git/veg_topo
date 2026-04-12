@@ -6,17 +6,28 @@ library(sf)
 library(parallel)
 
 # ------Load configuration and helper functions---------------------------------
-source(here::here("config.R"))
+source(here::here("R/config.R"))
 source(here::here("R/generate_tile_grid.R"))
 source(here::here("R/filter_land_tiles_parallel.R"))
 
+# Set worker numbers for different system
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  workers = 8
+  message("→ using ", workers, " workers")
+
+} else {
+  workers = 50
+  message("→ using ", workers, " workers")
+}
 # --------- Generate and valid the land tile with TWI data ---------------------
 
 tictoc::tic()
 tile_grid <- generate_tile_grid()
-valid_tiles <- filter_land_tiles_parallel(tile_grid, twi_450m_mosaic_clean_path)
-saveRDS(valid_tiles, file = here::here("data/valid_tiles_info.rds"))
+valid_tiles <- filter_land_tiles_parallel(tile_grid, twi_450m_mosaic_clean_path, workers)
+saveRDS(valid_tiles, valid_tiles_info_path)
 tictoc::toc()
+
 # -------- Create GeoPackage for each valid land tile---------------------------
 
 # Create list of rectangle polygons with tile_id as attribute

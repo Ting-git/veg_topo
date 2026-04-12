@@ -26,17 +26,7 @@ library(rnaturalearth)
 library(sf)
 library(grid) # add figure tag
 
-# Automatically select configuration based on hostname
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected workstation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
-# Custom plotting functions
+source(here::here("R/config.R"))
 source(here::here("R/plot_hex_scatter.R"))
 source(here::here("R/plot_cor_twi_vegh.R"))
 

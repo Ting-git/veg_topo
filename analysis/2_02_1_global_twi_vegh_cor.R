@@ -1,4 +1,4 @@
-# UBELIX: 20 cores, 400G, done [40 min]
+# UBELIX: 20 cores, 400G, done [7-10 min]
 
 # ------Load required libraries-------------------------------------------------
 
@@ -6,47 +6,23 @@ library(terra)
 library(dplyr)
 library(furrr)
 
-library(ggplot2)
-library(tidyterra)
-library(patchwork)
-library(ggmap)
-library(khroma)
-library(RColorBrewer)
-library(rnaturalearth)
-library(sf)
-
-# ------ Load configuration file and custom functions -------------------------------------------------
-
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-  workers = 2
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-  workers = 17
-}
-
-# Load cuntom functions
+source(here::here("R/config.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
-source(here::here("R/plot_dem.R"))
-source(here::here("R/plot_vegh.R"))
-source(here::here("R/plot_twi.R"))
-source(here::here("R/plot_cor_twi_vegh.R"))
-source(here::here("R/plot_hex_scatter.R"))
-source(here::here("R/plot_single_sample_location.R"))
-# source(here::here("R/plot_google_img.R"))
-source(here::here("R/plot_fused.R"))
-source(here::here("R/plot_cor_pval.R"))
-# source(here::here("R/plot_biomes.R"))
-source(here::here("R/plot_kg_class.R"))
+# Set worker numbers for different system
+hostname <- trimws(tolower(system("hostname", intern = TRUE)))
+if (hostname == "dash") {
+  workers = 2
+  message("→ using ", workers, " workers")
+
+} else {
+  workers = 17
+  message("→ using ", workers, " workers")
+}
 
 # ------ File Configuration ---------------------------------------------
 
@@ -56,8 +32,7 @@ if (!dir.exists(cor_twi_vegh_tiles_dir)) {
 }
 
 # ------------ function to process single tile----------------------------------
-process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
-                              text_size = 12, fig_width = 14, fig_height = 14) {
+process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir) {
 
   tryCatch({
 
@@ -78,7 +53,6 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
     twi_rc <- terra::rast(twi_tmp_path)
     names(twi_rc) <- "twi"
     message("Saved temporary TWI raster: ", twi_tmp_path)
-
 
     # --- Vegetation Height Raster ---
     vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(tile_extent)
@@ -108,67 +82,6 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
-    # # --- reset theme for plots ---
-    # re_theme <- ggplot2::theme(
-    #   aspect.ratio = 1,
-    #   legend.position = "right",
-    #   legend.text = ggplot2::element_text(size = text_size * 0.9),
-    #   legend.title = ggplot2::element_text(size = text_size),
-    #   legend.margin = margin(0, 0, 0, 0),
-    #   legend.box.margin = margin(0, 0, 0, -5),
-    #   axis.title.x = ggplot2::element_blank(),
-    #   axis.title.y = ggplot2::element_blank(),
-    #   axis.text.x = ggplot2::element_text(
-    #     size = text_size * 0.9,
-    #     margin = margin(t = 15, b = -20),
-    #     vjust = 1
-    #   ),
-    #   axis.text.y = ggplot2::element_text(
-    #     size = text_size * 0.8,
-    #     angle = 90,
-    #     hjust = 0.5,
-    #     vjust = 0.5,
-    #     margin = margin(r = 15, l = -20)
-    #   ),
-    #   panel.spacing = unit(0, "cm"),
-    #   panel.border = ggplot2::element_rect(linewidth = 0.5, fill = NA),
-    #   plot.margin = margin(1, 1, 1, 1),
-    #   plot.title = ggplot2::element_text(
-    #     size = text_size * 1.2,
-    #     face = "bold",
-    #     margin = margin(b = 3)
-    #   ),
-    #   plot.title.position = "panel"
-    # )
-    #
-    # # --- Plotting, change the layout for better visualization ---
-    # p_vegh <- plot_vegh(vegh_rc, extent = tile_extent, text_size = text_size) + re_theme
-    # p_twi <- plot_twi(twi_rc, extent = tile_extent, text_size = text_size) + re_theme
-    # p_r <- plot_cor_twi_vegh(cor_r, extent = tile_extent,  title_text = "5km: Pearson's r (H~TWI)", text_size = text_size)+ re_theme
-    # p_p <- plot_cor_pval(pval_r, extent = tile_extent,  title_text = "5km: Pearson's p value (H~TWI)", text_size = text_size) + re_theme
-    # p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size) + re_theme
-    # # p_biome <- plot_biomes(ecoregion_path, extent = tile_extent, text_size = text_size) + re_theme
-    # p_dem <- plot_dem(dem_450m_mosaic_path, extent = tile_extent, text_size = text_size) + re_theme
-    # p_kg <- plot_kg_class(kg_present_0p0083_file, kg_legend_file, extent = tile_extent, text_size = text_size) + re_theme
-    #
-    # # p_google <- plot_google_img(extent = tile_extent) + ggplot2::theme(aspect.ratio = 1)
-    # p_scatter <- plot_hex_scatter(df_win, x_var = "twi", y_var = "vegh",
-    #                               x_text = "Topographic Wetness Index",
-    #                               y_text = "Vegetation height (m)",
-    #                               text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    # p_location <- plot_single_sample_location(tile_xmid, tile_ymid,  tile_id, text_size = text_size) + ggplot2::theme(aspect.ratio = 1)
-    # # ---- Combine plots ----
-    # final_plot <- ((p_dem + p_twi + p_vegh) /
-    #                  (p_r + p_fused + p_p ) /
-    #                  (p_location + p_scatter + p_kg))+
-    #   plot_annotation(title = tile_id) +
-    #   plot_layout(heights = c(1, 1, 1))
-    #
-    # # ---- Save plot ----
-    # out_file <- here::here(file.path(paste0("data/figures/2_02_tile_", tile_id, "_H_TWI_plots.png")))
-    # ggsave(filename = out_file, plot = final_plot, width = fig_width, height = fig_height, dpi = 600)
-
-
     # --- Print proccess time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
     message(sprintf("Region %s completed [%.1f mins]", tile_id, elapsed_mins))
@@ -183,27 +96,26 @@ process_r_H_TWI_5km <- function(tile_row, output_dir = cor_twi_vegh_tiles_dir,
   })
 }
 
-
-# ----------------- Parallel execution for all tiles-----------------
-# Set up cluster plan
-plan(cluster, workers = workers)
-
-# load tiles info
-tiles_info <- readRDS(valid_tiles_info_path)
-
-# Run in parallel
-tictoc::tic("🚀 Parallel processing of tiles")
-results <- future_map(seq_len(nrow(tiles_info)),
-                      function(i) process_r_H_TWI_5km(tiles_info[i, ]),
-                      .progress = FALSE,
-                      .options = furrr_options(seed=TRUE))
-plan(sequential)
-tictoc::toc()
-
-# Summarize results
-success_count <- sum(unlist(results))
-fail_count <- length(results) - success_count
-message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
+# # ----------------- Parallel execution for all tiles-----------------
+# # Set up cluster plan
+# plan(cluster, workers = workers)
+#
+# # load tiles info
+# tiles_info <- readRDS(valid_tiles_info_path)
+#
+# # Run in parallel
+# tictoc::tic("🚀 Parallel processing of tiles")
+# results <- future_map(seq_len(nrow(tiles_info)),
+#                       function(i) process_r_H_TWI_5km(tiles_info[i, ]),
+#                       .progress = FALSE,
+#                       .options = furrr_options(seed=TRUE))
+# plan(sequential)
+# tictoc::toc()
+#
+# # Summarize results
+# success_count <- sum(unlist(results))
+# fail_count <- length(results) - success_count
+# message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
 
 # -------- Combination ---------------------------------------------------------
 
@@ -219,7 +131,7 @@ mosaic_tiles(
   input_dir   = cor_twi_vegh_tiles_dir,
   output_file = pval_cor_twi_vegh_mosaic_file,
   pattern = "*_pval.nc",
-  varname = "pval_r_H_TWI")
+  varname = "p_H_TWI")
 
 # # ---------- Delete intermediate data ------------------------------------------
 # # List all files in the directory cor_twi_vegh_tiles_dir that match "*.nc"

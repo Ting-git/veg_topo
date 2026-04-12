@@ -9,6 +9,7 @@
 
 # -------------------- 1. Setup Environment ------------------------------------
 library(terra)
+library(exactextractr) # Zonal aggregation
 
 # other custom functions
 source(here::here("R/config.R"))
@@ -24,15 +25,35 @@ message("Aggregating vegetated area fraction...")
 # Create template raster aligned to 5km grid
 align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin=0.5)
 
-r_out <- raster_preprocess_save(
-  input        = fveg_450m_mosaic_path,
+# real vegetated fraction based on 10m height data
+raster_preprocess_save(
+  input        = fveg_real_450m_mosaic_path, # calculate from 10-m height data
+  output       = fveg_real_55km_path,
+  target       = align_template_55km,
+  varname      = "fveg",
+  if_zonal = TRUE,
+  fun = function(values, coverage_fractions) {
+    if (all(is.na(values))) return(NA_real_)
+    # Area-weighted mean (more accurate for partial pixels)
+    sum(values * coverage_fractions, na.rm = TRUE) / sum(coverage_fractions, na.rm = TRUE)
+  },
+  if_aggregate = FALSE,
+  if_resample  = FALSE,
+  if_return_raster = FALSE
+)
+
+# vegetated area fraction based on valid height data on vegh_450m_mosaic_path
+# The weighted proportion of a target pixel's area that is covered by non-NA (valid) source pixels.
+raster_preprocess_save(
+  input        = vegh_450m_mosaic_path,
   output       = fveg_55km_path,
   target       = align_template_55km,
   varname      = "fveg",
   if_zonal = TRUE,
-  fun = function(x) {
-    if (all(is.na(x))) return(NA_real_) # Returns NA only if all elements are NA, otherwise
-    sum(x, na.rm = TRUE) / length(x) # Memory-efficient mean treating NA as 0: sum(non-NA)/total_n, returns NA if all NA
+  fun = function(values, coverage_fractions) {
+    if (all(is.na(values))) return(NA_real_)
+    # Count of non-NA values weighted by coverage fractions
+    sum((!is.na(values)) * coverage_fractions, na.rm = TRUE) / sum(coverage_fractions, na.rm = TRUE)
   },
   if_aggregate = FALSE,
   if_resample  = FALSE,
@@ -40,10 +61,11 @@ r_out <- raster_preprocess_save(
 )
 
 # # -------------------- 3. Optional Check ---------------------------------------
-# Uncomment this section to verify results visually
+# # Uncomment this section to verify results visually
 # message("Checking input and output rasters...")
-# r_in  <- rast(fveg_450m_mosaic_path)
+# r_in  <- rast(fveg_real_450m_mosaic_path)
 # r_out <- rast(fveg_55km_path)
+# r_out2 <- rast(fveg_real_55km_path)
 #
 # print(r_in)
 # print(r_out)
@@ -51,12 +73,9 @@ r_out <- raster_preprocess_save(
 # par(mfrow = c(1, 2))
 # plot(r_in,  main = "Vegetation Height (450m)")
 # plot(r_out, main = "Vegetated Area Fraction (0.5°)")
+# plot(r_out2, main = "Vegetation Cover Fraction (0.5°)")
+#
 # par(mfrow = c(1, 1))
 #
 # summary(r_out)
 
-# -------------------- 4. Cleanup ----------------------------------------------
-message("Cleaning up environment...")
-rm(list = ls())
-gc()
-message("✅ Script finished successfully.")

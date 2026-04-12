@@ -19,25 +19,9 @@ library(tidyterra)    # terra + ggplot2 bridge
 library(rnaturalearth)# coastline data
 library(sf)           # vector data handling
 
-
-# ========================================================
-# 2. Load configuration and custom functions
-# ========================================================
-
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-}
-
-# Reusable plotting utilities
+source(here::here("R/config.R"))
 source(here::here("R/plot_box_or_violin.R"))
 source(here::here("R/plot_kmeans_map.R"))
-
 
 # ========================================================
 # 3. Load raster datasets
@@ -93,7 +77,6 @@ rm(
 )
 gc()
 
-
 # ========================================================
 # 5. Cluster-level statistics
 # ========================================================
@@ -122,11 +105,10 @@ df_summary <- df |>
   mutate(percentage = round(percentage, 2)) |>
   arrange(median_mi)   # order clusters along MI gradient
 
-# Inspect ordering
-df_summary$median_mi
-df_summary$cluster8c
-df_summary$percentage
-
+message("df_summary:")
+print(df_summary$median_mi)
+print(df_summary$cluster8c)
+print(df_summary$percentage)
 
 # ========================================================
 # 6. Assign descriptive cluster labels and colors
@@ -175,7 +157,6 @@ df_summary <- df_summary |>
     )
   )
 
-
 # ========================================================
 # 7. Global K-means cluster map
 # ========================================================
@@ -204,7 +185,7 @@ p_8c <- plot_kmeans_map(
     clip   = "on"
   ) +
   theme(
-    legend.position  = "none",
+    legend.position  = "bottom",
     axis.title       = element_blank(),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background  = element_blank()
@@ -214,7 +195,6 @@ p_8c <- plot_kmeans_map(
     plot.tag = element_text(size = text_size, face = "bold"),
     plot.tag.position = c(0.01, 1)
   )
-
 
 # ========================================================
 # 8. Cluster-wise variable distributions
@@ -295,7 +275,7 @@ ggsave(
   filename = here::here("data/figures/4_03_kmeans_gl_map_8c_stat.png"),
   plot     = p_8c_stat,
   width    = 14,
-  height   = 10,
+  height   = 12,
   dpi      = 600,
   units    = "in"
 )
@@ -410,4 +390,3 @@ ggsave(
   height   = 14,
   dpi      = 300
 )
-
