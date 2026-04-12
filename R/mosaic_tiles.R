@@ -19,7 +19,8 @@ mosaic_tiles <- function(input_dir,
                          if_mask = FALSE,
                          pattern = "*.nc",
                          overwrite = TRUE,
-                         crs = NULL) {
+                         crs = NULL,
+                         varname = "band") {
 
   # ===========================================================================
   # 1) Input check & file listing
@@ -34,7 +35,7 @@ mosaic_tiles <- function(input_dir,
   # 2) Target grid (optional)
   # ===========================================================================
   if (!is.null(target_grid)) {
-    r_tar <- if (is.character(target_grid)) terra::rast(target_grid)[[1]] else target[[1]]
+    r_tar <- if (is.character(target_grid)) terra::rast(target_grid)[[1]] else target_grid[[1]]
   }
 
   # ===========================================================================
@@ -65,17 +66,25 @@ mosaic_tiles <- function(input_dir,
   # ===========================================================================
   # 5) Write output (optional)
   # ===========================================================================
+  message("Saving...")
   if (!is.null(output_file)) {
-    message("Saving...")
-    terra::writeRaster(
-      r_out,
-      output_file,
-      filetype  = "GTiff",
-      gdal      = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
-      overwrite = overwrite,
-      datatype  = "FLT4S",
-      NAflag    = -9999
-    )
+    ext <- tolower(tools::file_ext(output_file))
+
+    if (ext == "nc") {
+      terra::writeCDF(r_out, output_file, overwrite = TRUE, varname = varname)
+    } else if (ext %in% c("tif", "tiff")) {
+      terra::writeRaster(
+        r_out,
+        output_file,
+        filetype  = "GTiff",
+        gdal      = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+        overwrite = overwrite,
+        datatype  = "FLT4S",
+        NAflag    = -9999
+      )
+    } else {
+      stop("Only .nc or .tif files supported")
+    }
     if (file.exists(output_file)) message("✅ Saved: ", output_file)
   }
 

@@ -77,27 +77,32 @@ raster_preprocess_save <- function(input,
       message("  -> Note: if_aggregate = TRUE ignored because if_zonal = TRUE takes priority")
     }
 
-    # Create zone ID raster
-    coarse_zones <- terra::rast(r_tar)
-    terra::values(coarse_zones) <- 1:terra::ncell(coarse_zones)
+    # Load or extract target raster
+    r_tar <- if (is.character(target)) terra::rast(target)[[1]] else target[[1]]
 
-    # Get zone ID for each high-resolution cell (memory efficient)
-    zone_ids <- terra::extract(coarse_zones, r_in, cells = TRUE, ID = FALSE)[[1]]
+    # Expand the input raster's spatial extent to align with the target grid
+    # This ensures all target polygons have corresponding raster data
+    # Areas outside original extent are set to NA
+    # super important for fveg calculation!!!!
+    r_in <- terra::extend(r_in, ext(r_tar))
 
-    # Group statistics (exclude NAs)
-    valid <- !is.na(terra::values(r_in))
-    zonal_stats <- tapply(terra::values(r_in)[valid],
-                          zone_ids[valid],
-                          fun,
-                          na.rm = TRUE)
+    # Convert target raster to polygons (memory-efficient with chunked processing)
+    target_polygons <- sf::st_as_sf(terra::as.polygons(r_tar,
+                                                       dissolve = FALSE,
+                                                       trunc = FALSE,
+                                                       values = TRUE))
 
-    # Fill results into target grid
-    r_out <- coarse_zones
-    positions <- as.numeric(names(zonal_stats))
-    terra::values(r_out)[positions] <- zonal_stats
+    # Efficient zonal extraction using exactextractr
+    result <- exactextractr::exact_extract(
+      r_in,
+      target_polygons,
+      fun = fun,
+      progress = FALSE
+    )
 
-    message(sprintf("  -> Populated %d of %d zones",
-                    length(positions), terra::ncell(coarse_zones)))
+    # Create output raster with target's structure and new values
+    r_out <- rast(r_tar)  # Create new raster from target's template
+    terra::values(r_out) <- result  # Assign aggregated values
 
   } else if (if_aggregate && !is.null(res_tar)) {
     # Method 2: Traditional Aggregate (requires grid alignment)
@@ -193,14 +198,20 @@ raster_preprocess_save <- function(input,
       # Write based on file extension
       if (tolower(ext) %in% c("nc", "cdf")) {
         terra::writeCDF(lyr, out_i, overwrite = TRUE, varname = varname_i)
-      } else {
-        terra::writeRaster(lyr, out_i, overwrite = TRUE)
+      } else if (tolower(ext) %in% c("tif", "tiff")) {
+        terra::writeRaster(
+          lyr,
+          out_i,
+          filetype  = "GTiff",
+          gdal      = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
+          overwrite = overwrite,
+          datatype  = "FLT4S",
+          NAflag    = -9999
+        )
       }
     }
 
-    if (all(file.exists(output))) {
-      message("Saved files:\n", paste("  ", output, collapse = "\n"))
-    }
+    if (all(file.exists(output))) message("✅ Saved files:\n", paste("  ", output, collapse = "\n"))
   }
 
   # Clean up
