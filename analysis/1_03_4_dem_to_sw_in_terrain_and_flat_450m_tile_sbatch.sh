@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="DEMfull"
+#SBATCH --job-name="P4DEM"
 #SBATCH --time=48:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
@@ -31,6 +31,11 @@ echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
 echo "=================================================="
 
+echo ""
+echo "=================================================="
+echo "Step 1: Running main R script"
+echo "=================================================="
+
 # Force Rscript to use the same library paths as RStudio Server
 Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
@@ -38,13 +43,15 @@ Rscript -e '.libPaths(c(
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
 )); cat("Running script: 1_03_4_dem_to_sw_in_terrain_and_flat_450m_tile.R\n"); source("1_03_4_dem_to_sw_in_terrain_and_flat_450m_tile.R")'
 
-# Capture the exit status
-EXIT_STATUS=$?
+# Capture R script exit status
+R_EXIT_STATUS=$?
+
+echo ""
 echo "=================================================="
 echo "Job finished on: $(date --rfc-3339=seconds)"
-echo "Exit status: $EXIT_STATUS"
+echo "R script exit status: $R_EXIT_STATUS"
 echo "Job name: $SLURM_JOB_NAME"
 echo "=================================================="
 
 # Exit with the same status as the R script
-exit $EXIT_STATUS
+exit $R_EXIT_STATUS

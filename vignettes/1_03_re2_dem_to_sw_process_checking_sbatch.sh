@@ -1,16 +1,16 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="flatR450m"
-#SBATCH --time=4:00:00
+#SBATCH --job-name="DEMcheck"
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
+#SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=64
-#SBATCH --mem=512G  # need >= 500G memory
+#SBATCH --cpus-per-task=54
+#SBATCH --mem=300  # > 300 G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
+#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/vignettes
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4
@@ -36,7 +36,9 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 1_03_6_global_sw_in_flat_mosaic_450m.R\n"); source("1_03_6_global_sw_in_flat_mosaic_450m.R")'
+));
+cat("Running script: 1_03_re2_dem_to_sw_process_checking.Rmd\n");
+rmarkdown::render("1_03_re2_dem_to_sw_process_checking.Rmd")'
 
 # Capture the exit status
 EXIT_STATUS=$?

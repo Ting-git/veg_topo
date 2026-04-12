@@ -1,26 +1,28 @@
-# DEM → Slope/Aspect → Annual SW_in @ 450 m workflow with SINGLE-LAYER parallelism
-# - Single parallel layer using doFuture (no nested parallelism to avoid port conflicts)
+
+# DEM → Slope/Aspect → Annual SW_in @ 450 m workflow with nested parallelism
+# - External: furrr::future_map() (one worker per DEM tile)
+# - Inner layer: foreach/doParallel (parallel radiation calculation within tiles)
 
 # ---- Processing set manually !!!!!!---------------------------------------------
 # 26450 tiles in total
 # better to split the work into four parts 最多同时提交两个任务，第三和第四个任务执行前空一段时间
 # set 1-7000, 7001-14000, 14001-21000, 21001-26450
 
-# Part 1 --> 35 mins
+# Part 1 --> 55 mins
 # start_idx <- 1
 # end_idx   <- 7000
 
-# Part 2 --> 43 mins
-# start_idx <- 7001
-# end_idx   <- 14000
+# Part 2 --> 55 mins
+start_idx <- 7001
+end_idx   <- 14000
 
-# Part 3 --> 45 mins
+# Part 3 --> 150 mins with 49 erros, redo 55 mins
 # start_idx <- 14001
 # end_idx   <- 21000
 
-# # Part 4 -->  32 mins
-start_idx <- 21001
-end_idx   <- 26450
+# # Part 4 --> 153 mins with 50 erros
+# start_idx <- 21001
+# end_idx   <- 26450
 
 # # Part 5 --> 2 mins
 # start_idx <- 1
@@ -30,12 +32,13 @@ library(terra)
 library(dplyr)
 library(tidyr)
 library(purrr)
+library(furrr)         # outer parallelism
 library(fs)
 library(stringr)
 library(readr)
 library(parallel)      # for core detection
-library(doFuture)      # <-- 新增：替代 furrr + doParallel
-library(foreach)       # <-- 保留用于并行
+library(doParallel)    # inner parallelism
+library(foreach)
 
 source(here::here("R/config.R"))
 source(here::here("R/raster_preprocess_save.R"))  # in aggregate_topography()
@@ -78,20 +81,44 @@ dem_files_all <- fs::dir_ls(
 message(sprintf("Found %d DEM tiles", length(dem_files_all)))
 
 # ---- Processing info ----
+# start_idx <- 1
+# end_idx   <- 26450 # 26450 tiles in total
 dem_files <- dem_files_all[start_idx:end_idx]
 message(sprintf("Start processing: %d:%d (total %d DEMs)", start_idx, end_idx, length(dem_files)))
 
-# ---- Core configuration (SIMPLIFIED) ----
-available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores()))
-total_cores <- parallel::detectCores()
-parallel_workers <- available_cores
+# Re-process missing tiles
+# dem_files <- dem_files_all[c(1883, 9748, 9749, 9750, 9773, 9842, 9937)]
+# message(sprintf("Start processing specific indices: 1883, 9748, 9749, 9750, 9773, 9842, 9937 (total %d DEMs)",
+                # length(dem_files)))
 
+# ---- Core configuration ----
+
+# numbers of inner core
+INNER_CORES <- 4
+
+# Use the number of allocated CPU cores in SLURM, or detectCores() if there is no SLURM environment
+available_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = parallel::detectCores())) # on UBELIX
+# available_cores <- 8 # test on workstation2
+total_cores <- parallel::detectCores()  # Total number of cores on the node
+
+# numbers of outer core
+outer_cores <- max(1, floor(available_cores / INNER_CORES))
+
+# Print the info of cores
 message(sprintf("Node total cores: %d", total_cores))
 message(sprintf("Available cores for this job: %d", available_cores))
-message(sprintf("Using %d parallel workers", parallel_workers))
+message(sprintf("Using %d outer workers, each with %d inner cores", outer_cores, INNER_CORES))
+message(sprintf("Total parallel threads: %d", outer_cores * INNER_CORES))
 
-# ---- Process one tile function (SEQUENTIAL inside, no nested parallelism) ----
-# <-- 修改：完全移除内层的 foreach/doParallel，改为顺序计算
+# ---- Outer parallel plan ----
+plan(multisession, workers = outer_cores)
+t0 <- Sys.time()
+message(paste0("Calculation on DEM Start:", format(t0, "%Y-%m-%d %H:%M:%S")))
+
+# # ---- Inner cluster ----
+# cl <- makeCluster(INNER_CORES)
+# registerDoParallel(cl)
+
 process_one_tile <- function(file) {
 
   # Output file path
@@ -99,13 +126,15 @@ process_one_tile <- function(file) {
   output_path_sw_in_uneven <- file.path(sw_in_uneven_450m_tile_dir, paste0(base_name, "_to_sw_in_uneven_450m.nc"))
   output_path_sw_in_flat <- file.path(sw_in_flat_450m_tile_dir, paste0(base_name, "_to_sw_in_flat_450m.nc"))
 
-  # Optional: Check if already processed (commented out by default)
-  if (fs::file_exists(output_path_sw_in_uneven) && fs::file_exists(output_path_sw_in_flat)) {
-    return(list(success = TRUE,
-                file = file,
-                skipped = TRUE,
-                error = NULL))
-  }
+  # # Check if it has been processed
+  # if (fs::file_exists(output_path_sw_in_uneven) && fs::file_exists(output_path_sw_in_flat)) {
+  #   return(list(success = TRUE,
+  #               file = file,
+  #               # out_file_sw_in_uneven = output_path_sw_in_uneven,
+  #               # out_file_sw_in_flat = output_path_sw_in_flat,
+  #               skipped = TRUE,
+  #               error = NULL))
+  # }
 
   tryCatch({
 
@@ -135,40 +164,67 @@ process_one_tile <- function(file) {
       warning(sprintf("No valid cells after drop_na for %s", file))
       return(list(success = FALSE,
                   file = file,
+                  # out_file_sw_in_uneven = NULL,
+                  # out_file_sw_in_flat = NULL,
                   skipped = FALSE,
                   error = "no_valid_cells"))
     }
 
-    # 计算辐射（向量化操作，处理所有行）
-    sw_in_uneven <- calc_sw_in(df$lat, df$slope, df$aspect, year = 2020)
-    sw_in_flat <- calc_sw_in(df$lat, rep(0, nrow(df)), rep(0, nrow(df)), year = 2020)
+    # Inner parallelism
+    cl <- makeCluster(INNER_CORES)
+    registerDoParallel(cl)
 
-    # 合并结果
-    df_calc <- df |>
-      mutate(sw_in_uneven = sw_in_uneven,
-             sw_in_flat = sw_in_flat)
+    # Chunk Processing
+    chunk_size <- 5000  # rows per chunk, adjust based on memory
+    chunks <- split(df, ceiling(seq_len(nrow(df)) / chunk_size))
+
+    # Parallel Calculation for Each Chunk - Direct assignment
+    df_calc <- foreach(
+      chunk = chunks,
+      .combine = bind_rows,
+      .packages = c("dplyr"),
+      .export   = c("calc_sw_in_daily", "calc_sw_in", "julian_day",
+                    "berger_tls", "dcos", "dsin")
+    ) %dopar% {
+
+      # Calculate sw_in_uneven and sw_in_flat for entire chunk
+      sw_in_uneven <- calc_sw_in(chunk$lat, chunk$slope, chunk$aspect, year = 2020)
+      sw_in_flat <- calc_sw_in(chunk$lat, rep(0, nrow(chunk)), rep(0, nrow(chunk)), year = 2020)
+
+      # Combine results back to dataframe
+      chunk |>
+        mutate(sw_in_uneven = sw_in_uneven,
+               sw_in_flat = sw_in_flat)
+
+    }
+
+    stopCluster(cl)
+    registerDoSEQ()
 
     # Build rasters
     crs_out <- terra::crs(aligned[["dem"]])
-    sw_in_uneven_rast <- terra::rast(df_calc[, c("lon", "lat", "sw_in_uneven")], type = "xyz", crs = crs_out)
-    sw_in_flat_rast <- terra::rast(df_calc[, c("lon", "lat", "sw_in_flat")], type = "xyz", crs = crs_out)
+    sw_in_uneven <- terra::rast(df_calc[, c("lon", "lat", "sw_in_uneven")], type = "xyz", crs = crs_out)
+    sw_in_flat <- terra::rast(df_calc[, c("lon", "lat", "sw_in_flat")], type = "xyz", crs = crs_out)
 
     # Write two separate NetCDFs
-    terra::writeCDF(sw_in_uneven_rast, output_path_sw_in_uneven, varname = "sw_in_uneven", overwrite = TRUE)
-    terra::writeCDF(sw_in_flat_rast, output_path_sw_in_flat, varname = "sw_in_flat", overwrite = TRUE)
+    terra::writeCDF(sw_in_uneven,output_path_sw_in_uneven,varname = "sw_in_uneven", overwrite = TRUE)
+    terra::writeCDF(sw_in_flat, output_path_sw_in_flat, varname = "sw_in_flat", overwrite = TRUE)
 
-    # Clean up
-    rm(dem, aligned, df, df_calc, sw_in_uneven_rast, sw_in_flat_rast)
+    rm(chunks, dem, aligned, df, df_calc, sw_in_uneven, sw_in_flat)
     gc(full = TRUE)
 
     list(success = TRUE,
          file = file,
+         # out_file_sw_in_uneven = output_path_sw_in_uneven,
+         # out_file_sw_in_flat = output_path_sw_in_flat,
          skipped = FALSE,
          error = NULL)
 
   }, error = function(e) {
     list(success = FALSE,
          file = file,
+         # out_file_sw_in_uneven = NULL,
+         # out_file_sw_in_flat = NULL,
          skipped = FALSE,
          error = conditionMessage(e))
   }, finally = {
@@ -176,41 +232,41 @@ process_one_tile <- function(file) {
   })
 }
 
-# ---- Setup doFuture parallel backend (SINGLE LAYER) ----
+# ---- processing ----
+all_results <- furrr::future_map(
+  dem_files,
+  process_one_tile,
+  .progress = FALSE,
+  .options = furrr::furrr_options(
+    seed = TRUE,
+    globals = c("raster_preprocess_save", "aggregate_topography",
+                "calc_sw_in_daily", "calc_sw_in",
+                "julian_day", "berger_tls", "dcos", "dsin",
+                "res_tar", "INNER_CORES",
+                "sw_in_flat_450m_tile_dir", "sw_in_uneven_450m_tile_dir"),
+    packages = c("terra", "dplyr", "tidyr", "purrr",
+                 "doParallel", "foreach", "parallel")
+  )
+)
 
-plan(multisession, workers = parallel_workers)
-registerDoFuture()  # <-- 关键：注册 doFuture 作为 foreach 后端
+# # stop cluster
+# stopCluster(cl)
+# registerDoSEQ()
 
-t0 <- Sys.time()
-message(paste0("Calculation on DEM Start:", format(t0, "%Y-%m-%d %H:%M:%S")))
-
-all_results <- foreach(
-  file = dem_files,
-  .packages = c("terra", "dplyr", "tidyr", "purrr", "fs"),
-  .export = c("calc_sw_in", "calc_sw_in_daily", "julian_day",
-              "berger_tls", "dcos", "dsin", "aggregate_topography",
-              "raster_preprocess_save", "res_tar",
-              "sw_in_flat_450m_tile_dir", "sw_in_uneven_450m_tile_dir"),
-  .options.future = list(seed = TRUE)  # <-- 解决随机数警告
-) %dopar% {
-  process_one_tile(file)
-}
-
+# Switch back to sequential execution
 plan(sequential)
-registerDoSEQ()
 
-# ---- Final timing ----
 elapsed <- as.numeric(difftime(Sys.time(), t0, units = "mins"))
 message(sprintf("Processing done [%.1f mins]", elapsed))
 
-# ---- File count summary ----
+# Recursive file count
 file_count <- length(list.files(path = sw_in_uneven_450m_tile_dir, recursive = TRUE, all.files = TRUE))
 message(sprintf("Total number of files in %s: %d", sw_in_uneven_450m_tile_dir, file_count))
 
 file_count <- length(list.files(path = sw_in_flat_450m_tile_dir, recursive = TRUE, all.files = TRUE))
 message(sprintf("Total number of files in %s: %d", sw_in_flat_450m_tile_dir, file_count))
 
-# ---- Results Summary ----
+# ---- Summary ----
 failed_results <- keep(all_results, ~ !.x$success)
 success_count <- sum(map_lgl(all_results, ~ .x$success))
 failed_count <- length(failed_results)

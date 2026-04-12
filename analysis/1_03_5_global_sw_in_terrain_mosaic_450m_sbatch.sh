@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="global_sw_in_450m"
+#SBATCH --job-name="surfR450m"
 #SBATCH --time=4:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker

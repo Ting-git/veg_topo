@@ -32,13 +32,13 @@ echo "=================================================="
 # ---------------------------
 # Input files
 # ---------------------------
-sw_in_450m="/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_uneven_450m.tif"
-sw_in_flat_450m="/storage/scratch/giub_geco/tting/global_sw_in_450m/sw_in_flat_450m.tif"
+sw_in_450m="/storage/scratch/giub_geco/tting/data/global_sw_in_450m/sw_in_uneven_450m.tif"
+sw_in_flat_450m="/storage/scratch/giub_geco/tting/data/global_sw_in_450m/sw_in_flat_450m.tif"
 
 # ---------------------------
 # Output file
 # ---------------------------
-output_dir="/storage/scratch/giub_geco/tting/global_sw_in_450m"
+output_dir="/storage/scratch/giub_geco/tting/data/global_sw_in_450m"
 sw_in_terrain_effect="${output_dir}/sw_in_terrain_effect_450m.tif"
 
 # ---------------------------
