@@ -23,7 +23,7 @@ if (!dir.exists(dirname(fveg_55km_path))) dir.create(dirname(fveg_55km_path), re
 message("Aggregating vegetated area fraction...")
 
 # Create template raster aligned to 5km grid
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin=0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out=0.5)
 
 # real vegetated fraction based on 10m height data
 raster_preprocess_save(

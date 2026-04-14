@@ -27,7 +27,7 @@ output_files <- c(fused_55km_file, fbare_55km_file, fwater_55km_file, fsnow_55km
 var_names <- c("fused", "fbare", "fwater", "fsnow")
 
 # Create template raster aligned to 55km grid and zonal aggregate
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.5)
 mapply(function(input, output, varname) {
   raster_preprocess_save(
     input   = input,

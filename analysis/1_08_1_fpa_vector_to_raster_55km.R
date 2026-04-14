@@ -72,7 +72,7 @@ message("Merged raster saved to: ", merged_22km_path)
 message("Aggregating to 0.5° grid (fractional PA coverage)...")
 
 # Create 0.5° template aligned with existing raster
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.5)
 
 # Area-weighted aggregation: accounts for partial pixel coverage at boundaries
 # Why 0 treat as NA here

@@ -22,7 +22,7 @@ if (!dir.exists(dirname(mi_55km_file))) dir.create(dirname(mi_55km_file), recurs
 message("Aggregation MI (0.05° → 0.5°)")
 
 # Create template raster aligned to 55km grid and zonal aggregate
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.5)
 raster_preprocess_save(
   input   = mi_5km_file,
   output  = mi_55km_file,

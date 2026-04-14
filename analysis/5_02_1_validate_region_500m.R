@@ -44,14 +44,16 @@ source(here::here("R/calc_sw_in.R"))     # SPLASH
 source(here::here("R/plot_dem.R"))
 source(here::here("R/plot_vegh.R"))
 source(here::here("R/plot_twi.R"))
-source(here::here("R/plot_cor_twi_vegh.R"))
-source(here::here("R/plot_hex_scatter.R"))
-source(here::here("R/plot_single_sample_location.R"))
-source(here::here("R/plot_google_img.R"))
-source(here::here("R/plot_cor_pval.R"))
-source(here::here("R/plot_kg_class.R"))
-source(here::here("R/plot_r_H_R.R"))
 source(here::here("R/plot_rin.R"))
+
+source(here::here("R/plot_google_img.R"))
+source(here::here("R/plot_cor_twi_vegh.R"))
+source(here::here("R/plot_cor_pval.R"))
+source(here::here("R/plot_hex_scatter.R"))
+source(here::here("R/plot_r_H_R.R"))
+
+source(here::here("R/plot_single_sample_location.R"))
+source(here::here("R/plot_kg_class.R"))
 source(here::here("R/plot_fused.R"))
 source(here::here("R/plot_kmeans_map.R"))
 source(here::here("R/plot_mi.R"))
@@ -177,10 +179,10 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     terra::writeCDF(pval_r, pval_nc_path, overwrite = TRUE)
     message("Saved: ", pval_nc_path)
 
-    # --- Elevation and radiation Raster ---
+    # --- Elevation, slope and aspect ---
+    # Crop dem
     dem_rc <- extent_to_tile_ids(reg_extent, tile_size = 1, return_raster = TRUE,
                                  source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
-
 
     # Calculate slope/aspect and resample to twi_rc
     aligned <- aggregate_topography(
@@ -191,8 +193,7 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
       if_resample = TRUE
     )
 
-    # --- Data frame Prepare ---
-
+    # --- Clac Rin ---
     # Extract + join
     df <- as.data.frame(aligned[["dem"]], xy = TRUE) |>
       left_join(as.data.frame(aligned[["slope"]], xy = TRUE), by = c("x", "y")) |>
@@ -206,55 +207,13 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
       return(FALSE)
     }
 
-    # --- Inner Paralell ---
+    sw_in_uneven <- calc_sw_in(df_topo$lat, df_topo$slope, df_topo$aspect, year = 2020)
+    sw_in_flat <- calc_sw_in(df_topo$lat, rep(0, nrow(df_topo)), rep(0, nrow(df_topo)), year = 2020)
 
-    # clean old cluster
-    try({
-      if (exists("cl")) stopCluster(cl)
-      closeAllConnections()
-    }, silent = TRUE)
+    # calculate rin
+    df_calc <- df_topo |>
+      mutate(rin = sw_in_uneven / sw_in_flat)
 
-    # Inner parallelism
-    cl <- makeCluster(workers)
-    registerDoParallel(cl)
-
-    # Chunk Processing
-    chunk_size <- 5000  # rows per chunk, adjust based on memory
-    chunks <- split(df, ceiling(seq_len(nrow(df)) / chunk_size))
-
-    # Parallel Calculation for Each Chunk - Direct assignment
-    df_calc <- foreach(
-      chunk = chunks,
-      .combine = bind_rows,
-      .packages = c("dplyr"),
-      .export   = c(
-        "calc_sw_in_daily",
-        "calc_sw_in",
-        "julian_day",
-        "berger_tls",
-        "dcos",
-        "dsin"
-      )
-    ) %dopar% {
-      # Calculate sw_in_uneven and sw_in_flat for entire chunk
-      sw_in_uneven <- calc_sw_in(chunk$lat, chunk$slope, chunk$aspect, year = 2020)
-      sw_in_flat <- calc_sw_in(chunk$lat, rep(0, nrow(chunk)), rep(0, nrow(chunk)), year = 2020)
-
-      # Combine results back to dataframe
-      chunk |>
-        mutate(
-          sw_in_uneven = sw_in_uneven,
-          sw_in_flat = sw_in_flat,
-          rin = sw_in_uneven / sw_in_flat
-        )
-
-    }
-
-    # Stop cluster
-    stopCluster(cl)
-    registerDoSEQ()
-
-    # --- Build rasters ---
     crs_out <- terra::crs(aligned[["dem"]])
     rin <- terra::rast(df_calc[, c("lon", "lat", "rin")], type = "xyz", crs = crs_out)
     rin <- terra::extend(rin, twi_rc)
@@ -495,8 +454,8 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.png")))
     ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, dpi = 600)
 
-    out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.svg")))
-    ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, device = "svg", bg = "transparent")
+    # out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.svg")))
+    # ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, device = "svg", bg = "transparent")
 
     # --- additional plots ---
     p_vegh450 <- plot_vegh(vegh_450m_mosaic_path, extent = reg_extent, title_text = expression("   450-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
@@ -562,10 +521,6 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
     out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_7plots.png")))
     ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8, dpi = 600)
-
-    out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_7plots.svg")))
-    ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8, device = "svg", bg = "transparent")
-
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")

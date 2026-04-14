@@ -19,7 +19,7 @@ if (!dir.exists(dirname(dem_rg_98p_02p_55km_path))) dir.create(dirname(dem_rg_98
 
 # ---------------- 1. Create template grid ------------------------
 # Create template raster aligned to 55km grid
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.5)
 
 # ---------------- 2. Compute 98th percentile -----------------
 message("Calculating 98th percentile elevation...")

@@ -62,6 +62,9 @@ if (hostname == "dash") {
   kg_present_0p083_file  <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
   kg_legend_file         <- file.path("/data/archive/koeppengeiger_beck_2018/data/legend.txt")
 
+  # Airborne Lidar ALS
+  lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
+
 } else {
 
   # --- UBELIX: Base directories ---
@@ -102,6 +105,8 @@ if (hostname == "dash") {
   kg_present_0p083_file  <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
   kg_legend_file         <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/legend.txt")
 
+  # Airborne Lidar ALS
+  lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
 }
 
 # ----------------------- Processed data ------------------------

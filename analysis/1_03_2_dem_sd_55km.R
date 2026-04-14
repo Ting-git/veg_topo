@@ -20,7 +20,7 @@ if (!dir.exists(dirname(dem_sd_55km_path))) dir.create(dirname(dem_sd_55km_path)
 message("Aggregating DEM using standard deviation (sd)...")
 
 # Create template raster aligned to 55km grid
-align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, dwin = 0.5)
+align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.5)
 
 raster_preprocess_save(
   input        = dem_450m_mosaic_path,
