@@ -69,117 +69,132 @@ calc_sw_in_daily <- function(
   kN <- ifelse(year == 0, 365, (julian_day(year + 1, 1, 1) - julian_day(year, 1, 1)))
   # solar$kN <- kN
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # 02. Calculate heliocentric longitudes (nu and lambda), degrees
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  my_helio <- berger_tls(doy, kN, ke, komega)
-  nu <- my_helio$nu
-  lam <- my_helio$tls
-  # solar$nu_deg <- nu
-  # solar$lambda_deg <- lam
-
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate distance factor (dr), unitless
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Berger et al. (1993)
-  kee <- ke^2
-  rho <- (1 - kee)/(1 + ke*dcos(nu))
-  dr <- (1/rho)^2
-  # solar$rho <- rho
-  # solar$dr <- dr
-
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate the declination angle (delta), degrees
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Woolf (1968)
-  delta <- asin(dsin(lam)*dsin(keps))
-  delta <- delta/pir
-  # solar$delta_deg <- delta
-
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate variable substitutes (u and v), unitless
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # (Ting) Vectorized computation for multiple latitudes and days
 
   # Create proper matrices for vectorized operations
   n_days <- length(doy)
   n_lats <- length(lat)
 
+  # Initialize the result matrix (n_lats rows × n_days columns)
+  result <- matrix(0, nrow = n_lats, ncol = n_days)
+
+  # Convert in advance (does not change with date)
   # Expand all inputs to matrices of correct dimensions
-  delta_mat <- matrix(delta, nrow = n_days, ncol = n_lats)
-  lat_mat <- matrix(lat, nrow = n_days, ncol = n_lats, byrow = TRUE)
-  slope_mat <- matrix(slope, nrow = n_days, ncol = n_lats, byrow = TRUE)
-  aspect_mat <- matrix(aspect, nrow = n_days, ncol = n_lats, byrow = TRUE)
-  dr_mat <- matrix(dr, nrow = n_days, ncol = n_lats)
+  lat_rad <- lat * pir
+  slope_rad <- slope * pir
+  aspect_rad <- aspect * pir
+  cos_slope <- cos(slope_rad)
+  sin_slope <- sin(slope_rad)
+  cos_aspect <- cos(aspect_rad)
+  sin_aspect <- sin(aspect_rad)
+  cos_lat <- cos(lat_rad)
+  sin_lat <- sin(lat_rad)
 
-  # modification by local slope and aspect
-  a <- dsin(delta_mat) * dcos(lat_mat) * dsin(slope_mat) * dcos(aspect_mat) - dsin(delta_mat) * dsin(lat_mat) * dcos(slope_mat)
-  b <- dcos(delta_mat) * dcos(lat_mat) * dcos(slope_mat) + dcos(delta_mat) * dsin(lat_mat) * dsin(slope_mat) * dcos(aspect_mat)
-  c_val <- dcos(delta_mat) * dsin(slope_mat) * dsin(aspect_mat)  # rename
+  # Daily Cycle
+  for(j in 1:n_days) {
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # 02. Calculate heliocentric longitudes (nu and lambda), degrees
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    my_helio <- berger_tls(doy[j], kN, ke, komega)
+    nu <- my_helio$nu
+    lam <- my_helio$tls
+    # solar$nu_deg <- nu
+    # solar$lambda_deg <- lam
 
-  d <- b^2 + c_val^2 - a^2  # use new name
-  d[d <= 0] <- 0.000001
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate distance factor (dr), unitless
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Berger et al. (1993)
+    kee <- ke^2
+    rho <- (1 - kee)/(1 + ke*dcos(nu))
+    dr <- (1/rho)^2
+    # solar$rho <- rho
+    # solar$dr <- dr
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate sin sunset hour angle after Allen, 2006 doi:10.1016/j.agrformet.2006.05.012 0deg is south!!!
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  denominator <- b^2 + c_val^2 # use new name
-  denominator[denominator == 0] <- 1e-6  # Avoid division by zero
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate the declination angle (delta), degrees
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Woolf (1968)
+    delta <- asin(dsin(lam)*dsin(keps)) / pir
+    # solar$delta_deg <- delta
 
-  sin_hs <- (a * c_val + b * sqrt(d)) / denominator # use new name
-  sin_hs <- pmin(pmax(sin_hs, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate variable substitutes (u and v), unitless
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # (Ting) Vectorized computation for multiple latitudes and days
 
-  sin_hs[sin_hs < (-1)] <- -1
-  sin_hs[sin_hs > (1)] <- 1
+    # Relevant trigonometric functions (scalars) for the day
+    sin_delta <- dsin(delta)
+    cos_delta <- dcos(delta)
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate variable substitutes ru and rv using cos^2(hs)+sin^2(hs) = 1
-  # (According to Email David Sandoval 26.05.2025)
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ru = -b * sqrt(1.0 - sin_hs^2)
-  rv = b
+    # Vectorized computation (using pre-computed values)
+    a <- sin_delta * cos_lat * sin_slope * cos_aspect - sin_delta * sin_lat * cos_slope
+    b <- cos_delta * cos_lat * cos_slope + cos_delta * sin_lat * sin_slope * cos_aspect
+    c_val <- cos_delta * sin_slope * sin_aspect # rename
 
-  # Corresponding variable substitute for a flat terrain (slope = 0)
-  ru_f <- dsin(delta_mat) * dsin(lat_mat) # (Ting) Vectorized computation for multiple latitudes and days!!
-  rv_f <- dcos(delta_mat) * dcos(lat_mat) # (Ting) Vectorized computation for multiple latitudes and days!!
+    d <- b^2 + c_val^2 - a^2  # use new name
+    d[d <= 0] <- 0.000001
 
-  # correct for anomalous ru, Transparent mountains!
-  # (Ting) Vectorized computation for multiple latitudes and days!!
-  ru <- ifelse((ru < ru_f) | (ru == 0), ru_f, ru)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate sin sunset hour angle after Allen, 2006 doi:10.1016/j.agrformet.2006.05.012 0deg is south!!!
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    denominator <- b^2 + c_val^2 # use new name
+    denominator[denominator == 0] <- 1e-6  # Avoid division by zero
 
-  # solar$ru <- ru
-  # solar$rv <- rv
+    sin_hs <- (a * c_val + b * sqrt(d)) / denominator # use new name
+    sin_hs <- pmin(pmax(sin_hs, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate the sunset hour angle (hs), degrees
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Note: u/v equals tan(delta) * tan(lat)
-  ruv <- ru/rv
-  ruv <- pmin(pmax(ruv, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
+    sin_hs[sin_hs < (-1)] <- -1
+    sin_hs[sin_hs > (1)] <- 1
 
-  hs <- acos(-1.0 * ruv) / pir
-  hs[ruv >= 1.0] <- 180    # Polar day (no sunset)
-  hs[ruv <= -1.0] <- 0     # Polar night (no sunrise)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate variable substitutes ru and rv using cos^2(hs)+sin^2(hs) = 1
+    # (According to Email David Sandoval 26.05.2025)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ru = -b * sqrt(1.0 - sin_hs^2)
+    rv = b
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Calculate daily extraterrestrial radiation (ra_d), J/m^2
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Corresponding variable substitute for a flat terrain (slope = 0)
+    ru_f <- sin_delta * sin_lat
+    rv_f <- cos_delta * cos_lat
 
-  # ref: Eq. 1.10.3, Duffy & Beckman (1993)
-  r_toa <- (kSecInDay/pi) * kGsc * dr_mat * (ru * pir * hs + rv * dsin(hs))
+    # correct for anomalous ru, Transparent mountains!
+    # (Ting) Vectorized computation for multiple latitudes and days!!
+    ru <- ifelse((ru < ru_f) | (ru == 0), ru_f, ru)
 
-  # solar$r_toa <- r_toa
+    # solar$ru <- ru
+    # solar$rv <- rv
 
-  # according to Email David Sandoval 26.05.2025
-  r_toa[r_toa < 0] <- 0
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate the sunset hour angle (hs), degrees
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Note: u/v equals tan(delta) * tan(lat)
+    ruv <- ru/rv
+    ruv <- pmin(pmax(ruv, -1), 1)  # (Ting) Ensure values stay within [-1, 1] to prevent floating-point errors causing NaNs in acos()
 
-  # (Ting)
-  # r_toa is per unit slope-surface area (J m-2 day-1)
-  # convert to horizontal-equivalent by area projection
-  # project slope-surface irradiance to horizontal-equivalent
-  r_toa_horiz_proj <- r_toa / dcos(slope_mat)
+    hs <- acos(-1.0 * ruv) / pir
+    hs[ruv >= 1.0] <- 180    # Polar day (no sunset)
+    hs[ruv <= -1.0] <- 0     # Polar night (no sunrise)
 
-  # (Ting) Vectorized computation for multiple latitudes and days!!
-  return(t(r_toa_horiz_proj)) # (Ting) change r_toa to r_toa_horiz_proj
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calculate daily extraterrestrial radiation (ra_d), J/m^2
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    # ref: Eq. 1.10.3, Duffy & Beckman (1993)
+    r_toa <- (kSecInDay/pi) * kGsc * dr * (ru * pir * hs + rv * dsin(hs))
+
+    # solar$r_toa <- r_toa
+
+    # according to Email David Sandoval 26.05.2025
+    r_toa[r_toa < 0] <- 0
+
+    # (Ting)
+    # r_toa is per unit slope-surface area (J m-2 day-1)
+    # convert to horizontal-equivalent by area projection
+    # project slope-surface irradiance to horizontal-equivalent
+    r_toa_horiz_proj <- r_toa / cos_slope
+
+    result[, j] <- r_toa_horiz_proj
+  }
+  return(result)
 
 }
