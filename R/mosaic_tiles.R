@@ -66,8 +66,8 @@ mosaic_tiles <- function(input_dir,
   # ===========================================================================
   # 5) Write output (optional)
   # ===========================================================================
-  message("Saving...")
   if (!is.null(output_file)) {
+    message("Saving...")
     ext <- tolower(tools::file_ext(output_file))
 
     if (ext == "nc") {

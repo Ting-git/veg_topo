@@ -69,7 +69,5 @@ plot_google_img <- function(extent = NULL, title_text = "Google Satellite Map",
       )
     )
 
-  rm(satellite_map); gc()
-
   return(p)
 }

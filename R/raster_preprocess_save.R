@@ -43,7 +43,8 @@ raster_preprocess_save <- function(input,
                                    if_resample = FALSE,
                                    if_round_fact = TRUE,
                                    if_mask = FALSE,
-                                   if_return_raster = TRUE) {
+                                   if_return_raster = TRUE,
+                                   overwrite = TRUE) {
 
   # --- Load input raster ---
   r_in <- if (is.character(input)) terra::rast(input) else input
@@ -108,7 +109,7 @@ raster_preprocess_save <- function(input,
     # Method 2: Traditional Aggregate (requires grid alignment)
     message("Using TRADITIONAL aggregate")
 
-    # Calculate aggregation factors
+    # Calculate aggregation factors (input resolution -> target resolution)
     fact_x <- res_tar[1] / terra::xres(r_in)
     fact_y <- res_tar[2] / terra::yres(r_in)
 
@@ -127,16 +128,41 @@ raster_preprocess_save <- function(input,
     message(sprintf("  -> Input raster dimensions: %d x %d",
                     terra::nrow(r_in), terra::ncol(r_in)))
 
-    # Perform aggregation
+    # Perform aggregation or disaggregation based on factors
     if (fact_x >= 1 && fact_y >= 1) {
+      # Downsampling: use aggregate
       r_out <- terra::aggregate(r_in,
                                 fact = c(fact_x, fact_y),
                                 fun = fun,
                                 na.rm = TRUE)
-      message(sprintf("  -> Output raster dimensions: %d x %d",
+      message(sprintf("  -> Output raster dimensions: %d x %d (after aggregation)",
+                      terra::nrow(r_out), terra::ncol(r_out)))
+    } else if (fact_x <= 1 && fact_y <= 1) {
+      # Upsampling: use disaggregate
+      # Calculate disaggregation factors (target resolution -> input resolution)
+      disagg_x <- terra::xres(r_in) / res_tar[1]
+      disagg_y <- terra::yres(r_in) / res_tar[2]
+
+      if (if_round_fact) {
+        disagg_x_rounded <- round(disagg_x)
+        disagg_y_rounded <- round(disagg_y)
+        message(sprintf("  -> Disaggregation factors: X = %.2f -> %d, Y = %.2f -> %d",
+                        disagg_x, disagg_x_rounded, disagg_y, disagg_y_rounded))
+        disagg_x <- disagg_x_rounded
+        disagg_y <- disagg_y_rounded
+      } else {
+        message(sprintf("  -> Disaggregation factors: X = %.2f, Y = %.2f", disagg_x, disagg_y))
+      }
+
+      r_out <- terra::disagg(r_in, fact = c(disagg_x, disagg_y))
+      message(sprintf("  -> Output raster dimensions: %d x %d (after disaggregation)",
                       terra::nrow(r_out), terra::ncol(r_out)))
     } else {
-      warning("Aggregation factors < 1 — skipping aggregation.")
+      # Mixed case: one factor >1, one <1 - not directly supported
+      warning(sprintf("Mixed factors: X = %.2f, Y = %.2f. ",
+                      fact_x, fact_y),
+              "Cannot aggregate in one dimension and disaggregate in the other simultaneously. ",
+              "Skipping aggregation.")
       r_out <- r_in
     }
 
@@ -197,7 +223,7 @@ raster_preprocess_save <- function(input,
 
       # Write based on file extension
       if (tolower(ext) %in% c("nc", "cdf")) {
-        terra::writeCDF(lyr, out_i, overwrite = TRUE, varname = varname_i)
+        terra::writeCDF(lyr, out_i, overwrite = overwrite, varname = varname_i)
       } else if (tolower(ext) %in% c("tif", "tiff")) {
         terra::writeRaster(
           lyr,

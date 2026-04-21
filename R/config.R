@@ -62,8 +62,9 @@ if (hostname == "dash") {
   kg_present_0p083_file  <- file.path("/data/archive/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
   kg_legend_file         <- file.path("/data/archive/koeppengeiger_beck_2018/data/legend.txt")
 
-  # Airborne Lidar ALS
+  # Airborne Lidar ALS and LVIS
   lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
+  lidar_lvis_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/LVIS_RH98_GSD10m")
 
 } else {
 
@@ -105,9 +106,10 @@ if (hostname == "dash") {
   kg_present_0p083_file  <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
   kg_legend_file         <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/legend.txt")
 
-  # Airborne Lidar ALS
+  # Airborne Lidar ALS and LVIS
   lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
-}
+  lidar_lvis_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/LVIS_RH98_GSD10m")
+  }
 
 # ----------------------- Processed data ------------------------
 
@@ -136,6 +138,7 @@ sw_in_uneven_450m_path           <- file.path(veg_topo_extr_dir,"data/global_sw_
 sw_in_flat_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/flat_1_1_deg")
 sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.tif")     # flat
 sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
+rin_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
 
 # Elevation variability (~55 km)
 dem_sd_55km_path            <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_sd_55km.nc")
@@ -202,3 +205,6 @@ reg_sample_vect_path <- file.path(reg_sample_dir,"reg_sample_vect.gpkg")
 
 # 5_02 Validation results (regional)
 reg_validate_dir <- file.path(veg_topo_extr_dir,"data/reg_validate_500m")
+
+# 6_01 Validation of Height data
+h_validation_dir <- file.path(veg_topo_extr_dir,"data/h_validate_500m")

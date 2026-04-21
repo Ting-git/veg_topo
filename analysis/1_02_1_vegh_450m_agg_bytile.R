@@ -12,14 +12,8 @@ source(here::here("R/raster_preprocess_save.R")) # Set Na value and aggregation
 
 # Set worker numbers for different system
 hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  workers = 4
-  message("→ using ", workers, " workers")
-
-} else {
-  workers = 16
-  message("→ using ", workers, " workers")
-}
+if (hostname == "dash") workers = 4 else workers = 16
+message("→ using ", workers, " workers")
 
 # -------Configuration----------------------------------------------------------
 

@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=256G  # need >= ？G memory
+#SBATCH --mem=400G  # need >= ？G memory
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -36,7 +36,7 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 1_06_1_mat_map_srad_5km.R\n"); source("1_06_1_mat_map_srad_5km.R")'
+)); cat("Running script: 1_06_1_mat_map_srad_5km_450m.R\n"); source("1_06_1_mat_map_srad_5km_450m.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?

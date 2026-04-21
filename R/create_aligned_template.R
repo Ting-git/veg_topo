@@ -13,7 +13,15 @@
 #' r <- rast(twi_450m_mosaic_clean_path)
 #' template <- create_aligned_template(r, res_out = 0.05)
 #' template
-create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326") {
+
+source(here::here("R/get_lonlat_extent.R"))
+create_aligned_template <- function(input,  res_out = 0.05, crs_out = "EPSG:4326", snap_step = NULL) {
+  # ---- Load raster ----
+  if (is.character(input)) input <- terra::rast(input)
+  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
+
+  # Get input raster extent
+  e <- if(crs(input) != "EPSG:4326") get_lonlat_extent(input) else ext(input)
 
   # ---- Helper function to determine decimal places ----
   get_decimal_places <- function(x) {
@@ -23,27 +31,23 @@ create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326"
     nchar(strsplit(x_str, "\\.")[[1]][2])
   }
 
-  # Automatically determine rounding precision from res_out
-  res_out_decimals <- get_decimal_places(res_out)
-  round <- res_out_decimals + 1
+  # ---- Set alignment step and rounding precision ----
+  if(is.null(snap_step)) snap_step <- res_out
 
-  # ---- Load raster ----
-  if (is.character(input)) input <- terra::rast(input)
-  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
+  # Automatically determine rounding precision from grid_resolution
+  res_decimals <- get_decimal_places(snap_step)
+  round_digits <- res_decimals + 1
 
-  # Get input raster extent
-  e <- if(crs(input) != "EPSG:4326") get_lonlat_extent(input) else ext(input)
-
-  xmin <- round(e$xmin, round)
-  xmax <- round(e$xmax, round)
-  ymin <- round(e$ymin, round)
-  ymax <- round(e$ymax, round)
+  xmin <- round(e$xmin, round_digits)
+  xmax <- round(e$xmax, round_digits)
+  ymin <- round(e$ymin, round_digits)
+  ymax <- round(e$ymax, round_digits)
 
   # Align the extent to the grid defined by res_out (floor/ceiling)
-  xmin_aligned <- floor(xmin / res_out) * res_out
-  xmax_aligned <- ceiling(xmax / res_out) * res_out
-  ymin_aligned <- floor(ymin / res_out) * res_out
-  ymax_aligned <- ceiling(ymax / res_out) * res_out
+  xmin_aligned <- floor(xmin / snap_step) * snap_step
+  xmax_aligned <- ceiling(xmax / snap_step) * snap_step
+  ymin_aligned <- floor(ymin / snap_step) * snap_step
+  ymax_aligned <- ceiling(ymax / snap_step) * snap_step
 
   # Compute number of rows and columns to cover the aligned extent
   ncols <- round((xmax_aligned - xmin_aligned) / res_out)
