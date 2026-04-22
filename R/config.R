@@ -142,7 +142,7 @@ rin_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_ter
 
 # Elevation variability (~55 km)
 dem_sd_55km_path            <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_sd_55km.nc")
-dem_rg_98p_02p_55km_path    <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_rg_98p_02p_55km.nc")  # 98th–2nd percentile
+dem_rg_95p_05p_55km_path    <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_rg_95p_05p_55km.nc")  # 95th–05p percentile
 
 # 1_04 Moisture index
 mi_5km_file  <- file.path(veg_topo_extr_dir,"data/global_mi_5km/mi_5km.nc")
