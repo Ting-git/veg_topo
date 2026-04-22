@@ -61,7 +61,7 @@ fbare_55km_r <- terra::rast(fbare_55km_file)
 fwater_55km_r <- terra::rast(fwater_55km_file)
 fsnow_55km_r <- terra::rast(fsnow_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
-dem_rg_98p_02p_55km_r <- terra::rast(dem_rg_98p_02p_55km_path)
+dem_rg_95p_05p_55km_r <- terra::rast(dem_rg_95p_05p_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
 fveg_55km_r <- terra::rast(fveg_55km_path)
 
@@ -73,7 +73,7 @@ stacked <- c(
   fwater_55km_r,
   fsnow_55km_r,
   dem_sd_55km_r,
-  dem_rg_98p_02p_55km_r,
+  dem_rg_95p_05p_55km_r,
   fpa_55km_r,
   fveg_55km_r
 )
@@ -85,11 +85,11 @@ df <- df[complete.cases(df), ]
 # easy to make mistake here!
 colnames(df) <-  c("lon", "lat",
                    "mi", "fused", "fbare", "fwater", "fsnow", "relief", 
-                   "dem_rg_98p_02p", "fpa", "fveg")
+                   "dem_rg_95p_05p", "fpa", "fveg")
 
 # Clean up
 rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r, dem_sd_55km_r, 
-   dem_rg_98p_02p_55km_r, fpa_55km_r, fveg_55km_r)
+   dem_rg_95p_05p_55km_r, fpa_55km_r, fveg_55km_r)
 gc()
 
 
@@ -110,7 +110,7 @@ knitr::include_graphics(files)
 
 ```{r DataOverview}
 # Select columns for plot
-cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_98p_02p", "fpa", "fveg")
+cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_95p_05p", "fpa", "fveg")
 # plot input data density
 plot_density_grid(
   df,
@@ -175,6 +175,10 @@ table(df_binned$abs_lat_bin)
 table(df_binned$relief_bin)
 
 table(df_binned$strata_label)
+# Select rows matching the condition
+df_subset <- subset(df, !is.na(df_binned$mi_bin) & df_binned$mi_bin == "[0,0.03]")
+df_sorted <- df_subset[order(-df_subset$fveg), ]
+print(df_sorted)
 ```
 
 ---
@@ -199,7 +203,7 @@ df_filt <- df_binned |>
   
   filter(fpa > 0.5) |> # select regions with 50% protected areas
   
-  filter(dem_rg_98p_02p < 500)  # avoid the strong influence of a large elevation gradient differences
+  filter(dem_rg_95p_05p < 500)  # avoid the strong influence of a large elevation gradient differences
 
 # print the numbers of possible region
 table(df_filt$strata_label)
