@@ -1,27 +1,23 @@
-#' Create a raster template aligned to an input raster
-#'
-#' Generates a template raster covering the input raster's extent,
-#' aligned to a regular grid of size `res_out`. Uses the same alignment
-#' logic as `create_spatial_windows()` for consistent spatial windows.
-#'
-#' @param input Input raster (SpatRaster, Raster, or its file path)
-#' @param res_out Grid/window size
-#' @param crs_out Optional CRS for output raster (default: same as input)
-#' @return Aligned SpatRaster template
-#'
-#' @examples
-#' r <- rast(twi_450m_mosaic_clean_path)
-#' template <- create_aligned_template(r, res_out = 0.05)
-#' template
-
 source(here::here("R/get_lonlat_extent.R"))
-create_aligned_template <- function(input,  res_out = 0.05, crs_out = "EPSG:4326", snap_step = NULL) {
-  # ---- Load raster ----
-  if (is.character(input)) input <- terra::rast(input)
-  if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster or valid file path.")
+create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326", snap_step = NULL) {
+  # ---- Handle different input types ----
+  if (inherits(input, "SpatExtent")) {
+    # Input is already an extent
+    e <- input
+    # Need CRS info - if not provided, use crs_out
+    if (is.null(crs_out)) {
+      stop("When input is an extent, crs_out must be specified")
+    }
+    input_crs <- crs_out
+  } else {
+    # Original logic for raster inputs
+    if (is.character(input)) input <- terra::rast(input)
+    if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster, valid file path, or SpatExtent.")
 
-  # Get input raster extent
-  e <- if(crs(input) != "EPSG:4326") get_lonlat_extent(input) else ext(input)
+    # Get input raster extent
+    e <- if(terra::crs(input) != "EPSG:4326") get_lonlat_extent(input) else terra::ext(input)
+    input_crs <- terra::crs(input)
+  }
 
   # ---- Helper function to determine decimal places ----
   get_decimal_places <- function(x) {
@@ -53,11 +49,17 @@ create_aligned_template <- function(input,  res_out = 0.05, crs_out = "EPSG:4326
   ncols <- round((xmax_aligned - xmin_aligned) / res_out)
   nrows <- round((ymax_aligned - ymin_aligned) / res_out)
 
-  # Use input CRS if crs_out not provided
-  if (is.null(crs_out)) crs_out <- crs(input)
+  # Use input CRS if crs_out not provided and input is raster
+  if (is.null(crs_out)) {
+    if (exists("input_crs") && !inherits(input, "SpatExtent")) {
+      crs_out <- input_crs
+    } else {
+      crs_out <- "EPSG:4326"  # Default fallback
+    }
+  }
 
   # Create the template raster
-  template <- rast(
+  template <- terra::rast(
     nrows = nrows,
     ncols = ncols,
     xmin = xmin_aligned,
