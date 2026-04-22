@@ -12,6 +12,7 @@
 
 # -------------------- 1. Setup ------------------------------------------------
 library(terra)
+library(sf)
 
 source(here::here("R/config.R"))
 source(here::here("R/raster_preprocess_save.R"))
@@ -39,7 +40,7 @@ message("Rasterizing shapefiles to 0.02° grid...")
 # -burn 1 -> 1 as protected
 rasterize_shp <- function(shp_path, out_tif) {
   cmd <- sprintf(
-    "gdal_rasterize -init 0 -burn 1 -tr 0.02 0.02 -te -180 -60 180 90 -ot Byte -of GTiff '%s' '%s'",
+    "gdal_rasterize -burn 1 -tr 0.02 0.02 -te -180 -60 180 90 -ot Byte -of GTiff '%s' '%s'",
     shp_path, out_tif
   )
   system(cmd)
@@ -50,23 +51,12 @@ mapply(rasterize_shp, shp_files, rasterized_files)
 # -------------------- 4. Merge rasters (union) --------------------------------
 message("Merging rasters with maximum operator (union of all PAs)...")
 
-# gdal_calc.py: maximum = 1 if any input is 1 (logical OR)
-merge_cmd <- sprintf(
-  "gdal_calc.py -A '%s' -B '%s' -C '%s' --outfile='%s' --calc=\"maximum(A,B,C)\" --NoDataValue=0 --overwrite",
-  rasterized_files[1], rasterized_files[2], rasterized_files[3], merged_22km_path
-)
+r1 <- rast(rasterized_files[1])
+r2 <- rast(rasterized_files[2])
+r3 <- rast(rasterized_files[3])
 
-system(merge_cmd)
-message("Merged raster saved to: ", merged_22km_path)
-
-# # --- Basic properties ------
-# r_merged <- rast(merged_22km_path)
-# summary(r_merged)
-#
-# message("1. Basic properties:")
-# vals <- values(r_merged)
-# message("   Min value: ", min(vals, na.rm = TRUE))
-# message("   Max value: ", max(vals, na.rm = TRUE))
+# merge by terra::max
+r_merged_terra <- max(r1, r2, r3, na.rm = TRUE)
 
 # -------------------- 5. Aggregate to 0.5° (area-weighted fraction) -----------
 message("Aggregating to 0.5° grid (fractional PA coverage)...")
@@ -77,7 +67,7 @@ align_template_55km <- create_aligned_template(twi_450m_mosaic_clean_path, res_o
 # Area-weighted aggregation: accounts for partial pixel coverage at boundaries
 # Why 0 treat as NA here
 r_out <- raster_preprocess_save(
-  input        = merged_22km_path,
+  input        = r_merged_terra,
   output       = fpa_55km_path,
   target       = align_template_55km,
   varname      = "fpa",
