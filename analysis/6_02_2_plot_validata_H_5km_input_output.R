@@ -99,7 +99,6 @@ plot_validation_results <- function(file_base) {
 
     base_theme <- ggplot2::theme(
       aspect.ratio = aspect_ratio,
-
       legend.position = "right",
       panel.background = element_rect(fill = NA, color = NA),
       legend.background = element_rect(fill = NA, color = NA),

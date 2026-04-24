@@ -1,6 +1,7 @@
 # ~84 min: UBELIX, 20 cores, 500G
 # ~30 min: UBELIX, 35 cores, 1000G
-# ------Load required libraries-------------------------------------------------
+
+# ------Load required libraries and custom functions----------------------------
 
 library(terra)
 library(dplyr)
@@ -15,30 +16,12 @@ library(RColorBrewer)
 library(rnaturalearth)
 library(sf)
 
-# ------ Load configuration file and custom functions -------------------------------------------------
-
-# Automatically select configuration file
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  message("💻 Detected Worksation: dash → using config.R")
-  source(here::here("config.R"))
-  workers = 2 # don't do it on worksation
-} else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-  workers = 35
-}
-
+source(here::here("R/config.R"))
 source(here::here("R/create_spatial_windows.R"))
 source(here::here("R/calculate_correlation_bywin.R"))
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
-# source(here::here("R/extent_to_tile_ids.R"))
-
-source(here::here("R/helpers.R")) # SPLASH
-source(here::here("R/calc_sw_in.R")) # SPLASH
-
 source(here::here("R/plot_dem.R"))
 # source(here::here("R/plot_aspect.R"))
 # source(here::here("R/plot_slope.R"))
@@ -56,6 +39,9 @@ source(here::here("R/plot_fused.R"))
 source(here::here("R/plot_kg_class.R"))
 
 
+# Set workers, but need `source(here::here("R/config.R"))` first
+if (hostname == "dash") workers = 2 else workers = 35
+message("→ using ", workers, " workers")
 # ------ File Configuration ---------------------------------------------
 
 if (!dir.exists(r_H_R_tiles_dir)) {

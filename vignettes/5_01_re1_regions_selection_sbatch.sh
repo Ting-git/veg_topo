@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=500  # >500G
+#SBATCH --mem=300G  # >500G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/vignettes

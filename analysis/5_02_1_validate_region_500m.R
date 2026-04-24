@@ -15,21 +15,22 @@ library(RColorBrewer)
 library(rnaturalearth)
 library(sf)
 
-# ------ Load configuration file and custom functions -----------------------------------------
-
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-
+# ------ Load helper and custom functions -----------------------------------------------------
+source(here::here("R/config.R"))
+# Set workers, but need `source(here::here("R/config.R"))` first
+# Set worker numbers for different system
 if (hostname == "dash") {
-  message("💻 Detected Workstation: dash → using config.R")
-  source(here::here("config.R"))
+  batch_size <- 10000
   workers <- 16
 } else {
-  message("🖥️ Detected HPC environment (", hostname, ") → using config_ubelix.R")
-  source(here::here("config_ubelix.R"))
-  workers <- 50
+  batch_size <- 1000000
+  # workers <- 50
+  workers <- 4
 }
+message("→ using ", workers, " workers")
+message("→ batch size: ", batch_size)
 
-# ------ Load helper and custom functions -----------------------------------------------------
+
 source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/create_spatial_windows.R"))
@@ -65,7 +66,6 @@ source(here::here("R/plot_aspect.R"))
 source(here::here("R/plot_slope.R"))
 source(here::here("R/plot_sw_in.R"))
 
-
 # ------ File Configuration ---------------------------------------------
 
 if (!dir.exists(reg_validate_dir)) {
@@ -87,21 +87,25 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
   tryCatch({
     t0 <- Sys.time()
 
+
     # --- Region info ---
     reg_id <- reg_row$strata_label
     reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
     reg_xmid <- (reg_row$xmin +reg_row$xmax) / 2
     reg_ymid <- (reg_row$ymin +reg_row$ymax) / 2
 
-    x_step <- reg_row$xmax - reg_row$xmin
-    y_step <-  reg_row$ymax - reg_row$ymin
+    x_step <- 0.01
+    y_step <-  0.01
+
+    aspect_ratio <- (reg_extent[4] - reg_extent[3]) / (reg_extent[2] - reg_extent[1])
 
     # Start Processing
-    tictoc::tic(paste0("Processing tile: ", reg_id))
+    tictoc::tic(paste0("⭐️⭐️⭐️ Processing: ", reg_id, " ⭐️⭐️⭐"))
     t0 <- Sys.time()
 
     # --- TWI Raster ---
     twi_rc <- terra::rast(twi_30m_path) |> terra::crop(reg_extent)
+    twi_rc <- twi_rc / 100
     twi_nc_path <- file.path(output_dir, paste0("reg_", reg_id, "_twi_30m.nc"))
     terra::writeCDF(twi_rc, twi_nc_path, overwrite = TRUE)
     rm(twi_rc); gc()
@@ -204,14 +208,18 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
     if (nrow(df) == 0) {
       warning(sprintf("No valid cells after drop_na for %s", file))
-      return(FALSE)
+      return(list(success = FALSE,
+                  file = file,
+                  skipped = FALSE,
+                  error = "no_valid_cells"))
     }
 
-    sw_in_uneven <- calc_sw_in(df_topo$lat, df_topo$slope, df_topo$aspect, year = 2020)
-    sw_in_flat <- calc_sw_in(df_topo$lat, rep(0, nrow(df_topo)), rep(0, nrow(df_topo)), year = 2020)
+    # 计算辐射（向量化操作，处理所有行）
+    sw_in_uneven <- calc_sw_in(df$lat, df$slope, df$aspect, year = 2020)
+    sw_in_flat <- calc_sw_in(df$lat, rep(0, nrow(df)), rep(0, nrow(df)), year = 2020)
 
-    # calculate rin
-    df_calc <- df_topo |>
+    # 合并结果
+    df_calc <- df |>
       mutate(rin = sw_in_uneven / sw_in_flat)
 
     crs_out <- terra::crs(aligned[["dem"]])
@@ -283,244 +291,170 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     rm(stacked, df_win, df_calc, df_cor, corA_r, corB_r);gc
 
     # --- reset theme for plots, change the layout for better visualization ---
-    re_theme0 <- list(
-      ggplot2::theme(
-        aspect.ratio = 1,
-        legend.position = "bottom",
-        panel.background = element_rect(fill = NA, color = NA),
-        legend.background = element_rect(fill = NA, color = NA),
-        legend.box.background = element_rect(fill = NA, color = NA),
+    base_theme <- ggplot2::theme(
+      aspect.ratio = aspect_ratio,
 
-        legend.text = ggplot2::element_text(size = text_size * 0.9,
-                                            angle = 90,
-                                            hjust = 0.5, vjust = 0.5,
-                                            margin = margin(r = 0, b = 0, l = 0)),
-        legend.title = ggplot2::element_text(size = text_size,
-                                             angle = 0,   hjust = 0, vjust = 1 ),
-        legend.margin = margin(0, 0, 0, 0),
-        legend.box.margin = margin(-45, 0, 0, 0),
-        axis.text.x = ggplot2::element_text(
-          angle = 90,
-          size = text_size * 0.8,
-          hjust = 0.5,
-          vjust = 0.5,
-          margin = margin(t = 0, b = 0),
-        ),
-        axis.text.y = ggplot2::element_text(
-          angle = 90,
-          size = text_size * 0.8,
-          hjust = 0.5,
-          vjust = 0.5,
-          margin = margin(r = 2, l = 0)
-        ),
-        panel.spacing = unit(0, "cm"),
-        panel.border = ggplot2::element_rect(linewidth = 0.3, fill = NA),
-        plot.title = ggplot2::element_text(
-          size = text_size * 1.2,
-          face = "plain",
-          margin = margin(b = 0)
-        ),
-        plot.title.position = "panel"
-      )
+      legend.position = "right",
+      legend.justification = c(0, 0), # 左对齐，垂直底部对齐
+      panel.background = element_rect(fill = NA, color = NA),
+      legend.background = element_rect(fill = NA, color = NA),
+      legend.box.background = element_rect(fill = NA, color = NA),
+      legend.text = ggplot2::element_text(size = text_size * 0.9,
+                                          angle = 0,
+                                          hjust = 0, vjust = 0.5,
+                                          margin = margin(b = 0) ),
+      legend.title = ggplot2::element_text(size = text_size,
+                                           angle = 0, hjust = 0, vjust = 1),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, -8),
+
+      axis.title.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_line(),
+
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y =  element_line(),
+
+      axis.line = element_blank(),
+
+      panel.spacing = unit(0, "cm"),
+      panel.border = ggplot2::element_rect(linewidth = 0.3, fill = NA),
+      plot.title = ggplot2::element_text(
+        size = text_size * 1.2,
+        face = "plain",
+        margin = margin(b = 0)
+      ),
+      plot.title.position = "panel"
     )
 
-    re_theme <- list(
-      guides(fill = guide_colorbar(barwidth = 8, barheight = 0.8)),
-      ggplot2::theme(  axis.title.x = ggplot2::element_blank(),
-                       axis.title.y = ggplot2::element_blank()),
-      re_theme0
-    )
+    my_guides <- guides(fill = guide_colorbar(label.position = "right",  # 标签在右侧
+                                              label.hjust = 0,
+                                              barwidth = 0.8, barheight = 12,
+                                              label.theme = element_text(
+                                                size = text_size * 0.9,
+                                                margin = margin(r = 2, l = 2)  # 统一右侧固定边距
+                                              )))
 
     # re_theme_margin_r for the first fig in each rows
     # re_theme_margin_r <- ggplot2::theme( plot.margin = margin(t = 0, r = 20, b = 0, l = 0))
 
     # --- Plotting ---
-    p_location <- plot_single_sample_location(reg_xmid, reg_ymid, title_text = "   Location", text_size = text_size) +
-      labs(tag = "a)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.13, 1)
-      ) + ggplot2::theme(aspect.ratio = 1, plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
+    p_location <- plot_single_sample_location(reg_xmid, reg_ymid, title_text = "Location", text_size = text_size) +
+      ggplot2::theme(aspect.ratio = aspect_ratio, plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_google <- plot_google_img(extent = reg_extent, title_text = "   Google Satellite Map", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "b)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)) + re_theme0 +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
+    p_google <- plot_google_img(extent = reg_extent, title_text = "Google Satellite", text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_dem <- plot_dem(file.path(output_dir, paste0("reg_", reg_id, "_dem_30m.nc")), extent = reg_extent, title_text = "   30-m Elevation", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "c)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.12, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 20, b = 4, l = 0))
+    p_dem <- plot_dem(file.path(output_dir, paste0("reg_", reg_id, "_dem_30m.nc")), extent = reg_extent, title_text = "30-m Elevation", text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme( plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_vegh <- plot_vegh(file.path(output_dir, paste0("reg_", reg_id, "_vegh_30m.nc")), extent = reg_extent, title_text = expression("   30-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "d)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
+    p_vegh <- plot_vegh(file.path(output_dir, paste0("reg_", reg_id, "_vegh_30m.nc")), extent = reg_extent, title_text = expression("30-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme( plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_twi <- plot_twi(file.path(output_dir, paste0("reg_", reg_id, "_twi_30m.nc")), extent = reg_extent, title_text = "   30-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "e)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.13, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+    p_twi <- plot_twi(file.path(output_dir, paste0("reg_", reg_id, "_twi_30m.nc")), extent = reg_extent, title_text = "30-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_rA <- plot_cor_twi_vegh(file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_500m_map.nc")), extent = reg_extent,  title_text <- bquote("   500-m Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "f)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+    p_rA <- plot_cor_twi_vegh(file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_500m_map.nc")), extent = reg_extent,  title_text <- bquote("500-m Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_rin <- plot_rin(file.path(output_dir, paste0("reg_", reg_id, "_rin_30m.nc")), extent = reg_extent, title_text = "   30-m Rᵢₙ",  text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "g)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.12, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+    p_rin <- plot_rin(file.path(output_dir, paste0("reg_", reg_id, "_rin_30m.nc")), extent = reg_extent, title_text = "30-m Rᵢₙ",  text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_rB <- plot_r_H_R(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_500m_map.nc")), extent = reg_extent, title_text = bquote("   500-m Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "h)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+    p_rB <- plot_r_H_R(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_500m_map.nc")), extent = reg_extent, title_text = bquote("500-m Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     # ---- x=r30; y=r450 ----
     p_validA <- plot_scatter_r_validation(input_x = file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")),
                                           input_y = cor_twi_vegh_mosaic_file,
-                                          title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]),
+                                          title_text = bquote("Comparison " * r[.("H")*","*.("TWI")]),
                                           x_text = expression(r[30]),
                                           y_text = expression(r[450]),
                                           text_size = text_size) +
-      labs(tag = "i)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.13, 1)
-      ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 20, b = 0, l = 0))
+      ggplot2::theme(legend.position = "none", plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    # ---- x=r450; y=r30 ----
-    # p_validA <- plot_scatter_r_validation(input_x = cor_twi_vegh_mosaic_file,
-    #                                       input_y = file.path(output_dir, paste0("reg_", reg_id, "_r_H_TWI_30m_5000m_map.nc")),
-    #                                       title_text = bquote("   Comparison " * r[.("H")*","*.("TWI")]),
-    #                                       x_text = expression(r[450]),
-    #                                       y_text = expression(r[30]),
-    #                                       text_size = text_size) +
-    #   labs(tag = "i)") +
-    #   theme(
-    #     plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-    #     plot.tag.position = c(0.13, 1)
-    #   ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 20, b = 0, l = 0))
+    p_rA2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = reg_extent, title_text = bquote("5-km Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme( plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
+    p_validB <- plot_scatter_r_validation(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_5000m_map.nc")), r_H_R_5km_path, title_text = bquote("Comparison " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size) +
+      ggplot2::theme(legend.position = "none", plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_rA2 <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = reg_extent, title_text = bquote("   5-km Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "j)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme + ggplot2::theme(legend.box.margin = margin(-75, 0, 0, 0), plot.margin = margin(t = 4, r = 10, b = 0, l = 0))
-
-    p_validB <- plot_scatter_r_validation(file.path(output_dir, paste0("reg_", reg_id, "_r_H_R_30m_5000m_map.nc")), r_H_R_5km_path, title_text = bquote("   Comparison " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size) +
-      labs(tag = "k)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.12, 1)
-      ) + re_theme0 + ggplot2::theme(legend.position = "none", plot.margin = margin(t = 4, r = 0, b = 0, l = 0))
-
-    p_rB2 <- plot_r_H_R(r_H_R_5km_path, extent = reg_extent, title_text = bquote("   5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step)+
-      labs(tag = "l)") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme  +  ggplot2::theme(legend.box.margin = margin(-75, 0, 0, 0), plot.margin = margin(t = 4, r = 0, b = 0, l = 0))
+    p_rB2 <- plot_r_H_R(r_H_R_5km_path, extent = reg_extent, title_text = bquote("5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step)+
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     final_plot1 <- patchwork::wrap_plots(
       p_location, p_google,  p_dem, p_vegh,
-      p_twi, p_rA, p_rin, p_rB,
-      p_validA, p_rA2,  p_validB, p_rB2,
+      p_validA, p_rA, p_rA2, p_twi,
+      p_validB, p_rB, p_rB2, p_rin,
       ncol = 4, nrow = 3
-    ) &
+    ) +
+      patchwork::plot_annotation(
+        title = sprintf(
+          "%s:\n xmin = %s, xmax = %s, ymin = %s, ymax = %s",
+          reg_id,
+          reg_extent[1], reg_extent[2], reg_extent[3], reg_extent[4]
+        ),
+        tag_levels = "a"
+      ) &
       theme(
         panel.background = element_rect(fill = "white", color = NA),
-        plot.background  = element_blank(),
+        plot.background = element_blank(),
         legend.background = element_blank(),
         legend.box.background = element_blank()
       )
 
-    out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.png")))
+    out_file1 <- here::here(file.path(paste0("data/figures/5_02_1_validate_", reg_id, "_12plots.png")))
     ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, dpi = 600)
 
     # out_file1 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_12plots.svg")))
     # ggsave(filename = out_file1, plot = final_plot1, width = 14, height = 12.1, device = "svg", bg = "transparent")
 
     # --- additional plots ---
-    p_vegh450 <- plot_vegh(vegh_450m_mosaic_path, extent = reg_extent, title_text = expression("   450-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 4, l = 0))
+    p_vegh450 <- plot_vegh(vegh_450m_mosaic_path, extent = reg_extent, title_text = expression("450-m " * italic(H)), text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_twi450 <- plot_twi(twi_450m_mosaic_clean_path, extent = reg_extent, title_text = "   450-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.13, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+    p_twi450 <- plot_twi(twi_450m_mosaic_clean_path, extent = reg_extent, title_text ="450-m TWI", text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_slope30 <- plot_slope(file.path(output_dir, paste0("reg_", reg_id, "_slope_30m.nc")), extent = reg_extent, title_text = "   30-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.13, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 20, b = 4, l = 0))
+    p_slope30 <- plot_slope(file.path(output_dir, paste0("reg_", reg_id, "_slope_30m.nc")), extent = reg_extent, title_text = "30-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     p_slope450 <- plot_slope(slope_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     p_aspect30 <- plot_aspect(file.path(output_dir, paste0("reg_", reg_id, "_aspect_30m.nc")), extent = reg_extent,  title_text <- "30-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     p_aspect450 <- plot_aspect(aspect_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     p_rin450 <- plot_rin(sw_in_terrain_effect_450m_path, extent = reg_extent,  title_text <- "450-m Rin", text_size = text_size, x_step = x_step, y_step = y_step) +
-      labs(tag = "") +
-      theme(
-        plot.tag = element_text(size = 14, face = "bold", hjust = 0, vjust = 1),
-        plot.tag.position = c(0.06, 1)
-      ) + re_theme +  ggplot2::theme(plot.margin = margin(t = 4, r = 0, b = 4, l = 0))
+      base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     final_plot2 <- patchwork::wrap_plots(
       p_vegh450, p_twi450, p_rin450, patchwork::plot_spacer(),
       p_slope30, p_slope450, p_aspect30, p_aspect450,
       ncol = 4, nrow = 2
-    ) &
+    )  +
+      patchwork::plot_annotation(
+        title = sprintf(
+          "%s:\n xmin = %s, xmax = %s, ymin = %s, ymax = %s",
+          reg_id,
+          reg_extent[1], reg_extent[2], reg_extent[3], reg_extent[4]
+        ),
+        tag_levels = "a"
+      ) &
       theme(
         panel.background = element_rect(fill = "white", color = NA),
-        plot.background  = element_blank(),
+        plot.background = element_blank(),
         legend.background = element_blank(),
-        legend.box.background = element_blank(),
+        legend.box.background = element_blank()
       )
 
-    out_file2 <- here::here(file.path(paste0("data/figures/5_02_validate_", reg_id, "_7plots.png")))
+    out_file2 <- here::here(file.path(paste0("data/figures/5_02_1_validate_", reg_id, "_7plots.png")))
     ggsave(filename = out_file2, plot = final_plot2, width = 14, height = 8, dpi = 600)
+
+
 
     # --- Print proccessed time ---
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
@@ -538,12 +472,12 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
 
 # ------------ validation region define ----------------------------------------
 # all samples regions from 5_01
-reg_info_all_samples <- readRDS(reg_sample_info_path)
+reg_info_all_samples <- readRDS(reg_sample_info_path) |>
+  select(ends_with("label"), ends_with("min"), ends_with("max"), -starts_with("dem"))
 print(reg_info_all_samples )
 
 # select 6 samples from 5_01 combined all MI bins and abs_lat bins
 reg_info1 <- readRDS(reg_sample_info_path) |>
-  select(ends_with("label"), ends_with("min"), ends_with("max"), -starts_with("dem")) |>
   slice(c(1, 3, 5, 9, 13, 15))
 print(reg_info1)
 
@@ -632,20 +566,26 @@ reg_info <- bind_rows(reg_info1, reg_info2)
 # process_reg_500m(reg_info[8, ]) # smallest one, best for single region test
 # process_reg_500m(reg_info[3, ])
 
-for (i in 1:6) {
-  process_reg_500m(reg_info[i, ])
-}
-
-for (i in 7:13) {
-  process_reg_500m(reg_info[i, ])
-}
-
-for (i in 14:66) {
-  process_reg_500m(reg_info[i, ])
+# for (i in 1:6) {
+#   process_reg_500m(reg_info[i, ])
+# }
+#
+# for (i in 7:13) {
+#   process_reg_500m(reg_info[i, ])
+# }
+#
+# for (i in 14:66) {
+#   process_reg_500m(reg_info[i, ])
+# }
+#
+for (i in seq_len(nrow(reg_info_all_samples))) {
+  process_reg_500m(reg_info_all_samples[i, ]) # ~ 8h 43 min
 }
 
 # # ----------- Test on smaller regions -----------------------------
-# reg_info <- data.frame(
+# output_dir = reg_validate_dir
+# text_size = 14
+# reg_row <- data.frame(
 #   strata_label = c("b1_Loetschental"),
 #   ymin = c(46.4),
 #   ymax = c(46.5),
@@ -653,16 +593,6 @@ for (i in 14:66) {
 #   xmax = c(7.9),
 #   sample_id = c(1)
 # )
-#
-# # center location
-# reg_info$xmid <- (reg_info$xmax + reg_info$xmin) / 2
-# reg_info$ymid <- (reg_info$ymax + reg_info$ymin) / 2
-#
-# # process_reg_500m(reg_info[1, ])
-#
-# reg_row <- reg_info[1, ]
-# output_dir = reg_validate_dir
-# text_size = 14
 
 
 # # print the plots one by one

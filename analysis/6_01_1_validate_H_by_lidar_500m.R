@@ -23,7 +23,6 @@ source(here::here("R/helpers.R"))
 source(here::here("R/calc_sw_in.R"))
 
 # Set worker numbers for different system
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
 if (hostname == "dash") {
   batch_size <- 10000
   workers <- 1

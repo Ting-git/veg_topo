@@ -31,6 +31,16 @@ plot_scatter_r_validation <- function(input_x,
                          color = "firebrick",
                          linetype = "dashed",
                          linewidth = 0.5) +
+    # x=0 和 y=0 线
+    ggplot2::geom_vline(xintercept = 0,
+                        color = "gray80",
+                        linetype = "solid",
+                        linewidth = 0.8) +
+    ggplot2::geom_hline(yintercept = 0,
+                        color = "gray80",
+                        linetype = "solid",
+                        linewidth = 0.8) +
+
     # Scatter points
     ggplot2::geom_point(ggplot2::aes(x = input_x, y = input_y),
                         alpha = 0.5,
@@ -56,6 +66,7 @@ plot_scatter_r_validation <- function(input_x,
       legend.position = "none",
       axis.title = ggplot2::element_text(size = text_size),
       axis.text = ggplot2::element_text(size = text_size * 0.9),
+      axis.text.y = ggplot2::element_text(angle = 90, hjust = 0.5, vjust = 0.5),
       plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold",
                                          margin = ggplot2::margin(b = 3)),
       plot.title.position = "panel"

@@ -73,7 +73,7 @@ r_out <- raster_preprocess_save(
   varname      = "fpa",
   if_zonal     = TRUE,
   fun = function(values, coverage_fractions) {
-    if (all(is.na(values))) return(NA_real_)
+    if (all(is.na(values))) return(0)
     # Area-weighted mean (more accurate for partial pixels)
     sum(values * coverage_fractions, na.rm = TRUE) / sum(coverage_fractions, na.rm = TRUE)
   },

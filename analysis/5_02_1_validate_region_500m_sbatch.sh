@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=50
-#SBATCH --mem=300G
+#SBATCH --mem=400G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis

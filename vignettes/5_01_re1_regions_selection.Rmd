@@ -14,7 +14,6 @@ csl: apa.csl
 ---
 
 ```{r SetUp, include=FALSE, eval=TRUE}
-
 knitr::opts_chunk$set(
   comment = "#>", fig.width = 10, message = FALSE, warning = FALSE
 )
@@ -30,13 +29,13 @@ library(rnaturalearth)
 library(sf)
 library(scico)
 
-# Load costom functions
+# Load custom functions
 source(here::here("R/config.R"))
 source(here::here("R/plot_density_grid.R"))
 source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/plot_vegh.R"))
 
-# prepare output directory
+# Prepare output directory
 if (!dir.exists(reg_sample_dir)) {
   dir.create(reg_sample_dir, recursive = TRUE)
 }
@@ -44,18 +43,17 @@ if (!dir.exists(reg_sample_dir)) {
 
 ---
 
-## Task
+## Objective
 
-Automatically identify regions where vegetation patterns are predominantly terrain-driven across different hydroclimatic and latitudinal backgrounds, in order to validate the Fan et al. (2019) framework.
+Automatically identify regions where vegetation patterns are predominantly terrain-driven across diverse hydroclimatic and latitudinal backgrounds, in order to validate the framework proposed by Fan et al. (2019).
 
 ---
 
-## Input data description
+## Input Data
 
 ```{r DataPre}
 # Load resampled raster datasets (MI, TWI, fused)
-
-mi_55km_r <- terra::rast(mi_55km_file) * 0.0001 # Multiply all values by 0.0001 to get original value
+mi_55km_r <- terra::rast(mi_55km_file) * 0.0001
 fused_55km_r <- terra::rast(fused_55km_file)
 fbare_55km_r <- terra::rast(fbare_55km_file)
 fwater_55km_r <- terra::rast(fwater_55km_file)
@@ -67,51 +65,47 @@ fveg_55km_r <- terra::rast(fveg_55km_path)
 
 # Stack rasters with explicit layer names
 stacked <- c(
-  mi_55km_r,
-  fused_55km_r,
-  fbare_55km_r,
-  fwater_55km_r,
-  fsnow_55km_r,
-  dem_sd_55km_r,
-  dem_rg_95p_05p_55km_r,
-  fpa_55km_r,
-  fveg_55km_r
+  mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r,
+  dem_sd_55km_r, dem_rg_95p_05p_55km_r, fpa_55km_r, fveg_55km_r
 )
 
-# Convert to data.frame 
-df <- as.data.frame(stacked, xy = TRUE, na.rm = FALSE)
-df <- df[complete.cases(df), ]
+# Convert to data.frame
+df <- na.omit(as.data.frame(stacked, xy = TRUE, na.rm = FALSE))
 
-# easy to make mistake here!
-colnames(df) <-  c("lon", "lat",
-                   "mi", "fused", "fbare", "fwater", "fsnow", "relief", 
-                   "dem_rg_95p_05p", "fpa", "fveg")
-
-# Clean up
-rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r, dem_sd_55km_r, 
-   dem_rg_95p_05p_55km_r, fpa_55km_r, fveg_55km_r)
+rm(stacked)
 gc()
 
+# Rename columns for clarity
+colnames(df) <- c(
+  "lon", "lat", "mi", "fused", "fbare", "fwater", "fsnow", "relief",
+  "dem_rg_95p_05p", "fpa", "fveg"
+)
 
-# load coast outline, vector data for plotting
+# Clean up
+rm(mi_55km_r, fused_55km_r, fbare_55km_r, fwater_55km_r, fsnow_55km_r,
+   dem_sd_55km_r, dem_rg_95p_05p_55km_r, fpa_55km_r, fveg_55km_r)
+gc()
+
+# Load coastline for visualization
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 ```
 
-```{r}
-# list all figures of input data 
-files <- list.files(path = here::here("data/figures"), pattern = "^1_99_region_grid_.*_55km_map\\.png$", full.names = TRUE)
+```{r visual_input}
+# List all input data figures
+files <- list.files(
+  path = here::here("data/figures"),
+  pattern = "^1_99_region_grid_.*_55km_map\\.png$",
+  full.names = TRUE
+)
 
-# Print 
 cat("Found", length(files), "figures:\n")
-
-# print
 knitr::include_graphics(files)
 ```
 
 ```{r DataOverview}
-# Select columns for plot
-cols <- c( "mi", "fused", "fbare","fwater","fsnow", "relief", "dem_rg_95p_05p", "fpa", "fveg")
-# plot input data density
+# Density plots for all variables
+cols <- c("mi", "fused", "fbare", "fwater", "fsnow", "relief", "dem_rg_95p_05p", "fpa", "fveg")
+
 plot_density_grid(
   df,
   cols,
@@ -124,22 +118,21 @@ plot_density_grid(
 
 ---
 
-## Binning Variables
+## Variable Binning
 
 ```{r Bin, echo = TRUE}
 df_binned <- df |>
-
-  # create bins
   mutate(
-    # mi_bin = cut(mi, breaks = quantile(mi, probs = seq(0, 1, 1/5)), include.lowest = TRUE),
+    # MI bins (aridity)
     mi_bin = cut(mi, breaks = c(0, 0.03, 0.2, 0.5, 0.65, 1, Inf), include.lowest = TRUE),
-    relief_bin = cut(relief, breaks = quantile(relief, probs = seq(0, 1, 1/3), na.rm = TRUE), include.lowest = TRUE),
+    # Relief bins (low vs high)
+    relief_bin = cut(relief, breaks = quantile(relief, probs = seq(0, 1, 1/2), na.rm = TRUE), include.lowest = TRUE),
+    # Latitude bins
     abs_lat = abs(lat),
-    abs_lat_bin = cut(abs_lat, breaks = quantile(abs_lat, probs = seq(0, 1, 1/5), na.rm = TRUE), include.lowest = TRUE)
+    abs_lat_bin = cut(abs_lat, breaks = c(0, 15, 30, 45, 60, Inf), include.lowest = TRUE)
   ) |>
-
-  # Assign readable labels to each bin
   mutate(
+    # MI labels (1–6)
     mi_label = case_when(
       mi_bin == levels(mi_bin)[1] ~ "1_hyper_arid",
       mi_bin == levels(mi_bin)[2] ~ "2_arid",
@@ -148,64 +141,51 @@ df_binned <- df |>
       mi_bin == levels(mi_bin)[5] ~ "5_humid",
       mi_bin == levels(mi_bin)[6] ~ "6_perhumid"
     ),
+    # Relief labels
     relief_label = case_when(
-      relief_bin == levels(relief_bin)[1] ~ "flat_relief",
-      relief_bin == levels(relief_bin)[2] ~ "mod_relief",
-      relief_bin == levels(relief_bin)[3] ~ "rugged_relief"
+      relief_bin == levels(relief_bin)[1] ~ "low_relief",
+      relief_bin == levels(relief_bin)[2] ~ "high_relief"
     ),
+    # Latitude labels (1–5)
     lat_label = case_when(
-      abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_low_lat",
-      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_low_to_mid_lat",
-      abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_mid_lat",
-      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_mid_to_high_lat",
-      abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_high_lat"
+      abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_00_15_lat",
+      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_15_30_lat",
+      abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_30_45_lat",
+      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_45_60_lat",
+      abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_60_90_lat"
     )
   ) |>
-
-  # Combine text labels into new readable strata labels
   mutate(
-    strata_label = paste0(mi_label, "_", lat_label, "_", relief_label),
+    # Combined strata label
+    strata_label = paste0(mi_label, "_", lat_label, "_", relief_label)
   ) |>
-
   select(-mi_label, -relief_label, -lat_label)
 
-# check data
+# Check bin distributions
 table(df_binned$mi_bin)
 table(df_binned$abs_lat_bin)
 table(df_binned$relief_bin)
-
 table(df_binned$strata_label)
-# Select rows matching the condition
-df_subset <- subset(df, !is.na(df_binned$mi_bin) & df_binned$mi_bin == "[0,0.03]")
-df_sorted <- df_subset[order(-df_subset$fveg), ]
-print(df_sorted)
 ```
 
 ---
 
 ## Filtering Candidate Regions
 
-```{r FilterA, echo = TRUE}
-
+```{r Filter, echo = TRUE}
 df_filt <- df_binned |>
-  
-  filter(relief_bin %in% levels(relief_bin)[c(3)],) |>
-  
-  filter(fused < 0.03) |>  # Exclude the region with high human activity 
-  
-  filter(fsnow < 0.1) |>  #  avoid high invalid or cold areas (permanent ice, and snow).
-  
-  filter(fwater < 0.3) |> # avoid regions with high invalid areas ( water bodies)
-  
-  # filter(fbare < 0.9) |>  # avoid regions with high invalid areas ( bare land)
-  
-  filter(fveg > 0.7) |> # avoid regions with very limited vegetation
-  
-  filter(fpa > 0.5) |> # select regions with 50% protected areas
-  
-  filter(dem_rg_95p_05p < 500)  # avoid the strong influence of a large elevation gradient differences
+  filter(relief_bin %in% levels(relief_bin)[c(2)]) |>            # Keep high relief only
+  filter(fused < 0.03) |>                                        # Exclude high human activity
+  filter(fsnow < 0.1) |>                                         # Avoid snow/ice-dominated areas
+  filter(fwater < 0.3) |>                                        # Avoid water-dominated areas
+  filter(fveg > 0.7) |>                                          # Require sufficient vegetation cover
+  filter(fpa > 0.5) |>                                           # Prefer protected areas (≥50%)
+  filter(dem_rg_95p_05p < 500)                                   # Limit elevation range
 
-# print the numbers of possible region
+# Check remaining samples per bin
+table(df_filt$mi_bin)
+table(df_filt$abs_lat_bin)
+table(df_filt$relief_bin)
 table(df_filt$strata_label)
 ```
 
@@ -214,12 +194,18 @@ table(df_filt$strata_label)
 ## Sampling Representative Locations
 
 ```{r Sampling}
+set.seed(26347)
 
-set.seed(216)
+# Function: Select 6 samples with the following constraints:
+# - First number (MI bin): 1–6 each exactly once
+# - Second number (latitude bin): 1–4 each ≥1, 5 exactly once
+# (Only one sample from latitude bin 5 due to high-latitude uncertainty in VEGH data)
 
-df_samples <- df_filt |>
+# Step 1: Randomly sample one row per strata_label
+sampled_all <- df_filt |>
   group_by(strata_label) |>
-  group_modify(~ slice_sample(.x, n = 1)) |>
+  slice_sample(n = 1) |>
+  ungroup() |>
   mutate(
     xmin = round(lon - 0.25, 1),
     xmax = round(lon + 0.25, 1),
@@ -228,62 +214,85 @@ df_samples <- df_filt |>
     xmid = (xmin + xmax) / 2,
     ymid = (ymin + ymax) / 2,
     sample_id = ""
-  ) |>
-  ungroup() 
+  )
 
-# Save the two data frames as RDS files
-saveRDS(df_samples, reg_sample_info_path)
+# Step 2: Manually select 6 labels meeting constraints
+selected_labels <- c(
+  "1_hyper_arid_2_15_30_lat_high_relief",   # first = 1, second = 2
+  "2_arid_1_00_15_lat_high_relief",         # first = 2, second = 1
+  "3_semiarid_5_60_90_lat_high_relief",     # first = 3, second = 3
+  "4_dry_subhumid_3_30_45_lat_high_relief", # first = 4, second = 4
+  "5_humid_5_60_90_lat_high_relief",        # first = 5, second = 5
+  "6_perhumid_1_00_15_lat_high_relief"      # first = 6, second = 2
+)
+
+# Step 3: Add selection indicator column
+sampled_all <- sampled_all |>
+  mutate(is_selected = strata_label %in% selected_labels)
+
+# Step 4: Save full dataset with selection indicator
+saveRDS(sampled_all, reg_sample_info_path)
 ```
 
 ---
 
 ## Export and Visualization
 
-
 ```{r loadinfo}
-# load region infos
-reg_info <- readRDS(reg_sample_info_path)
-
-# ---- regA
-reg_gpkg <- reg_info |>
-  rowwise() |>
-  mutate(geometry = list(st_polygon(list(matrix(
-    c(xmin, ymin,
-      xmin, ymax,
-      xmax, ymax,
-      xmax, ymin,
-      xmin, ymin),
-    ncol = 2, byrow = TRUE))))) |>
-  st_as_sf(crs = 4326)
-
-# write gpkg document
-st_write(reg_gpkg,reg_sample_vect_path, delete_layer = TRUE)
+# Load region info
+reg_info_full <- readRDS(reg_sample_info_path) 
+reg_info <- reg_info_full |> filter(is_selected)
 ```
 
-
 ```{r plot_location}
-
-# Load world map
+# World map
 world <- ne_countries(scale = "medium", returnclass = "sf")
-
 text_size <- 12
+
+reg_info_full <- reg_info_full |>
+  mutate(label_num = row_number())
+
+# 使用 reorder 按 label_num 排序
+reg_info_full <- reg_info_full %>%
+  mutate(
+    display_label = paste(label_num, "-", strata_label),
+    display_label = reorder(display_label, label_num)  # 按 label_num 排序
+  )
 
 p_loc <- ggplot(data = world) +
   geom_sf(fill = "gray95", color = "gray70") +
   geom_point(
-    data = reg_info,
-    aes(x = xmid, y = ymid, color = strata_label),
-    size = 1
+    data = reg_info_full,
+    aes(x = xmid, y = ymid, fill = display_label),
+    color = "black",
+    size = 5,
+    shape = 21
+  ) +
+  geom_text(
+    data = reg_info_full,
+    aes(x = xmid, y = ymid, label = label_num),
+    size = 3,
+    fontface = "bold"
   ) +
   coord_sf(xlim = c(-180, 180), ylim = c(-60, 90), expand = FALSE) +
   labs(
-    title = "Location of Sample Region",
-    color = "Region"
+    title = "Sample Region Locations",
+    fill = "Strata Label"
   ) +
-  scale_color_scico_d(palette = "roma") + 
+  guides(
+    fill = guide_legend(
+      ncol = 2,  # 图例显示为2列
+      byrow = TRUE,
+      title.position = "top"
+    )
+  ) +
   theme_bw(base_size = text_size) +
   theme(
-    legend.position = "right",
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.title = element_text(size = text_size * 0.9),
+    legend.text = element_text(size = text_size * 0.7),
     axis.title.x = element_blank(),
     axis.title.y = element_blank(),
     axis.text.x = element_text(size = text_size * 0.8, vjust = 1),
@@ -294,93 +303,46 @@ p_loc <- ggplot(data = world) +
     panel.grid.minor = element_line(color = "gray90", linewidth = 0.25),
     axis.line = element_blank()
   )
+
+print(p_loc)
+
 reg_info
+
 ggsave(
-  filename = here::here("data/figures/5_01_sample_region_location.svg"),
-  plot     = p_loc,
-  width    = 10,
-  height   = 5,
-  device = "svg",
+  filename = here::here("data/figures/5_01_sample_region_location.png"),
+  plot = p_loc,
+  width = 10,
+  height = 10,
+  device = "png",
   bg = "transparent"
 )
 ```
 
-```{r plot_6location}
-reg_info1 <- reg_info |>
-  slice(c(1, 3, 5, 9, 13, 15))
-reg_info1
+```{r plot_sample_vegh}
+vegh_master <- terra::rast(vegh_450m_mosaic_path)
 
-p_loc6 <- ggplot(data = world) +
-  geom_sf(fill = "gray95", color = "gray70") +
-  geom_point(
-    data = reg_info1,
-    aes(x = xmid, y = ymid, color = strata_label),
-    size = 1.5
-  ) +
-  coord_sf(xlim = c(-180, 180), ylim = c(-60, 90), expand = FALSE) +
-  labs(
-    title = "Location of Sample Region",
-    color = "Region"
-  ) +
-  scale_color_scico_d(palette = "batlow") + 
-  theme_bw(base_size = text_size) +
-  theme(
-    legend.position = "right",
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.x = element_text(size = text_size * 0.8, vjust = 1),
-    axis.text.y = element_text(size = text_size * 0.8, hjust = 0.5, vjust = 0.5),
-    plot.title = element_text(size = text_size * 1.2, face = "bold", margin = margin(b = 3)),
-    plot.title.position = "panel",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_blank()
-  )
+plot_vegh_by_reg <- function(reg_row, vegh_master, text_size = 12) {
+  reg_id <- paste0(reg_row$strata_label, "_", reg_row$sample_id)
+  reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
 
-ggsave(
-  filename = here::here("data/figures/5_01_sample_region_location_6s.svg"),
-  plot     = p_loc6,
-  width    = 12,
-  height   = 5,
-  device = "svg",
-  bg = "transparent"
-)
-```
+  vegh_cropped <- terra::crop(vegh_master, reg_extent)
+  names(vegh_cropped) <- "vegh"
 
-```{r}
-# regA_info
-# regB_info
-plot_vegh_by_reg <- function(reg_row,
-                              text_size = 12,
-                              fig_width = 14,
-                              fig_height = 18) {
+  p_vegh <- plot_vegh(vegh_cropped, extent = reg_extent, title_text = reg_id,
+                      text_size = text_size, x_step = 0.5, y_step = 0.5) +
+    theme(aspect.ratio = 1)
 
-    # --- reg info ---
-    reg_id <- paste0(reg_row$strata_label, "_", reg_row$sample_id)
-    reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
-    reg_xmid <- reg_row$lon
-    reg_ymid <- reg_row$lat
-
-    # --- Vegetation Height Raster ---
-    vegh_rc <- terra::rast(vegh_450m_mosaic_path) |> terra::crop(reg_extent)
-    vegh_tmp_path <- file.path(tempdir(), paste0("tile_", reg_id, "_vegh_450m.nc"))
-    terra::writeCDF(vegh_rc, vegh_tmp_path, varnames = "vegh",overwrite = TRUE)
-    rm(vegh_rc); gc()
-    vegh_rc <- terra::rast(vegh_tmp_path)
-    names(vegh_rc) <- "vegh"
-    
-    p_vegh <- plot_vegh(vegh_rc, extent = reg_extent, title_text = reg_id, text_size = text_size, x_step = 0.5, y_step = 0.5) + ggplot2::theme(aspect.ratio = 1)
-    
-    return(p_vegh)
-    
-    rm(vegh_rc);gc()
-
+  rm(vegh_cropped)
+  return(p_vegh)
 }
 
-for (i in seq_len(nrow(reg_info))) {
-  p <- plot_vegh_by_reg(reg_info[i, ])
+for (i in seq_len(nrow(reg_info_full))) {
+  p <- plot_vegh_by_reg(reg_info_full[i, ], vegh_master)
   print(p)
 }
+
+rm(vegh_master)
+gc()
 ```
 
 

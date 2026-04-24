@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="05LandUsedMask"
+#SBATCH --job-name="LUmaskRin"
 #SBATCH --time=2:00:00 # ~ 6.5 min
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
