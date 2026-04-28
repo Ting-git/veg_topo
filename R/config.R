@@ -211,3 +211,8 @@ reg_validate_dir <- file.path(veg_topo_extr_dir,"data/reg_validate_500m")
 
 # 6_01 Validation of Height data
 h_validation_dir <- file.path(veg_topo_extr_dir,"data/h_validate_500m")
+
+# 7_01 Sample data for RF
+rf_sample_data_tiles_dir <- file.path(veg_topo_extr_dir,"data/global_rf_30m/1_1_deg")
+valid_win_path <- file.path(veg_topo_extr_dir, "data/global_rf_30m/global_valid_win_5km.tif")
+rf_tiles_path <- file.path(veg_topo_extr_dir, "data/global_rf_30m/global_rf_tiles.parquet")
