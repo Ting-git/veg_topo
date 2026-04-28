@@ -109,7 +109,7 @@ if (hostname == "dash") {
   # Airborne Lidar ALS and LVIS
   lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
   lidar_lvis_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/LVIS_RH98_GSD10m")
-  }
+}
 
 # ----------------------- Processed data ------------------------
 
@@ -162,14 +162,17 @@ fsnow_55km_file <- file.path(veg_topo_extr_dir,"data/global_flc_55km/fsnow_55km.
 
 # 1_06 Climatic variables (1970–2000)
 mat_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_mat_450m_1970_2000.tif")
+mat_1km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_mat_1km_1970_2000.tif")
 mat_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_mat_5km_1970_2000.nc")
 mat_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_mat_55km_1970_2000.nc")
 
 map_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_map_450m_1970_2000.tif")
+map_1km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_map_1km_1970_2000.tif")
 map_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_map_5km_1970_2000.nc")
 map_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_map_55km_1970_2000.nc")
 
 srad_450m_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_srad_450m_1970_2000.tif")
+srad_1km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_srad_1km_1970_2000.tif")
 srad_5km_file  <- file.path(veg_topo_extr_dir,"data/global_climvar_5km/global_srad_5km_1970_2000.nc")
 srad_55km_file <- file.path(veg_topo_extr_dir,"data/global_climvar_55km/global_srad_55km_1970_2000.nc")
 

@@ -22,6 +22,7 @@ if (!dir.exists(dirname(mat_5km_file))) dir.create(dirname(mat_5km_file), recurs
 
 # ------------- Process: MAT (mean), MAP & SRAD (sum) --------------------------
 vars    <- c("tavg", "prec", "srad")
+outputs_1km <- c(mat_1km_file, map_1km_file, srad_1km_file)
 outputs_5km <- c(mat_5km_file, map_5km_file, srad_5km_file)
 outputs_450m <- c(mat_450m_file, map_450m_file, srad_450m_file)
 
@@ -31,6 +32,7 @@ for (i in seq_along(vars)) {
   var    <- vars[i]
   message("⭐️⭐️⭐️ Processing: ", var, " ⭐️⭐️⭐️")
 
+  output_1km <- outputs_1km[i]
   output_5km <- outputs_5km[i]
   output_450m <- outputs_450m[i]
 
@@ -47,36 +49,44 @@ for (i in seq_along(vars)) {
   )
 
   # # Save to temporary file
-  # temp_path <- tempfile(fileext = ".tif")
-  # writeRaster(annual_result, filename = temp_path, overwrite = TRUE)
-  # message(var, " -> ", basename(temp_path))
-
-  # Align to 5km grid and aggregate zones
-  message("Resampling to 5-km...")
+  message("Saving 1-km...")
   raster_preprocess_save(
     input            = annual_result,
-    output           = output_5km,
-    target           = align_template_5km,
+    output           = output_1km,
+    target           = NULL,
     varname          = var,
-    if_zonal         = TRUE,
-    fun              = "mean", # for exact_extract()
+    if_zonal         = FALSE,
     if_aggregate     = FALSE,
     if_resample      = FALSE,
     if_return_raster = FALSE
   )
 
-  # Resample to 450m grid (as Marthews et al.'s TWI data)
-  message("Resampling to 450-m...")
-  raster_preprocess_save(
-    input            = annual_result,
-    output           = output_450m,
-    target           = twi_450m_mosaic_clean_path,
-    varname          = var,
-    if_zonal         = FALSE,
-    if_aggregate     = FALSE,
-    if_resample      = TRUE,
-    if_return_raster = FALSE
-  )
+  # # Align to 5km grid and aggregate zones
+  # message("Resampling to 5-km...")
+  # raster_preprocess_save(
+  #   input            = annual_result,
+  #   output           = output_5km,
+  #   target           = align_template_5km,
+  #   varname          = var,
+  #   if_zonal         = TRUE,
+  #   fun              = "mean", # for exact_extract()
+  #   if_aggregate     = FALSE,
+  #   if_resample      = FALSE,
+  #   if_return_raster = FALSE
+  # )
+  #
+  # # Resample to 450m grid (as Marthews et al.'s TWI data)
+  # message("Resampling to 450-m...")
+  # raster_preprocess_save(
+  #   input            = annual_result,
+  #   output           = output_450m,
+  #   target           = twi_450m_mosaic_clean_path,
+  #   varname          = var,
+  #   if_zonal         = FALSE,
+  #   if_aggregate     = FALSE,
+  #   if_resample      = TRUE,
+  #   if_return_raster = FALSE
+  # )
 }
 
 # -------------------- Optional Check ---------------------------
