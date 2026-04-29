@@ -46,7 +46,7 @@ This script tests the data preprocessing pipeline on a single 1°×1° tile. The
 After fixed window analysis, we have r(H,TWI) and r(H,Rin) at 0.05° resolution. 
 Windows with < 30 valid observations (complete cases for H and TWI or H and Rin) are excluded.
 
-```{r valid_win}
+```{r valid_win, eval=TRUE}
 # Load correlation rasters
 r_twi_vegh <- rast(cor_twi_vegh_mosaic_file)
 r_h_rin <- rast(r_H_R_5km_path)
@@ -66,11 +66,12 @@ plot(valid_win, main = "Valid Windows (0.05°)")
 
 Aggregate valid windows to 1° resolution to identify tiles containing at least one valid window.
 
-```{r valid_tile}
+```{r valid_tile, eval=TRUE}
 # Create 1° template
 align_1_deg <- create_aligned_template(valid_win, res_out = 1)
 
 # Aggregate to 1° tiles
+# Only consider pixels with cover fraction > 0.1 to eliminate border effects
 grid_1_deg <- raster_preprocess_save(
   input        = valid_win, 
   output       = NULL,
@@ -78,7 +79,12 @@ grid_1_deg <- raster_preprocess_save(
   varname      = "valid_tile",
   if_zonal     = TRUE,
   fun          = function(values, coverage_fractions) {
-    any(values == 1, na.rm = TRUE)
+    valid_indices <- !is.na(values) & coverage_fractions > 0.1
+    if (any(valid_indices)) {
+      any(values[valid_indices] == 1, na.rm = TRUE)
+    } else {
+      FALSE
+    }
   },
   if_aggregate = FALSE,
   if_resample  = FALSE,
@@ -97,8 +103,8 @@ plot(grid_1_deg, main = "Valid 1°×1° Tiles")
 
 Convert raster to dataframe with tile boundaries.
 
-```{r valid_tile_df}
-df_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
+```{r valid_tile_df, eval=FALSE}
+rf_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
   filter(lyr.1 == TRUE) |>
   transmute(
     xmin = floor(x - 0.5),
@@ -107,34 +113,41 @@ df_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
     ymax = ceiling(y + 0.5)
   ) |>
   mutate(
-    tile_id = paste0(make_lat_label(ymax), "_", make_lon_label(xmin))
+    reg_id = paste0(make_lat_label(ymax), "_", make_lon_label(xmin))
   )
 
-cat("Number of valid tiles:", nrow(df_tiles), "\n")
-head(df_tiles)
-```
+cat("Number of valid tiles:", nrow(rf_tiles), "\n")
+head(rf_tiles)
 
+# "83N_019W" %in% rf_tiles$reg_id
+```
 # 3. Test Tile Processing
 
 ## 3.1 Select Test Tile
 
+
 ```{r select_tile}
+rf_tiles <- arrow::read_parquet(rf_tiles_path)
+
 # Select a specific tile for testing
-tile_id <- "00N_025E"
-# tile_id <- df_tiles$tile_id[1]
-cat("Testing tile", tile_id, "of", nrow(df_tiles), "\n")
+reg_id <- "00N_025E"
+# reg_id <- rf_tiles$reg_id[1]
+cat("Testing tile", reg_id, "of", nrow(rf_tiles), "\n")
 
 # Define tile extent
-tile_extent <- terra::ext(
-  df_tiles$xmin[df_tiles$tile_id==tile_id], 
-  df_tiles$xmax[df_tiles$tile_id==tile_id], 
-  df_tiles$ymin[df_tiles$tile_id==tile_id], 
-  df_tiles$ymax[df_tiles$tile_id==tile_id]
+reg_extent <- terra::ext(
+  rf_tiles$xmin[rf_tiles$reg_id==reg_id], 
+  rf_tiles$xmax[rf_tiles$reg_id==reg_id], 
+  rf_tiles$ymin[rf_tiles$reg_id==reg_id], 
+  rf_tiles$ymax[rf_tiles$reg_id==reg_id]
 )
 
 # Create high-resolution valid window mask (0.00025° = 0.05°/200)
-valid_win_hr <- terra::crop(valid_win, tile_extent) |> 
-  terra::disagg(fact = 200)
+ valid_win_hr <- terra::crop(rast(valid_win_path), reg_extent) |>
+      terra::disagg(fact = 200) 
+
+# valid_win_hr <- terra::crop(valid_win, reg_extent) |> 
+#  terra::disagg(fact = 200)
 
 cat("Valid window mask created:\n")
 print(valid_win_hr)
@@ -144,15 +157,14 @@ print(valid_win_hr)
 
 ```{r visualize_tile}
 # Plot correlation rasters for this tile
-par(mfrow = c(1, 3))
-plot(terra::crop(r_twi_vegh, tile_extent), 
+par(mfrow = c(1, 4))
+plot(terra::crop(rast(cor_twi_vegh_mosaic_file), reg_extent), 
      main = "r(H,TWI) - Test Tile")
-plot(terra::crop(r_h_rin, tile_extent), 
+plot(terra::crop(rast(r_H_R_5km_path), reg_extent), 
      main = "r(H,Rin) - Test Tile")
-plot(valid_win_hr, main = "Valid Windows (High Resolution)")
+plot(valid_win_hr, main = "Valid Windows")
+plot(terra::crop(grid_1_deg, reg_extent), main = "Valid grid")
 par(mfrow = c(1, 1))
-
-
 ```
 
 ## 3.3 Load Input Layers
@@ -160,13 +172,13 @@ par(mfrow = c(1, 1))
 ```{r load_layers}
 # Topographic Wetness Index
 twi <- rast(twi_30m_path) |> 
-  terra::crop(tile_extent)
+  terra::crop(reg_extent)
 twi <- twi / 100  # Scale to original values
 cat("TWI range:", range(values(twi), na.rm = TRUE), "\n")
 
 # Vegetation height
 vegh <- extent_to_tile_ids(
-  tile_extent, 
+  reg_extent, 
   tile_size = 3, 
   return_raster = TRUE, 
   source = "lang_vegh_10m", 
@@ -175,7 +187,7 @@ vegh <- extent_to_tile_ids(
 
 # DEM
 dem <- extent_to_tile_ids(
-  tile_extent, 
+  reg_extent, 
   tile_size = 1, 
   return_raster = TRUE, 
   source = "copernicus_dem_30m", 
@@ -193,15 +205,15 @@ aligned <- aggregate_topography(
 
 # Climate data
 mat <- rast(mat_1km_file) |> 
-  terra::crop(tile_extent) |> 
+  terra::crop(reg_extent) |> 
   terra::resample(twi, method = "bilinear")
 
 map <- rast(map_1km_file) |> 
-  terra::crop(tile_extent) |> 
+  terra::crop(reg_extent) |> 
   terra::resample(twi, method = "bilinear")
 
 srad <- rast(srad_1km_file) |> 
-  terra::crop(tile_extent) |> 
+  terra::crop(reg_extent) |> 
   terra::resample(twi, method = "bilinear")
 
 # Visualize key layers
@@ -269,7 +281,7 @@ df_samp <- df_samp |>
 cat("Radiation index (Rin) range:", range(df_samp$rin, na.rm = TRUE), "\n")
 
 # Save data frame per tile
-out_file <- file.path(rf_sample_data_tiles_dir, sprintf("tile_%s.parquet", tile_id))
+out_file <- file.path(rf_sample_data_tiles_dir, sprintf("tile_%s.parquet", reg_id))
 arrow::write_parquet(df_samp, out_file)
 if(file.exists(out_file)) message("✅ Saved: ", out_file)
 ```
