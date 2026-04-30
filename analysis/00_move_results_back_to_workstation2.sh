@@ -10,12 +10,6 @@ rsync -avhP --no-perms --no-owner --no-group \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data/ \
   /data_2/scratch/ting/veg_topo_data/data/
 
-# Move RF model data
-rsync -avhP --no-perms --no-owner --no-group \
-  --human-readable -i --info=progress2 \
-  tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting//data/global_rf_30m/1_1_deg/ \
-  /data_2/scratch/ting/veg_topo_data/data/global_rf_30m/1_1_deg/
-
 # data/figures
 rsync -avhP --no-perms --no-owner --no-group \
   --human-readable -i --info=progress2 \

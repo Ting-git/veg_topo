@@ -17,12 +17,11 @@ if (!dir.exists(rf_sample_data_tiles_dir)) {
 
 # -------------------- Prepare Valid Windows ------------------------------------
 # Load correlation rasters
-r_h_twi <- rast(cor_twi_vegh_mosaic_file)
+r_twi_vegh <- rast(cor_twi_vegh_mosaic_file)
 r_h_rin <- rast(r_H_R_5km_path)
-fused <- rast(fused_5km_file)
 
 # Identify valid windows (both correlations available)
-valid_win <- !is.na(r_h_twi) & !is.na(r_h_rin) & fused < 0.03
+valid_win <- !is.na(r_twi_vegh) & !is.na(r_h_rin)
 
 # Statistics
 true_count <- global(valid_win, "sum", na.rm = TRUE)[[1]]
