@@ -103,7 +103,7 @@ plot(grid_1_deg, main = "Valid 1°×1° Tiles")
 
 Convert raster to dataframe with tile boundaries.
 
-```{r valid_tile_df, eval=FALSE}
+```{r valid_tile_df, eval=TRUE}
 rf_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
   filter(lyr.1 == TRUE) |>
   transmute(
@@ -130,7 +130,8 @@ head(rf_tiles)
 rf_tiles <- arrow::read_parquet(rf_tiles_path)
 
 # Select a specific tile for testing
-reg_id <- "00N_025E"
+# reg_id <- "00N_025E" 
+reg_id <- "78N_121W" 
 # reg_id <- rf_tiles$reg_id[1]
 cat("Testing tile", reg_id, "of", nrow(rf_tiles), "\n")
 
