@@ -1,16 +1,16 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="lidarDataCheck"
+#SBATCH --job-name="rfSamp"
+#SBATCH --time=12:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
-#SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=54
-#SBATCH --mem=300G  # > 300 G
+#SBATCH --cpus-per-task=80
+#SBATCH --mem=800G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/vignettes
+#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4
@@ -25,10 +25,12 @@ module load R/4.4.2-gfbf-2024a
 echo "=================================================="
 echo "Job started on: $(date --rfc-3339=seconds)"
 echo "Job ID: $SLURM_JOB_ID"
-echo "Job name: $SLURM_JOB_NAME"  # 输出job name
+echo "Job name: $SLURM_JOB_NAME"
 echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 echo "R_LIBS_USER: $R_LIBS_USER"
+echo "CPU cores allocated: $SLURM_CPUS_PER_TASK"
+echo "Memory allocated: $SLURM_MEM_PER_NODE"
 echo "=================================================="
 
 # Force Rscript to use the same library paths as RStudio Server
@@ -37,8 +39,10 @@ Rscript -e '.libPaths(c(
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
 ));
-cat("Running script: 6_01_re1_lidar_H_overview.Rmd\n");
-rmarkdown::render("6_01_re1_lidar_H_overview.Rmd")'
+cat("Session info:\n");
+sessionInfo();
+cat("\nRunning script: 7_01_2_extract_samples_by_tile.R\n");
+source("7_01_2_extract_samples_by_tile.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
@@ -46,7 +50,9 @@ echo "=================================================="
 echo "Job finished on: $(date --rfc-3339=seconds)"
 echo "Exit status: $EXIT_STATUS"
 echo "Job name: $SLURM_JOB_NAME"
+echo "Job ID: $SLURM_JOB_ID"
 echo "=================================================="
 
 # Exit with the same status as the R script
 exit $EXIT_STATUS
+

@@ -1,12 +1,12 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="lidarDataCheck"
+#SBATCH --job-name="rfsampletest"
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
 #SBATCH --time=4:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=54
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=300G  # > 300 G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -37,8 +37,8 @@ Rscript -e '.libPaths(c(
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
 ));
-cat("Running script: 6_01_re1_lidar_H_overview.Rmd\n");
-rmarkdown::render("6_01_re1_lidar_H_overview.Rmd")'
+cat("Running script: 7_01_re1_rf_model_data_sample_test.Rmd\n");
+rmarkdown::render("7_01_re1_rf_model_data_sample_test.Rmd")'
 
 # Capture the exit status
 EXIT_STATUS=$?

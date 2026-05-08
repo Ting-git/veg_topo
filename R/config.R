@@ -18,7 +18,13 @@
 
 # ----------------------- Raw data ------------------------
 # Global extent (terra::ext)
-ext_global <- ext(-180, 180, -60, 85)
+ext_global <- tryCatch(
+  ext(-180, 180, -60, 85),
+  error = function(e) {
+    message("⚠️ Failed to create extent: ", e$message)
+    NULL
+  }
+)
 
 # Auto-detect environment and set paths
 hostname <- trimws(tolower(system("hostname", intern = TRUE)))
@@ -214,5 +220,6 @@ h_validation_dir <- file.path(veg_topo_extr_dir,"data/h_validate_500m")
 
 # 7_01 Sample data for RF
 rf_sample_data_tiles_dir <- file.path(veg_topo_extr_dir,"data/global_rf_30m/1_1_deg")
+rf_models_dir <- file.path(veg_topo_extr_dir,"data/global_rf_30m/models")
 valid_win_path <- file.path(veg_topo_extr_dir, "data/global_rf_30m/global_valid_win_5km.tif")
 rf_tiles_path <- file.path(veg_topo_extr_dir, "data/global_rf_30m/global_rf_tiles.parquet")
