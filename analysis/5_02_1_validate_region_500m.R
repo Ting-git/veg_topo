@@ -419,16 +419,16 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir,
     p_slope30 <- plot_slope(file.path(output_dir, paste0("reg_", reg_id, "_slope_30m.nc")), extent = reg_extent, title_text = "30-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
       base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_slope450 <- plot_slope(slope_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+    p_slope450 <- plot_slope(slope_450m_mosaic_path, extent = reg_extent,  title_text = "450-m slope (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
       base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_aspect30 <- plot_aspect(file.path(output_dir, paste0("reg_", reg_id, "_aspect_30m.nc")), extent = reg_extent,  title_text <- "30-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+    p_aspect30 <- plot_aspect(file.path(output_dir, paste0("reg_", reg_id, "_aspect_30m.nc")), extent = reg_extent,  title_text = "30-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
       base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_aspect450 <- plot_aspect(aspect_450m_mosaic_path, extent = reg_extent,  title_text <- "450-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
+    p_aspect450 <- plot_aspect(aspect_450m_mosaic_path, extent = reg_extent,  title_text = "450-m aspect (°)", text_size = text_size, x_step = x_step, y_step = y_step) +
       base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
-    p_rin450 <- plot_rin(sw_in_terrain_effect_450m_path, extent = reg_extent,  title_text <- "450-m Rin", text_size = text_size, x_step = x_step, y_step = y_step) +
+    p_rin450 <- plot_rin(sw_in_terrain_effect_450m_path, extent = reg_extent,  title_text = "450-m Rin", text_size = text_size, x_step = x_step, y_step = y_step) +
       base_theme + my_guides + ggplot2::theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0))
 
     final_plot2 <- patchwork::wrap_plots(
