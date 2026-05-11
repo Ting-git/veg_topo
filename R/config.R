@@ -34,6 +34,7 @@ if (hostname == "dash") {
   message("💻 Workstation detected: dash")
   project_root <- "~/veg_topo"
   veg_topo_extr_dir <- file.path("/data_2/scratch/ting/veg_topo_data")
+  temp_dir <- file.path("/data_2/scratch/ting/veg_topo_data/tmp")
 
   # --- Workstation2: Raw data paths ---
   # Topographic Wetness Index (TWI)
@@ -72,12 +73,15 @@ if (hostname == "dash") {
   lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
   lidar_lvis_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/LVIS_RH98_GSD10m")
 
+  # VegH Wagner 2024
+  vegh_wagner_dir <- file.path(veg_topo_extr_dir, "data_raw/canopy_height_wagner_2024/v1")
 } else {
 
   # --- UBELIX: Base directories ---
   message("🖥️ HPC environment detected: ", hostname)
   project_root <- "~/veg_topo"
   veg_topo_extr_dir <- file.path("/storage/scratch/giub_geco/tting")
+  temp_dir <- file.path("/storage/scratch/giub_geco/tting/tmp")
 
   # --- UBELIX: Raw data paths ---
   # Topographic Wetness Index (TWI)
@@ -188,6 +192,9 @@ ecoregion_5km_path <- file.path(veg_topo_extr_dir,"data/global_ecoregion_5km/Eco
 # 1_08 Protected areas fraction
 fpa_55km_path <- file.path(veg_topo_extr_dir,"data/global_fpa_55km_2025/WDPA_WDOECM_Jul2025_55km.nc")
 
+# 1_10 Amazon vegetation height data (Wagner et. al. 2024)
+vegh_wagner_30m_path <- file.path(veg_topo_extr_dir,"data/vegh_wagner_30m/vegh_2015-12-01_END_2024-06-01_height_mean_wagner_30m.tif")
+vegh_wagner_450m_path <- file.path(veg_topo_extr_dir,"data/vegh_wagner_450m/vegh_2015-12-01_END_2024-06-01_height_mean_wagner_450m.tif")
 # ----------------------- Analysis products ------------------------
 
 # 2_01 Valid tiles (global analysis)
