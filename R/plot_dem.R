@@ -40,8 +40,8 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
-    scico::scale_fill_scico(
-      palette = "bamako",
+    scale_fill_gradientn(
+      colors = terrain.colors(255),
       direction = 1,
       na.value = NA,
       labels = function(x) {
@@ -52,7 +52,7 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
         }
       },
       guide = guide_colorbar(barwidth = 0.8, barheight = 6)
-    ) +
+    )
     guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
     ggplot2::labs(
       title = title_text,

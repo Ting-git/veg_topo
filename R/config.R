@@ -46,6 +46,7 @@ if (hostname == "dash") {
 
   # Elevation (Copernicus DEM, ~30 m)
   dem_30m_copernicus_dir <- file.path(veg_topo_extr_dir, "data_raw/copernicus_dem_30m/copernicus_dem_30m")
+  COP30_dir <- file.path(veg_topo_extr_dir, "data_raw/COP30_OpenTopography/COP30_hh")
 
   # Aridity / Moisture Index
   mi_950m_file <- file.path("/data/archive/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
@@ -93,6 +94,7 @@ if (hostname == "dash") {
 
   # Elevation (Copernicus DEM, ~30 m)
   dem_30m_copernicus_dir <- file.path(veg_topo_extr_dir, "data_raw/copernicus_dem_30m/copernicus_dem_30m")
+  COP30_dir <- file.path(veg_topo_extr_dir, "data_raw/COP30_OpenTopography/COP30_hh")
 
   # Aridity / Moisture Index
   mi_950m_file <- file.path(veg_topo_extr_dir, "/data_raw/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
