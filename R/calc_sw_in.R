@@ -143,7 +143,7 @@ calc_sw_in_daily <- function(
 
   # (Ting) Vectorized computation for multiple latitudes and days!!
   # correct for anomalous ru, Transparent mountains!
-  ru <- ifelse((ru < ru_f) | (ru == 0), ru_f, ru)  # mistake here !!!!!!!!!!!!!!!!!!!!!
+  ru <- ifelse((ru < ru_f) | (ru == 0), ru_f, ru)  # possible issue here????????????????????????????????
 
   # solar$ru <- ru
   # solar$rv <- rv
