@@ -145,12 +145,13 @@ slope_450m_mosaic_path  <- file.path(veg_topo_extr_dir,"data/global_dem_slope_as
 aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_dem_slope_aspect_450m/aspect_450m.tif")
 
 # Shortwave radiation (terrain vs flat)
-sw_in_uneven_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/uneven_1_1_deg")
-sw_in_uneven_450m_path           <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_uneven_450m.tif")   # terrain
-sw_in_flat_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/flat_1_1_deg")
-sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.tif")     # flat
-sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
-rin_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
+# sw_in_uneven_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/uneven_1_1_deg")
+# sw_in_uneven_450m_path           <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_uneven_450m.tif")   # terrain
+# sw_in_flat_450m_tile_dir              <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/flat_1_1_deg")
+# sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.tif")     # flat
+# sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
+rin_450m_tiles_dir <- file.path(veg_topo_extr_dir,"data/global_rin_450m/1_1_deg")  # ratio
+rin_450m_path   <- file.path(veg_topo_extr_dir,"data/global_rin_450m/radiation_index_450m.tif")  # ratio
 
 # Elevation variability (~55 km)
 dem_sd_55km_path            <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_sd_55km.nc")

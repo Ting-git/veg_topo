@@ -19,27 +19,25 @@ cacl_meteoland_sw_in <- function(lat_deg, slope_deg, aspect_deg, year = 2020) {
   # Solar constant (MJ/m²/day)
   Sc <- 1.361
 
-  # Vectorized calculation for all points (returns raw slope radiation)
-  calc_annual_raw <- function(lr, sr, ar) {
-    daily_rad <- sapply(delta_values, function(delta) {
-      meteoland::radiation_potentialRadiation(
+  # Use cumulative summation to avoid storing 365 intermediate values
+  n_points <- length(lat_rad)
+  potentialRad <- numeric(n_points)
+
+  # Cumulative calculation for each point
+  for (i in 1:n_points) {
+    daily_sum <- 0
+    # Accumulate daily radiation for the entire year
+    for (j in seq_along(delta_values)) {
+      daily_sum <- daily_sum + meteoland::radiation_potentialRadiation(
         solarConstant = Sc,
-        latrad = lr,
-        slorad = sr,
-        asprad = ar,
-        delta = delta
+        latrad = lat_rad[i],
+        slorad = slope_rad[i],
+        asprad = aspect_rad[i],
+        delta = delta_values[j]
       )
-    })
-
-    return(sum(daily_rad))
+    }
+    potentialRad[i] <- daily_sum
   }
-
-  # Apply to all input points (per unit slope-surface area)
-  potentialRad <- mapply(calc_annual_raw,
-                        lr = lat_rad,
-                        sr = slope_rad,
-                        ar = aspect_rad,
-                        SIMPLIFY = TRUE)
 
   # Project slope-surface irradiance to horizontal-equivalent
   potentialRad_proj <- potentialRad / cos(slope_rad)
