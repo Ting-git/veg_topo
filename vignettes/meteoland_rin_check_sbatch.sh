@@ -1,16 +1,16 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="DEM_26450"
-#SBATCH --time=4:00:00
+#SBATCH --job-name="meteolandvs"
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
+#SBATCH --time=24:00:00     #
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=110
-#SBATCH --mem=880G  # set 880G on first running, but don't need so much
+#SBATCH --cpus-per-task=80
+#SBATCH --mem=500G  # > ? G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
+#SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/vignettes
 
 # Set personal R library
 export R_LIBS_USER=/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4
@@ -36,7 +36,9 @@ Rscript -e '.libPaths(c(
   "/storage/homefs/tt22k003/R/x86_64-pc-linux-gnu-library/4.4",
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
-)); cat("Running script: 1_03_1_dem_slope_aspect_450m_agg_bytile.R\n"); source("1_03_1_dem_slope_aspect_450m_agg_bytile.R")'
+));
+cat("Running script: meteoland_rin_check.Rmd\n");
+rmarkdown::render("meteoland_rin_check.Rmd")'
 
 # Capture the exit status
 EXIT_STATUS=$?

@@ -26,7 +26,7 @@ tictoc::tic()
 # Get all tile files
 # Found 22063 tile files (~185GB)
 tile_files <- list.files(vegh_wagner_dir, pattern = "PAGE_.*_height_mean\\.tif$",
-                         full.names = TRUE) #  for test add [1:100]!!!!!
+                         full.names = TRUE)[1:10] #  for test add [1:100]!!!!!
 cat("→ Found", length(tile_files), "tile files (~185GB)\n")
 
 # Create file list in output directory
@@ -56,9 +56,6 @@ if (file.exists(vegh_wagner_30m_path)) unlink(vegh_wagner_30m_path)
 
 system2("gdalwarp",
         args = c(
-          # Input/Output
-          shQuote(vrt_file),
-          shQuote(vegh_wagner_30m_path),
 
           # Target CRS and resolution
           "-t_srs", "EPSG:4326",
@@ -70,9 +67,6 @@ system2("gdalwarp",
           # NoData handling
           "-srcnodata", "0",
           "-dstnodata", "0",
-
-          # Scale: map 0-100 to 0-40 (equivalent to divide by 2.5)
-          "-scale", "0", "100", "0", "40",
 
           # Memory configuration
           "-wm", "131072",
@@ -86,7 +80,11 @@ system2("gdalwarp",
           # Output compression
           "-co", "COMPRESS=ZSTD",
           "-co", "ZSTD_LEVEL=1",
-          "-co", "BIGTIFF=YES"
+          "-co", "BIGTIFF=YES",
+
+          # Input/Output
+          shQuote(vrt_file),
+          shQuote(vegh_wagner_30m_path)
         ),
         stdout = TRUE, stderr = TRUE)
 

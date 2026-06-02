@@ -22,8 +22,7 @@ p_cor <- plot_cor_twi_vegh(
   title_text = bquote("5-km Pearson's " * r[.("H")*","*.("TWI")]),
   text_size = 14,
   x_step = 30,
-  y_step = 30,
-  land_color = "#f5f6f7"
+  y_step = 30
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
@@ -46,7 +45,6 @@ p_cor <- plot_cor_twi_vegh(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "#f5f6f7", color = NA),
     plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()
@@ -94,7 +92,6 @@ p_pval <- plot_cor_pval(
     axis.title.y = ggplot2::element_blank(),
     panel.spacing = unit(0, "pt"),
     plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-    panel.background = element_rect(fill = "#f5f6f7", color = NA),
     plot.background  = element_blank(),
     legend.background = element_blank(),
     legend.box.background = element_blank()

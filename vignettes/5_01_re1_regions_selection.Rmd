@@ -61,7 +61,17 @@ fsnow_55km_r <- terra::rast(fsnow_55km_file)
 dem_sd_55km_r <- terra::rast(dem_sd_55km_path)
 dem_rg_95p_05p_55km_r <- terra::rast(dem_rg_95p_05p_55km_path)
 fpa_55km_r <- terra::rast(fpa_55km_path)
-fveg_55km_r <- terra::rast(fveg_55km_path)
+fveg_55km_r <- terra::rast(fveg_real_55km_path)
+
+# mi_55km_r
+# fused_55km_r
+# fbare_55km_r
+# fwater_55km_r
+# fsnow_55km_r
+# dem_sd_55km_r
+# dem_rg_95p_05p_55km_r
+# fpa_55km_r
+# fveg_55km_r
 
 # Stack rasters with explicit layer names
 stacked <- c(
@@ -166,6 +176,7 @@ table(df_binned$mi_bin)
 table(df_binned$abs_lat_bin)
 table(df_binned$relief_bin)
 table(df_binned$strata_label)
+df_binned[df_binned$lon == 14.25 & df_binned$lat == -21.25, ]
 ```
 
 ---
@@ -178,7 +189,7 @@ df_filt <- df_binned |>
   filter(fused < 0.03) |>                                        # Exclude high human activity
   filter(fsnow < 0.1) |>                                         # Avoid snow/ice-dominated areas
   filter(fwater < 0.3) |>                                        # Avoid water-dominated areas
-  filter(fveg > 0.7) |>                                          # Require sufficient vegetation cover
+  filter(fveg > 0.5) |>                                          # Require sufficient vegetation cover
   filter(fpa > 0.5) |>                                           # Prefer protected areas (≥50%)
   filter(dem_rg_95p_05p < 500)                                   # Limit elevation range
 
@@ -194,7 +205,7 @@ table(df_filt$strata_label)
 ## Sampling Representative Locations
 
 ```{r Sampling}
-set.seed(26347)
+set.seed(2026)
 
 # Function: Select 6 samples with the following constraints:
 # - First number (MI bin): 1–6 each exactly once
@@ -220,10 +231,10 @@ sampled_all <- df_filt |>
 selected_labels <- c(
   "1_hyper_arid_2_15_30_lat_high_relief",   # first = 1, second = 2
   "2_arid_1_00_15_lat_high_relief",         # first = 2, second = 1
-  "3_semiarid_5_60_90_lat_high_relief",     # first = 3, second = 3
-  "4_dry_subhumid_3_30_45_lat_high_relief", # first = 4, second = 4
-  "5_humid_5_60_90_lat_high_relief",        # first = 5, second = 5
-  "6_perhumid_1_00_15_lat_high_relief"      # first = 6, second = 2
+  "3_semiarid_5_60_90_lat_high_relief",     # first = 3, second = 5
+  "4_dry_subhumid_3_30_45_lat_high_relief", # first = 4, second = 3
+  "5_humid_2_15_30_lat_high_relief",        # first = 5, second = 2
+  "6_perhumid_4_45_60_lat_high_relief"      # first = 6, second = 4
 )
 
 # Step 3: Add selection indicator column
@@ -241,14 +252,6 @@ saveRDS(sampled_all, reg_sample_info_path)
 ```{r loadinfo}
 # Load region info
 reg_info_full <- readRDS(reg_sample_info_path) 
-reg_info <- reg_info_full |> filter(is_selected)
-```
-
-```{r plot_location}
-# World map
-world <- ne_countries(scale = "medium", returnclass = "sf")
-text_size <- 12
-
 reg_info_full <- reg_info_full |>
   mutate(label_num = row_number())
 
@@ -258,6 +261,15 @@ reg_info_full <- reg_info_full %>%
     display_label = paste(label_num, "-", strata_label),
     display_label = reorder(display_label, label_num)  # 按 label_num 排序
   )
+reg_info <- reg_info_full |> filter(is_selected)
+```
+
+```{r plot_location, fig.width=8, fig.height=8}
+reg_info_full
+
+# World map
+world <- ne_countries(scale = "medium", returnclass = "sf")
+text_size <- 12
 
 p_loc <- ggplot(data = world) +
   geom_sf(fill = "gray95", color = "gray70") +
@@ -306,10 +318,68 @@ p_loc <- ggplot(data = world) +
 
 print(p_loc)
 
+ggsave(
+  filename = here::here("data/figures/5_01_sample_region_location_all.png"),
+  plot = p_loc,
+  width = 10,
+  height = 10,
+  device = "png",
+  bg = "transparent"
+)
+```
+```{r plot_loc_samp, fig.width=8, fig.height=8}
+reg_info
+p_loc <- ggplot(data = world) +
+  geom_sf(fill = "gray95", color = "gray70") +
+  geom_point(
+    data = reg_info,
+    aes(x = xmid, y = ymid, fill = display_label),
+    color = "black",
+    size = 5,
+    shape = 21
+  ) +
+  geom_text(
+    data = reg_info,
+    aes(x = xmid, y = ymid, label = label_num),
+    size = 3,
+    fontface = "bold"
+  ) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-60, 90), expand = FALSE) +
+  labs(
+    title = "Sample Region Locations",
+    fill = "Strata Label"
+  ) +
+  guides(
+    fill = guide_legend(
+      ncol = 2,  # 图例显示为2列
+      byrow = TRUE,
+      title.position = "top"
+    )
+  ) +
+  theme_bw(base_size = text_size) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.title = element_text(size = text_size * 0.9),
+    legend.text = element_text(size = text_size * 0.7),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(size = text_size * 0.8, vjust = 1),
+    axis.text.y = element_text(size = text_size * 0.8, angle = 90, hjust = 0.5, vjust = 0.5),
+    plot.title = element_text(size = text_size * 1.2, face = "bold", margin = margin(b = 3)),
+    plot.title.position = "panel",
+    panel.grid.major = element_line(color = "gray80", linewidth = 0.5),
+    panel.grid.minor = element_line(color = "gray90", linewidth = 0.25),
+    axis.line = element_blank()
+  )
+
+print(p_loc)
+
 reg_info
 
 ggsave(
-  filename = here::here("data/figures/5_01_sample_region_location.png"),
+  filename = here::here("data/figures/5_01_sample_region_location_6.png"),
   plot = p_loc,
   width = 10,
   height = 10,

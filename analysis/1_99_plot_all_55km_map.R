@@ -81,7 +81,7 @@ plot_map(fwater_55km_file, "Water body fraction", here::here("data/figures/1_99_
 plot_map(fsnow_55km_file, "Permanent snow & ice fraction", here::here("data/figures/1_99_region_grid_fsnow_55km_map.png"))
 plot_map(dem_sd_55km_path,"Elevation SD", here::here("data/figures/1_99_region_grid_dem_sd_55km_map.png"))
 plot_map(fpa_55km_path,   "Protected area fraction", here::here("data/figures/1_99_region_grid_fpa_55km_map.png"))
-plot_map(dem_rg_95p_05p_55km_path, "Elevation range (98p-02p)", here::here("data/figures/1_99_region_grid_dem_rg_95p_05p_55km_map.png"))
+plot_map(dem_rg_95p_05p_55km_path, "Elevation range (95p-05p)", here::here("data/figures/1_99_region_grid_dem_rg_95p_05p_55km_map.png"))
 plot_map(fveg_55km_path,   "Vegetated area fraction", here::here("data/figures/1_99_region_grid_fveg_55km_map.png"))
 plot_map(fveg_real_55km_path,  "Real vegetated area fraction", here::here("data/figures/1_99_region_grid_fveg_real_55km_map.png"))
 

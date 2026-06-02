@@ -23,8 +23,8 @@ if (!dir.exists(dirname(mat_5km_file))) dir.create(dirname(mat_5km_file), recurs
 # ------------- Process: MAT (mean), MAP & SRAD (sum) --------------------------
 vars    <- c("tavg", "prec", "srad")
 outputs_1km <- c(mat_1km_file, map_1km_file, srad_1km_file)
-outputs_5km <- c(mat_5km_file, map_5km_file, srad_5km_file)
-outputs_450m <- c(mat_450m_file, map_450m_file, srad_450m_file)
+# outputs_5km <- c(mat_5km_file, map_5km_file, srad_5km_file)
+# outputs_450m <- c(mat_450m_file, map_450m_file, srad_450m_file)
 
 # Create 5km template once (reused for all variables)
 align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
@@ -33,8 +33,8 @@ for (i in seq_along(vars)) {
   message("⭐️⭐️⭐️ Processing: ", var, " ⭐️⭐️⭐️")
 
   output_1km <- outputs_1km[i]
-  output_5km <- outputs_5km[i]
-  output_450m <- outputs_450m[i]
+  # output_5km <- outputs_5km[i]
+  # output_450m <- outputs_450m[i]
 
   # more info here:
   # https://api.rdocumentation.org/packages/geodata/versions/0.5-8/topics/worldclim

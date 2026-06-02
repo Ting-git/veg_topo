@@ -22,14 +22,16 @@ library(furrr)
 # Load custom functions
 source(here::here("R/config.R"))
 source(here::here("R/extent_to_tile_ids.R"))
-source(here::here("R/raster_preprocess_save.R"))
-source(here::here("R/aggregate_topography.R"))
 source(here::here("R/create_spatial_windows.R"))
-source(here::here("R/helpers.R"))
-source(here::here("R/calc_sw_in.R"))
-
+source(here::here("R/raster_preprocess_save.R"))
+source(here::here("R/df_to_raster.R"))
+source(here::here("R/create_aligned_template.R"))
+source(here::here("R/convert_lat.R"))
+source(here::here("R/convert_lon.R"))
+source(here::here("R/merge_dem_neighbors.R"))
+source(here::here("R/cacl_meteoland_sw_in.R"))
 # Set worker numbers for different system
-if (hostname == "dash") workers = 2 else workers = 80
+if (hostname == "dash") workers = 2 else workers = 100
 message("→ using ", workers, " workers")
 
 # set output directory
@@ -48,10 +50,10 @@ end_idx   <- ntiles
 
 message(sprintf("Start processing: %d:%d (total %d Tiles)", start_idx, end_idx, nrow(rf_tiles_all)))  # Fixed: rf_tiles -> rf_tiles_all
 
-rf_tiles <- rf_tiles_all[start_idx:end_idx, ]  # 16378 tiles in total
+rf_tiles <- rf_tiles_all[start_idx:end_idx, ]  # 16403 tiles in total
 
 # random seed for sampling
-set.seed(124563)
+set.seed(2026)
 # -------------------- Tile Processing Function --------------------------------
 # Function to process for each Lidar tile
 sample_by_tile <- function(reg_id) {
@@ -63,9 +65,12 @@ sample_by_tile <- function(reg_id) {
     # ----- Region info -----
     # Create alignment template (30m resolution)
     reg_row <- rf_tiles[rf_tiles$reg_id == reg_id, ]
-    reg_id <- reg_row$reg_id
+    # reg_id <- reg_row$reg_id
     reg_extent <- terra::ext(reg_row$xmin, reg_row$xmax, reg_row$ymin, reg_row$ymax)
+    lon <- reg_row$xmin
+    lat <- reg_row$ymin
     out_file <- file.path(rf_sample_data_tiles_dir, sprintf("tile_%s.parquet", reg_id))
+    align_30m <- create_aligned_template(reg_extent, res_out = 0.00025)
 
     # message("⭐️⭐️⭐️ Processing:", reg_id, " ⭐️⭐️⭐️")
     # ----- Skip if already processed -----
@@ -90,7 +95,7 @@ sample_by_tile <- function(reg_id) {
       raster_preprocess_save(
         na_value = 0,
         fun = mean,
-        target = twi,
+        target = align_30m,
         if_aggregate = TRUE,
         if_round_fact = TRUE,
         if_resample = TRUE,
@@ -100,26 +105,37 @@ sample_by_tile <- function(reg_id) {
     })
 
     # DEM /Elevation
-    dem <- extent_to_tile_ids(reg_extent,tile_size = 1, return_raster = TRUE, source = "copernicus_dem_30m", tiles_dir = dem_30m_copernicus_dir)
+    # 6.2 Load DEM with neighbors
+    dem_ex <- merge_dem_neighbors(lat, lon, file_dir = COP30_dir)
+    if (is.null(dem_ex)) stop("Failed to load DEM data for this tile")
 
-    # Calculate slope and aspect, resample to TWI resolution
-    aligned <- suppressMessages({aggregate_topography(
-        dem,
-        res_tar = NULL,
-        target = twi,
-        if_aggregate = FALSE,
-        if_resample = TRUE
-      )})
+    # 6.3 Compute slope (450m resolution)
+    slope <- terrain(dem_ex, v = "slope", unit = "degrees") |>
+      resample(align_30m, method = "bilinear")
+
+    # 6.4 Compute aspect (450m resolution, circular mean)
+    aspect <- terrain(dem_ex, v = "aspect", unit = "radians")
+    aspect_cos <- cos(aspect) |>
+      resample(align_30m, method = "bilinear")
+    aspect_sin <- sin(aspect) |>
+      resample(align_30m, method = "bilinear")
+    aspect <- (atan2(aspect_sin, aspect_cos) * 180 / pi) %% 360
+
+    # 6.5 Save DEM
+    dem <- suppressMessages(
+      raster_preprocess_save(dem_ex, target = align_30m,
+                             if_aggregate = FALSE, if_resample = TRUE)
+    )
 
     # Climate data
-    mat <- rast(mat_1km_file) |> terra::crop(reg_extent) |> terra::resample(twi, method = "bilinear")
-    map <- rast(map_1km_file) |> terra::crop(reg_extent) |> terra::resample(twi, method = "bilinear")
-    srad <- rast(srad_1km_file) |> terra::crop(reg_extent) |> terra::resample(twi, method = "bilinear")
+    mat <- rast(mat_1km_file) |> terra::crop(reg_extent) |> terra::resample(align_30m, method = "bilinear")
+    map <- rast(map_1km_file) |> terra::crop(reg_extent) |> terra::resample(align_30m, method = "bilinear")
+    srad <- rast(srad_1km_file) |> terra::crop(reg_extent) |> terra::resample(align_30m, method = "bilinear")
 
     # ----- Stack and mask all layers -----
     # Stack all layers and apply valid window mask
-    stacked <- c(twi, vegh, aligned[["dem"]], aligned[["slope"]],
-                 aligned[["aspect"]], mat, map, srad) |>
+    stacked <- c(twi, vegh, dem, slope,
+                 aspect, mat, map, srad) |>
       terra::mask(valid_win_hr, maskvalues = FALSE)
 
     # ----- Sample 5 points per 0.05° window -----
@@ -136,12 +152,15 @@ sample_by_tile <- function(reg_id) {
       ungroup()
 
     # ----- Calculate Radiation Index (Rin) -----
+    # 缓存平地面辐射
+    sw_meteoland_flat_vec <- unlist(ave(df_samp$lat, df_samp$lat,
+                                        FUN = function(x) cacl_meteoland_sw_in(x[1], 0, 0, 2020)))
+
+    sw_meteoland_surf_vec <- cacl_meteoland_sw_in(df_samp$lat, df_samp$slope, df_samp$aspect, 2020)
+
+    # 计算并保存
     df_samp <- df_samp |>
-      mutate(
-        sw_in_uneven = calc_sw_in(lat, slope, aspect, year = 2020),
-        sw_in_flat = calc_sw_in(lat, 0, 0, year = 2020),
-        rin = sw_in_uneven / sw_in_flat
-      ) |>
+      mutate(rin = sw_meteoland_surf_vec / sw_meteoland_flat_vec) |>
       dplyr::select(lon, lat, vegh, elv, twi, rin, mat, map, srad)
 
     # ----- Save results -----

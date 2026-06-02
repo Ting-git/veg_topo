@@ -19,7 +19,7 @@ source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/df_to_raster.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/extent_to_tile_ids.R"))
-source(here::here("R/helpers.R"))
+source(here::here("R/save_raster.R"))
 source(here::here("R/calc_sw_in.R"))
 
 # Set worker numbers for different system
@@ -58,7 +58,7 @@ validate_vegetation_heights <- function(file_base) {
 
   # ----- Region info -----
   # Create alignment template (30m resolution)
-  align_r <- create_aligned_template( lidar_path , res_out = 0.00025)
+  align_r <- create_aligned_template( lidar_path , res_out = 0.00025, trim_input = TRUE)
   reg_extent <- ext(align_r)
   message("Extent:",reg_extent[1], ", ", reg_extent[2],", ",reg_extent[3],", ",reg_extent[4], " (xmin,xmax,ymin,ymax)")
 
@@ -136,8 +136,8 @@ validate_vegetation_heights <- function(file_base) {
       reg_extent,
       tile_size = 1,
       return_raster = TRUE,
-      source = "copernicus_dem_30m",
-      tiles_dir = dem_30m_copernicus_dir
+      source = "COP30",
+      tiles_dir = COP30_dir
     )
 
     aligned <- aggregate_topography(
@@ -148,41 +148,10 @@ validate_vegetation_heights <- function(file_base) {
       if_resample = TRUE
     )
 
-    # Save DEM
-    dem <- raster_preprocess_save(
-      input = aligned[["dem"]],
-      output = dem_file,
-      target = vegh_lidar,
-      varname = "dem",
-      if_aggregate = FALSE,
-      if_resample = FALSE,
-      if_mask = TRUE,
-      if_return_raster = TRUE
-    )
-
-    # Save slope
-    slope <- raster_preprocess_save(
-      input = aligned[["slope"]],
-      output = slope_file,
-      target = vegh_lidar,
-      varname = "slope",
-      if_aggregate = FALSE,
-      if_resample = FALSE,
-      if_mask = TRUE,
-      if_return_raster = TRUE
-    )
-
-    # Save aspect
-    aspect <- raster_preprocess_save(
-      input = aligned[["aspect"]],
-      output = aspect_file,
-      target = vegh_lidar,
-      varname = "aspect",
-      if_aggregate = FALSE,
-      if_resample = FALSE,
-      if_mask = TRUE,
-      if_return_raster = TRUE
-    )
+    # Save DEM, Slope, Aspect
+    save_raster(aligned[["dem"]], dem_file)
+    save_raster(aligned[["slope"]], slope_file)
+    save_raster(aligned[["aspect"]], aspect_file)
 
     # ============================================================================
     # 3. RADIATION (Rin) CALCULATION
@@ -190,57 +159,44 @@ validate_vegetation_heights <- function(file_base) {
     message("☀️ Data preparation (Rin)...")
 
     # Extract topography data to data frame
-    df_topo <- as.data.frame(dem, xy = TRUE) |>
-      left_join(as.data.frame(slope, xy = TRUE), by = c("x", "y")) |>
+    df_topo <- as.data.frame(slope, xy = TRUE) |>
       left_join(as.data.frame(aspect, xy = TRUE), by = c("x", "y")) |>
       tidyr::drop_na()
 
-    names(df_topo) <- c("lon", "lat", "dem", "slope", "aspect")
+    names(df_topo) <- c("lon", "lat", "slope", "aspect")
 
     if (nrow(df_topo) == 0) {
       warning("No valid cells after drop_na")
       return(FALSE)
     }
 
-    # Calculate solar radiation in batches
-    n_rows <- nrow(df_topo)
-    n_batches <- ceiling(n_rows / batch_size)
+    # 6.6 Extract topography to dataframe
+    df_topo <- as.data.frame(slope, xy = TRUE) |>
+      left_join(as.data.frame(aspect, xy = TRUE), by = c("x", "y")) |>
+      tidyr::drop_na()
+    colnames(df_topo) <- c("lon", "lat", "slope", "aspect")
 
-    sw_in_uneven <- numeric(n_rows)
-    sw_in_flat <- numeric(n_rows)
+    # 6.7 Radiation calculation
+    # Slope surface radiation
+    sw_meteoland_surf_vec <- cacl_meteoland_sw_in(df_topo$lat, df_topo$slope, df_topo$aspect, 2020)
 
-    for (i in seq(1, n_rows, by = batch_size)) {
-      idx <- i:min(i + batch_size - 1, n_rows)
+    # Flat surface radiation (cached by latitude)
+    sw_meteoland_flat_vec <- unlist(ave(df_topo$lat, df_topo$lat,
+                                        FUN = function(x) cacl_meteoland_sw_in(x[1], 0, 0, 2020)))
 
-      sw_in_uneven[idx] <- calc_sw_in(
-        df_topo$lat[idx],
-        df_topo$slope[idx],
-        df_topo$aspect[idx],
-        year = 2020
-      )
+    # Radiation index
+    rin_meteoland_vec <- sw_meteoland_surf_vec / sw_meteoland_flat_vec
 
-      sw_in_flat[idx] <- calc_sw_in(
-        df_topo$lat[idx],
-        rep(0, length(idx)),
-        rep(0, length(idx)),
-        year = 2020
-      )
-    }
+    # 6.8 Save result as raster
+    df_calc <- df_topo[, c("lon", "lat")] |>
+      mutate(rin = rin_meteoland_vec)
 
-    # Compute radiation index (Rin)
-    df_calc <- df_topo |> mutate(rin = sw_in_uneven / sw_in_flat)
-
-    # Convert to raster and save
-    rin <- df_to_raster(df_calc, "lon", "lat", "rin",
-                        template_raster = vegh_lidar,
-                        output_file = rin_file,
-                        varname = "rin",
-                        overwrite = TRUE,
-                        return_raster = TRUE
+    rin <- suppressMessages(
+      df_to_raster(df_calc, "lon", "lat", "rin", align_r, output_file = rin_file)
     )
 
     # Clean up
-    rm(aligned, sw_in_uneven, sw_in_flat)
+    rm(aligned, sw_meteoland_surf_vec, sw_meteoland_flat_vec, rin_meteoland_vec, df_topo, df_calc, rin)
     gc()
 
     # ============================================================================
@@ -278,7 +234,7 @@ validate_vegetation_heights <- function(file_base) {
       suffixes = c("_lang", "_lidar")
     )
 
-    r_temp_500m <- create_aligned_template(vegh_lidar, res_out = 0.005)
+    r_temp_500m <- create_aligned_template(vegh_lidar, res_out = 0.005, trim_input = TRUE)
 
     # Save TWI correlation rasters
     r_hlidar_twi <- df_to_raster(

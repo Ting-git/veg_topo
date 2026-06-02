@@ -5,7 +5,6 @@
 #   1. Load DEM and target grid
 #   2. Compute 95th and 5th percentile elevation per grid cell
 #   3. Compute elevation range (95p - 05p)
-#   4. Optionally test on a smaller region
 
 # about ~ 11 min on UBELIX
 # ============================================================
@@ -33,13 +32,20 @@ dem_95p <- raster_preprocess_save(
   if_zonal = TRUE,
   if_aggregate = FALSE,
   fun = function(values, coverage_fractions) {
-    as.numeric(quantile(values, 0.95, na.rm = TRUE))
+    # Keep only pixels with at least 10% coverage to reduce edge noise
+    keep <- coverage_fractions >= 0.1
+    values_filtered <- values[keep]
+    # Return NA if insufficient pixels for reliable quantile
+    if (length(values_filtered) < 2) {
+      return(NA_real_)
+    }
+    as.numeric(quantile(values_filtered, 0.95, na.rm = TRUE))
   },
   if_resample    = FALSE,
   if_return_raster = TRUE
 )
 
-# ---------------- 3. Compute 2th percentile ------------------
+# ---------------- 3. Compute 5th percentile ------------------
 message("Calculating 05th percentile elevation...")
 dem_05p <- raster_preprocess_save(
   input   = dem_450m_mosaic_path,
@@ -48,7 +54,14 @@ dem_05p <- raster_preprocess_save(
   varname = "dem_05p",
   if_zonal = TRUE,
   fun = function(values, coverage_fractions) {
-    as.numeric(quantile(values, 0.05, na.rm = TRUE))
+    # Keep only pixels with at least 10% coverage to reduce edge noise
+    keep <- coverage_fractions >= 0.1
+    values_filtered <- values[keep]
+    # Return NA if insufficient pixels for reliable quantile
+    if (length(values_filtered) < 2) {
+      return(NA_real_)
+    }
+    as.numeric(quantile(values_filtered, 0.05, na.rm = TRUE))
   },
   if_aggregate = FALSE,
   if_round_fact  = TRUE,
@@ -57,16 +70,14 @@ dem_05p <- raster_preprocess_save(
 )
 
 # ---------------- 4. Compute elevation range -----------------
-
 message("Computing elevation range (95p - 05p)...")
 dem_rg <- dem_95p - dem_05p
 
 terra::writeCDF(dem_rg, dem_rg_95p_05p_55km_path, overwrite = TRUE, varname = "dem_rg_95p_05p")
 if (file.exists(dem_rg_95p_05p_55km_path)) message("✅ Saved : ", dem_rg_95p_05p_55km_path)
 
-# # ---------------- 5 (optional ). Check the output ----------
+# # ---------------- 5 (optional). Check the output ----------
 # r <- terra::rast(dem_rg_95p_05p_55km_path)
 # r
 # summary(r)
-# plot(r,  main = "Elevation range (0.5°)")
-
+# plot(r, main = "Elevation range (0.5°)")

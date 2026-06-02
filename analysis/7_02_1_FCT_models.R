@@ -4,8 +4,6 @@
 
 library(dplyr)
 library(tidyr)
-library(caret)
-library(recipes)
 library(ggplot2)
 library(arrow)
 library(ranger)
@@ -26,9 +24,13 @@ if (!dir.exists(rf_models_dir)) dir.create(rf_models_dir, recursive = TRUE)
 
 # Load data
 dataset <- open_dataset(rf_sample_data_tiles_dir, format = "parquet")
-combined_data <- dataset |> collect() |> tidyr::drop_na() |> filter(lat <= 60)
+combined_data <- dataset |>
+  collect() |>
+  tidyr::drop_na() |>
+  filter(lat <= 60)
 message("→ Loaded ", nrow(combined_data), " samples\n")
 head(combined_data)
+
 # ============================================================================
 # 3. FIXED PARAMETERS FOR ALL MODELS (CRITICAL FOR VARIANCE PARTITIONING)
 # ============================================================================
@@ -49,10 +51,10 @@ message(sprintf("  num.trees = %d", FIXED_PARAMS$num.trees))
 message(sprintf("  sample.fraction = %.1f\n", FIXED_PARAMS$sample.fraction))
 
 # ============================================================================
-# 4. FUNCTION TO TRAIN MODEL WITH FIXED PARAMETERS
+# 4. FUNCTION TO TRAIN MODEL WITH FIXED PARAMETERS (USING RANGER)
 # ============================================================================
 
-train_rf_model <- function(formula, data, model_name, n_cores) {
+train_rf_model_ranger <- function(formula, data, model_name, n_cores) {
 
   message("\n", paste(rep("=", 50), collapse = ""))
   message("Training: ", model_name)
@@ -60,73 +62,49 @@ train_rf_model <- function(formula, data, model_name, n_cores) {
 
   # Print sample info
   message(sprintf("  Training samples: %d", nrow(data)))
-  message(sprintf("  Features: %d", length(all.vars(formula)) - 1))  # 减去因变量
+  message(sprintf("  Features: %d", length(all.vars(formula)) - 1))
   message(sprintf("  Model formula: %s", deparse(formula)))
 
-  # Create recipe
-  pp <- recipe(formula, data = data) |>
-    step_center(all_numeric(), -all_outcomes()) |>
-    step_scale(all_numeric(), -all_outcomes())
-
-  # Training control
-  train_control <- trainControl(
-    method = "cv",
-    number = 5,
-    savePredictions = "final",
-    verboseIter = FALSE,
-    allowParallel = FALSE
-  )
-
-  # Train model with FIXED parameters
   set.seed(1982)
   start_time <- Sys.time()
 
-  model <- train(
-    pp,
+  # Core training - one line with ranger
+  model <- ranger(
+    formula,
     data = data,
-    method = "ranger",
-    trControl = train_control,
-    tuneGrid = data.frame(
-      mtry = FIXED_PARAMS$mtry,
-      splitrule = "variance",
-      min.node.size = FIXED_PARAMS$min.node.size
-    ),
-    metric = "RMSE",
+    num.trees = FIXED_PARAMS$num.trees,
+    mtry = FIXED_PARAMS$mtry,
+    min.node.size = FIXED_PARAMS$min.node.size,
+    importance = FIXED_PARAMS$importance,
     replace = FIXED_PARAMS$replace,
     sample.fraction = FIXED_PARAMS$sample.fraction,
-    num.trees = FIXED_PARAMS$num.trees,
-    importance = FIXED_PARAMS$importance,
-    num.threads = n_cores,
-    seed = 1982
+    num.threads = n_cores
   )
 
   end_time <- Sys.time()
   training_time <- difftime(end_time, start_time, units = "mins")
 
-  # Extract results
-  cv_rmse <- model$results$RMSE
-  cv_rsq <- model$results$Rsquared
-  oob_rmse <- sqrt(model$finalModel$prediction.error)
+  # Extract outcome name from formula
+  outcome_name <- as.character(formula[[2]])
+  observed <- data[[outcome_name]]
 
-  # Variable importance
-  importance <- data.frame(
-    Variable = names(model$finalModel$variable.importance),
-    Importance = model$finalModel$variable.importance
-  ) |> arrange(desc(Importance))
+  # Calculate training RMSE
+  train_rmse <- sqrt(mean((model$predictions - observed)^2))
 
   message(sprintf("  ✓ Completed in %.2f minutes", training_time))
-  message(sprintf("  ✓ CV R² = %.4f", cv_rsq))
-  message(sprintf("  ✓ CV RMSE = %.4f", cv_rmse))
-  message(sprintf("  ✓ OOB RMSE = %.4f", oob_rmse))
+  message(sprintf("  ✓ Training R² = %.4f", model$r.squared))
+  message(sprintf("  ✓ Training RMSE = %.4f", train_rmse))
+  message(sprintf("  ✓ OOB RMSE = %.4f", sqrt(model$prediction.error)))
 
+  # Return results
   return(list(
     model = model,
     name = model_name,
-    cv_rmse = cv_rmse,
-    cv_rsq = cv_rsq,
-    oob_rmse = oob_rmse,
-    importance = importance,
-    predictions = model$pred,
+    oob_rmse = sqrt(model$prediction.error),
+    train_rsq = model$r.squared,
+    train_rmse = train_rmse,
+    predictions = model$predictions,
+    importance = model$variable.importance,
     training_time = training_time
   ))
 }
@@ -139,82 +117,67 @@ cat("\n", paste(rep("=", 60), collapse = ""))
 cat("\nTRAINING THREE MODELS FOR VARIANCE PARTITIONING\n")
 cat(paste(rep("=", 60), collapse = ""), "\n")
 
-
 # Model A: Full model (Climate + Topography)
 gc()
-full <- train_rf_model(
+full <- train_rf_model_ranger(
   vegh ~ mat + map + srad + twi + rin + elv,
   combined_data,
   "Full Model (Climate + Topo)",
   n_cores
 )
-# Save individual models
-saveRDS(full$model, file.path(rf_models_dir, paste0("rf_full_model_cv.rds")))
-
+saveRDS(full$model, file.path(rf_models_dir, "rf_full_model.rds"))
 
 # Model B: Climate only
 gc()
-climate <- train_rf_model(
+climate <- train_rf_model_ranger(
   vegh ~ mat + map + srad,
   combined_data,
   "Climate Only",
   n_cores
 )
-saveRDS(climate$model, file.path(rf_models_dir, paste0("rf_climate_model_cv.rds")))
+saveRDS(climate$model, file.path(rf_models_dir, "rf_climate_model.rds"))
 
 # Model C: Topography only
 gc()
-topo <- train_rf_model(
+topo <- train_rf_model_ranger(
   vegh ~ twi + rin + elv,
   combined_data,
   "Topography Only",
   n_cores
 )
-saveRDS(topo$model, file.path(rf_models_dir, paste0("rf_topo_model_cv.rds")))
+saveRDS(topo$model, file.path(rf_models_dir, "rf_topo_model.rds"))
 
 # ============================================================================
-# 6. CROSS-VALIDATION RESULTS FOR EACH MODEL
+# 6. MODEL PERFORMANCE (USING OOB ERROR)
 # ============================================================================
 
 cat("\n\n", paste(rep("=", 60), collapse = ""))
-cat("\nCROSS-VALIDATION RESULTS\n")
+cat("\nMODEL PERFORMANCE (OOB ERROR)\n")
 cat(paste(rep("=", 60), collapse = ""), "\n")
 
 # Full model results
 cat("\n", paste(rep("-", 40), collapse = ""))
 cat("\nFull Model (Climate + Topography)\n")
 cat(paste(rep("-", 40), collapse = ""), "\n")
-for(i in 1:5) {
-  fold_preds <- full$predictions[full$predictions$Resample == paste0("Fold", i), ]
-  rmse <- sqrt(mean((fold_preds$pred - fold_preds$obs)^2))
-  rsq <- cor(fold_preds$pred, fold_preds$obs)^2
-  cat(sprintf("Fold %d: RMSE = %.4f, R² = %.4f\n", i, rmse, rsq))
-}
-cat(sprintf("Average: RMSE = %.4f, R² = %.4f\n", full$cv_rmse, full$cv_rsq))
+cat(sprintf("OOB RMSE = %.4f\n", full$oob_rmse))
+cat(sprintf("Training R² = %.4f\n", full$train_rsq))
+cat(sprintf("Training RMSE = %.4f\n", full$train_rmse))
 
 # Climate only results
 cat("\n", paste(rep("-", 40), collapse = ""))
 cat("\nClimate Only Model\n")
 cat(paste(rep("-", 40), collapse = ""), "\n")
-for(i in 1:5) {
-  fold_preds <- climate$predictions[climate$predictions$Resample == paste0("Fold", i), ]
-  rmse <- sqrt(mean((fold_preds$pred - fold_preds$obs)^2))
-  rsq <- cor(fold_preds$pred, fold_preds$obs)^2
-  cat(sprintf("Fold %d: RMSE = %.4f, R² = %.4f\n", i, rmse, rsq))
-}
-cat(sprintf("Average: RMSE = %.4f, R² = %.4f\n", climate$cv_rmse, climate$cv_rsq))
+cat(sprintf("OOB RMSE = %.4f\n", climate$oob_rmse))
+cat(sprintf("Training R² = %.4f\n", climate$train_rsq))
+cat(sprintf("Training RMSE = %.4f\n", climate$train_rmse))
 
 # Topography only results
 cat("\n", paste(rep("-", 40), collapse = ""))
 cat("\nTopography Only Model\n")
 cat(paste(rep("-", 40), collapse = ""), "\n")
-for(i in 1:5) {
-  fold_preds <- topo$predictions[topo$predictions$Resample == paste0("Fold", i), ]
-  rmse <- sqrt(mean((fold_preds$pred - fold_preds$obs)^2))
-  rsq <- cor(fold_preds$pred, fold_preds$obs)^2
-  cat(sprintf("Fold %d: RMSE = %.4f, R² = %.4f\n", i, rmse, rsq))
-}
-cat(sprintf("Average: RMSE = %.4f, R² = %.4f\n", topo$cv_rmse, topo$cv_rsq))
+cat(sprintf("OOB RMSE = %.4f\n", topo$oob_rmse))
+cat(sprintf("Training R² = %.4f\n", topo$train_rsq))
+cat(sprintf("Training RMSE = %.4f\n", topo$train_rmse))
 
 # ============================================================================
 # 7. VARIABLE IMPORTANCE FOR EACH MODEL
@@ -225,25 +188,37 @@ cat("\nVARIABLE IMPORTANCE\n")
 cat(paste(rep("=", 60), collapse = ""), "\n")
 
 cat("\n--- Full Model ---\n")
-print(full$importance)
+importance_full <- data.frame(
+  Variable = names(full$importance),
+  Importance = as.numeric(full$importance)
+) |> arrange(desc(Importance))
+print(importance_full)
 
 cat("\n--- Climate Only Model ---\n")
-print(climate$importance)
+importance_climate <- data.frame(
+  Variable = names(climate$importance),
+  Importance = as.numeric(climate$importance)
+) |> arrange(desc(Importance))
+print(importance_climate)
 
 cat("\n--- Topography Only Model ---\n")
-print(topo$importance)
+importance_topo <- data.frame(
+  Variable = names(topo$importance),
+  Importance = as.numeric(topo$importance)
+) |> arrange(desc(Importance))
+print(importance_topo)
 
 # ============================================================================
-# 8. VARIANCE PARTITIONING
+# 8. VARIANCE PARTITIONING (USING TRAINING R²)
 # ============================================================================
 
 cat("\n\n", paste(rep("=", 60), collapse = ""))
 cat("\nVARIANCE PARTITIONING RESULTS\n")
 cat(paste(rep("=", 60), collapse = ""), "\n\n")
 
-R2_full <- full$cv_rsq
-R2_climate <- climate$cv_rsq
-R2_topo <- topo$cv_rsq
+R2_full <- full$train_rsq
+R2_climate <- climate$train_rsq
+R2_topo <- topo$train_rsq
 
 # Calculate variance components
 unique_climate <- R2_full - R2_topo
@@ -273,37 +248,43 @@ cat(sprintf("  Unexplained:                   %.4f (%.1f%% of total)\n\n",
 # ============================================================================
 
 # Prepare data for plotting
-full_pred <- full$predictions[, c("pred", "obs", "Resample")]
-full_pred$Model <- "Full Model"
+full_pred <- data.frame(
+  pred = full$predictions,
+  obs = combined_data$vegh,
+  Model = "Full Model"
+)
 
-climate_pred <- climate$predictions[, c("pred", "obs", "Resample")]
-climate_pred$Model <- "Climate Only"
+climate_pred <- data.frame(
+  pred = climate$predictions,
+  obs = combined_data$vegh,
+  Model = "Climate Only"
+)
 
-topo_pred <- topo$predictions[, c("pred", "obs", "Resample")]
-topo_pred$Model <- "Topography Only"
+topo_pred <- data.frame(
+  pred = topo$predictions,
+  obs = combined_data$vegh,
+  Model = "Topography Only"
+)
 
 all_pred <- rbind(full_pred, climate_pred, topo_pred)
 
-# Calculate R² for each model
+# Calculate R² and RMSE for each model for plotting
 model_rsq <- data.frame(
   Model = c("Full Model", "Climate Only", "Topography Only"),
-  R2 = c(R2_full, R2_climate, R2_topo),
-  RMSE = c(full$cv_rmse, climate$cv_rmse, topo$cv_rmse)
+  R2 = c(full$train_rsq, climate$train_rsq, topo$train_rsq),
+  RMSE = c(full$train_rmse, climate$train_rmse, topo$train_rmse)
 )
 
 # Plot 1: Predicted vs observed by model
-p1 <- ggplot(all_pred, aes(x = obs, y = pred, color = Resample)) +
-  geom_point(alpha = 0.4, size = 1) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", size = 1) +
+p1 <- ggplot(all_pred, aes(x = obs, y = pred)) +
+  geom_point(alpha = 0.4, size = 1, color = "steelblue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", size = 1, color = "red") +
   facet_wrap(~Model, nrow = 1) +
   labs(
-    title = "Predicted vs Observed (5-fold CV)",
+    title = "Predicted vs Observed (Training Set)",
     x = "Observed", y = "Predicted"
   ) +
-  theme_bw() +
-  theme(legend.position = "bottom")
-
-# print(p1)
+  theme_bw()
 
 # Plot 2: R² comparison
 p2 <- ggplot(model_rsq, aes(x = Model, y = R2, fill = Model)) +
@@ -317,8 +298,6 @@ p2 <- ggplot(model_rsq, aes(x = Model, y = R2, fill = Model)) +
   theme_bw() +
   theme(legend.position = "none") +
   ylim(0, 1)
-
-# print(p2)
 
 # Plot 3: Variance partitioning pie/bar chart
 variance_data <- data.frame(
@@ -338,14 +317,27 @@ p3 <- ggplot(variance_data, aes(x = "", y = Value, fill = Component)) +
   theme_void() +
   theme(legend.position = "bottom")
 
-# print(p3)
-
 # Plot 4: Variable importance comparison
-imp_combined <- rbind(
-  cbind(full$importance, Model = "Full"),
-  cbind(climate$importance, Model = "Climate Only"),
-  cbind(topo$importance, Model = "Topography Only")
+# Combine importance data from all models
+full_imp_df <- data.frame(
+  Variable = names(full$importance),
+  Importance = as.numeric(full$importance),
+  Model = "Full"
 )
+
+climate_imp_df <- data.frame(
+  Variable = names(climate$importance),
+  Importance = as.numeric(climate$importance),
+  Model = "Climate Only"
+)
+
+topo_imp_df <- data.frame(
+  Variable = names(topo$importance),
+  Importance = as.numeric(topo$importance),
+  Model = "Topography Only"
+)
+
+imp_combined <- rbind(full_imp_df, climate_imp_df, topo_imp_df)
 
 p4 <- ggplot(imp_combined, aes(x = reorder(Variable, Importance),
                                y = Importance, fill = Model)) +
@@ -358,8 +350,6 @@ p4 <- ggplot(imp_combined, aes(x = reorder(Variable, Importance),
   ) +
   theme_bw() +
   theme(legend.position = "none")
-
-# print(p4)
 
 # Save plots
 ggsave(here::here("data/figures/7_02_pred_vs_obs_three_models.png"),
@@ -393,11 +383,18 @@ variance_summary <- data.frame(
 
 model_comparison <- data.frame(
   Model = c("Full", "Climate Only", "Topography Only"),
-  CV_RMSE = c(full$cv_rmse, climate$cv_rmse, topo$cv_rmse),
-  CV_R2 = c(full$cv_rsq, climate$cv_rsq, topo$cv_rsq),
+  Training_RMSE = c(full$train_rmse, climate$train_rmse, topo$train_rmse),
+  Training_R2 = c(full$train_rsq, climate$train_rsq, topo$train_rsq),
   OOB_RMSE = c(full$oob_rmse, climate$oob_rmse, topo$oob_rmse),
   Training_Time_Min = c(full$training_time, climate$training_time, topo$training_time)
 )
+
+# Save results
+saveRDS(variance_summary, file.path(rf_models_dir, "variance_partitioning.rds"))
+saveRDS(model_comparison, file.path(rf_models_dir, "model_comparison.rds"))
+saveRDS(importance_full, file.path(rf_models_dir, "importance_full.rds"))
+saveRDS(importance_climate, file.path(rf_models_dir, "importance_climate.rds"))
+saveRDS(importance_topo, file.path(rf_models_dir, "importance_topo.rds"))
 
 # ============================================================================
 # 11. TRAINING SUMMARY
@@ -419,6 +416,7 @@ cat(sprintf("  mtry = %d\n", FIXED_PARAMS$mtry))
 cat(sprintf("  num.trees = %d\n", FIXED_PARAMS$num.trees))
 cat(sprintf("  min.node.size = %d\n", FIXED_PARAMS$min.node.size))
 cat(sprintf("  sample.fraction = %.1f\n", FIXED_PARAMS$sample.fraction))
-
+cat(sprintf("  replace = %s\n", FIXED_PARAMS$replace))
+cat(sprintf("  importance = %s\n", FIXED_PARAMS$importance))
 
 cat("\n✅ COMPLETED!\n")

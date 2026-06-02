@@ -85,8 +85,8 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     message("Saved temporary vegetation height raster: ", vegh_tmp_path)
 
     # --- Radiation index of terrain effect ---
-    rin_rc <- terra::rast(sw_in_terrain_effect_450m_path) |> terra::crop(tile_extent)
-    terrain_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_terrain_effect_450m.nc"))
+    rin_rc <- terra::rast(rin_450m_mosaic_path) |> terra::crop(tile_extent)
+    terrain_tmp_path <- file.path(tempdir(), paste0("tile_", tile_id, "_rin_450m.nc"))
     terra::writeCDF(rin_rc, terrain_tmp_path, varnames = "rin", overwrite = TRUE)
     rm(rin_rc); gc()
     rin_rc <- terra::rast(terrain_tmp_path)
@@ -115,6 +115,9 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
     # --- reset theme for plots ---
     re_theme <- list(
       guides(fill = guide_colorbar(barwidth = 0.8, barheight = 12)),
+      ggplot2::coord_sf(
+        clip = "on"
+      ),
       ggplot2::theme(
         aspect.ratio = 1,
         legend.position = "right",
@@ -164,7 +167,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
 
     p_rin <- plot_rin(rin_rc, extent = tile_extent, title_text = "450 m: Radiation index",  text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
     p_rA <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent,  title_text <- bquote("5 km: Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme + re_theme_left
-    p_rB <- plot_r_H_R(cor_r, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
+    p_rB <- plot_r_H_R(r_H_R_5km_path, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
 
     p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
     p_kg <- plot_kg_class(kg_present_0p083_file, kg_legend_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + ggplot2::theme(aspect.ratio = 1)

@@ -14,9 +14,9 @@
 library(terra)
 library(dplyr)
 library(tidyr)
-library(purrr)
-library(furrr)
 library(fs)
+library(future)
+library(furrr)
 
 # Load custom functions
 source(here::here("R/config.R"))
@@ -27,97 +27,77 @@ source(here::here("R/mosaic_tiles.R"))
 source(here::here("R/raster_preprocess_save.R"))
 
 # Set worker numbers for different system
-hostname <- trimws(tolower(system("hostname", intern = TRUE)))
-if (hostname == "dash") {
-  workers = 4
-  message("→ using ", workers, " workers")
+if (hostname == "dash") workers = 4 else workers = 16
+message("→ using ", workers, " workers")
 
-} else {
-  workers = 16
-  message("→ using ", workers, " workers")
-}
 # Create output directory
 if (!dir.exists(flc_tile_dir)) dir.create(flc_tile_dir, recursive = TRUE)
 
-# -------------------- 3. Parallel Tile Processing -----------------------------
-gc()
-plan(multisession, workers = workers)
+# # Load Tile Information
+tiles_info <- readRDS(valid_tiles_info_path)
 
 t_start <- Sys.time()
 message("⏱ Land-cover fraction pipeline started at: ", format(t_start, "%Y-%m-%d %H:%M:%S"))
+# -------------------- 3. Parallel Tile Processing -----------------------------
+# Single tile processing function
+process_tile <- function(tile_info) {
 
-# Load Tile Information
-tiles_info <- readRDS(valid_tiles_info_path)
+  tile_id <- tile_info$tile_id
+  output_file <- file.path(flc_tile_dir, paste0("flc_5km_", tile_id, ".nc"))
 
-# Parallel process
-results <- future_pmap(
-  tiles_info,
-  function(...) {
-    args <- list(...)
-    tryCatch({
+  if (file.exists(output_file)) {
+    message("⏭️ Skip: ", tile_id)
+    return(NULL)
+  }
 
-      # set output per tile
-      tile_id <- args$tile_id
-      output_file <- file.path(flc_tile_dir, paste0("flc_5km_", tile_id, ".nc"))
+  message("🔹 Processing: ", tile_id)
 
-      # Check if files have been processed
-      if (fs::file_exists(output_file)) {
-        message("Existed: ", tile_id)
-        return(list(success = TRUE, error = NULL))
-      }
+  ext <- terra::ext(tile_info$xmin, tile_info$xmax, tile_info$ymin, tile_info$ymax)
+  lc_r <- terra::rast(cci_landcover_path, lyrs = "lccs_class")
+  rc <- terra::crop(lc_r, ext)
 
-      # ---- Start process the tile -----
-      message("🔹 Processing tile: ", tile_id)
+  df_win <- create_spatial_windows(rc, value_vars = "lccs_class", dwin = 0.05)
+  df_flc <- calculate_fraction_land_cover(df_win, output_file = output_file)
 
-      # Define tile extent and crop land cover raster
-      ext <- terra::ext(args$xmin, args$xmax, args$ymin, args$ymax)
-      lc_r <- terra::rast(cci_landcover_path, lyrs = "lccs_class")
-      rc   <- terra::crop(lc_r, ext)
+  print(rast(output_file))
 
-      # Record tile processing start
-      t_tile_start <- Sys.time()
+  message("✅ Done: ", tile_id)
+}
 
-      # Create spatial windows and calculate fractions
-      df_win <- create_spatial_windows(rc, value_vars = "lccs_class", dwin = 0.05)
-      df_flc <- calculate_fraction_land_cover(df_win, output_file = output_file)
+# Parallel processing
+run_parallel <- function(tiles_info, n_cores = NULL) {
 
-      # Log tile completion
-      if (file.exists(output_file)) {
-        elapsed_tile <- difftime(Sys.time(), t_tile_start, units = "mins")
-        message(sprintf("✅ Tile %s completed [%.1f mins]", tile_id, elapsed_tile))
-      }
+  if (is.null(n_cores)) n_cores <- availableCores() - 1
 
-      # Clean tile variables
-      rm(lc_r, rc, df_win, df_flc); gc()
-      return(list(success = TRUE, error = NULL))
+  plan(multisession, workers = n_cores)
 
-    }, error = function(e) {
-      msg <- sprintf("Tile %s failed: %s", args$tile_id %||% "unknown", conditionMessage(e))
-      message("❌ ", msg)
-      return(list(success = FALSE, error = msg))
-    })
-  },
-  .options = furrr_options(seed = TRUE)
-)
+  dir.create(flc_tile_dir, showWarnings = FALSE, recursive = TRUE)
 
-plan(sequential)
-gc()
+  future_map(1:nrow(tiles_info), function(i) {
+    process_tile(tiles_info[i, ])
+  }, .progress = FALSE)
 
-elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
-message(sprintf("📦 All tiles processed [%.1f mins]", elapsed_total))
+  message("🎉 All tiles completed!")
+}
 
+# Usage
+run_parallel(tiles_info, n_cores = workers)
 # -------------------- 4. Mosaic All Tiles -------------------------------------
 message("🗺 Mosaicing all tiles into global raster...")
 
 # Create template raster aligned to 5km grid and mosaic
-align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path)
+align_template_5km <- create_aligned_template(twi_450m_mosaic_clean_path, res_out = 0.05)
 mosaic_r <- mosaic_tiles(
   input_dir   = flc_tile_dir,
   output_file = NULL,
   pattern = "*.nc",
   target_grid = align_template_5km,
-  if_resample = TRUE
+  if_resample = FALSE,
+  if_crop = TRUE
 )
+
+print(rast(mosaic_r))
+print(summary(mosaic_r))
 
 # -------------------- 5. Save to Single Layer Raster -------------------------
 message("🔧 Saving single-layer rasters...")
@@ -139,6 +119,7 @@ raster_preprocess_save(
 elapsed_total <- difftime(Sys.time(), t_start, units = "mins")
 message(sprintf("🎉 Pipeline completed successfully [%.1f mins]", elapsed_total))
 
+print(rast(fused_5km_file))
 # # -------------------- 6. Cleanup Intermediate Tiles ---------------------------
 # tiles_path <- fs::dir_ls(path = flc_tile_dir, glob = "*.nc")
 # if (length(tiles_path) > 0) {
@@ -153,7 +134,7 @@ message(sprintf("🎉 Pipeline completed successfully [%.1f mins]", elapsed_tota
 # summary(r)
 # plot(r, main = "Used land fraction (5km)")
 #
-# r <- rast(fbare_5km_file)
+# r <- rast("/storage/scratch/giub_geco/tting/data/global_flc_5km/30_30_deg/flc_60S_90W.nc")
 # print(r)
 # summary(r)
 # plot(r, main = "Bare land fraction (5km)")
@@ -167,3 +148,12 @@ message(sprintf("🎉 Pipeline completed successfully [%.1f mins]", elapsed_tota
 # print(r)
 # summary(r)
 # plot(r, main = "Permanent snow and ice fraction (5km)")
+#
+# # single tile check
+# args <- tiles_info[11,]
+#
+# tile_id <- args$tile_id
+# output_file <- file.path(flc_tile_dir, paste0("flc_5km_", tile_id, ".nc"))
+#
+# r_out <- rast(output_file)
+# print(r_out)

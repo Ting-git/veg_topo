@@ -8,7 +8,8 @@ library(arrow)
 source(here::here("R/config.R"))
 source(here::here("R/create_aligned_template.R"))
 source(here::here("R/raster_preprocess_save.R"))
-source(here::here("R/make_lon_label.R"))
+source(here::here("R/convert_lat.R"))
+source(here::here("R/convert_lon.R"))
 
 # Create output directory
 if (!dir.exists(rf_sample_data_tiles_dir)) {
@@ -74,7 +75,7 @@ rf_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
     ymax = ceiling(y + 0.5)
   ) |>
   mutate(
-    reg_id = paste0(make_lat_label(ymin), "_", make_lon_label(xmin))
+    reg_id = paste0(convert_lat(ymin), "_", convert_lon(xmin))
   )
 
 message(sprintf("Total tiles to process: %d", nrow(rf_tiles)))

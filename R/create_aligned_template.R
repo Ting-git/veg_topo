@@ -1,5 +1,5 @@
 source(here::here("R/get_lonlat_extent.R"))
-create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326", snap_step = NULL) {
+create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326", snap_step = NULL, trim_input = FALSE) {
   # ---- Handle different input types ----
   if (inherits(input, "SpatExtent")) {
     # Input is already an extent
@@ -14,7 +14,7 @@ create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326"
     if (is.character(input)) input <- terra::rast(input)
     if (!inherits(input, "SpatRaster")) stop("Input must be a SpatRaster, valid file path, or SpatExtent.")
 
-    input <- trim(input)
+    if (trim_input ) input <- trim(input)
 
     # Get input raster extent
     e <- if(terra::crs(input) != "EPSG:4326") get_lonlat_extent(input) else terra::ext(input)

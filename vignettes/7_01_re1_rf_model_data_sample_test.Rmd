@@ -19,9 +19,9 @@ source(here::here("R/extent_to_tile_ids.R"))
 source(here::here("R/raster_preprocess_save.R"))
 source(here::here("R/aggregate_topography.R"))
 source(here::here("R/create_spatial_windows.R"))
-source(here::here("R/make_lon_label.R")) 
-source(here::here("R/helpers.R"))
-source(here::here("R/calc_sw_in.R"))
+source(here::here("R/convert_lat.R"))
+source(here::here("R/convert_lon.R"))
+source(here::here("R/cacl_meteoland_sw_in.R"))
 
 if (!dir.exists(rf_sample_data_tiles_dir)) {
   dir.create(rf_sample_data_tiles_dir, recursive = TRUE)
@@ -114,7 +114,7 @@ rf_tiles <- as.data.frame(grid_1_deg, xy = TRUE) |>
     ymax = ceiling(y + 0.5)
   ) |>
   mutate(
-    reg_id = paste0(make_lat_label(ymin), "_", make_lon_label(xmin))
+    reg_id = paste0(convert_lat(ymin), "_", convert_lon(xmin))
   )
 
 cat("Number of valid tiles:", nrow(rf_tiles), "\n")
@@ -130,16 +130,19 @@ head(rf_tiles)
 # rf_tiles <- arrow::read_parquet(rf_tiles_path)
 
 # Select a specific tile for testing
-reg_id <- "22S_014E"
+reg_id <- "S22_E014"
 # reg_id <- rf_tiles$reg_id[1]
 cat("Testing tile", reg_id, "of", nrow(rf_tiles), "\n")
 
+# Extract the row first
+reg_row <- rf_tiles[rf_tiles$reg_id == reg_id, ]
+
 # Define tile extent
 reg_extent <- terra::ext(
-  rf_tiles$xmin[rf_tiles$reg_id==reg_id], 
-  rf_tiles$xmax[rf_tiles$reg_id==reg_id], 
-  rf_tiles$ymin[rf_tiles$reg_id==reg_id], 
-  rf_tiles$ymax[rf_tiles$reg_id==reg_id]
+  reg_row$xmin, 
+  reg_row$xmax, 
+  reg_row$ymin, 
+  reg_row$ymax
 )
 
 # Create high-resolution valid window mask (0.00025° = 0.05°/200)
@@ -206,8 +209,8 @@ dem <- extent_to_tile_ids(
   reg_extent, 
   tile_size = 1, 
   return_raster = TRUE, 
-  source = "copernicus_dem_30m", 
-  tiles_dir = dem_30m_copernicus_dir
+  source = "COP30", 
+  tiles_dir = COP30_dir
 )
 
 # Calculate slope and aspect, resample to TWI resolution
@@ -242,7 +245,7 @@ plot(aligned[["slope"]], main = "Slope (deg)")
 plot(aligned[["aspect"]], main = "Aspect (deg)") 
 plot(mat, main = "MAT (°C)")            
 plot(map, main = "MAP (mm)")               
-plot(srad, main = "Radiation (kJ m⁻² day⁻¹)") 
+plot(srad, main = "SRAD (kJ m⁻² day⁻¹)") 
 
 par(mfrow = c(1, 1))
 ```
@@ -270,7 +273,7 @@ cat("Valid pixels after masking:", sum(!is.na(values(stacked[[1]]))), "\n")
 df_samp <- as.data.frame(stacked, xy = TRUE, na.rm = TRUE) |> 
   create_spatial_windows(
     coord_vars = c("lon", "lat"), 
-    value_vars = c("twi", "vegh", "dem", "slope", "aspect", "mat", "map", "srad"), 
+    value_vars = c("twi", "vegh", "elv", "slope", "aspect", "mat", "map", "srad"), 
     dwin = 0.05
   ) |>
   tidyr::drop_na() |> 
@@ -286,13 +289,21 @@ cat("Number of unique windows:", n_distinct(df_samp$lon_mid, df_samp$lat_mid), "
 
 ```{r calculate_rin}
 # Calculate incoming solar radiation
+# Slope surface radiation
+sw_meteoland_surf_vec <- cacl_meteoland_sw_in(df_samp$lat, df_samp$slope, df_samp$aspect, 2020)
+
+# Flat surface radiation (cached by latitude)
+sw_meteoland_flat_vec <- unlist(ave(df_samp$lat, df_samp$lat,
+                                    FUN = function(x) cacl_meteoland_sw_in(x[1], 0, 0, 2020)))
+
+# Radiation index
+rin_meteoland_vec <- sw_meteoland_surf_vec / sw_meteoland_flat_vec
+
 df_samp <- df_samp |>
   mutate(
-    sw_in_uneven = calc_sw_in(lat, slope, aspect, year = 2020),
-    sw_in_flat = calc_sw_in(lat, 0, 0, year = 2020),
-    rin = sw_in_uneven / sw_in_flat
+    rin = rin_meteoland_vec
   ) |>
-  dplyr::select(lon, lat, vegh, dem, twi, rin, mat, map, srad)
+  dplyr::select(lon, lat, vegh, elv, twi, rin, mat, map, srad)
 
 cat("Radiation index (Rin) range:", range(df_samp$rin, na.rm = TRUE), "\n")
 

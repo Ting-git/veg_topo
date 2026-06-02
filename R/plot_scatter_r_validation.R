@@ -2,8 +2,8 @@
 plot_scatter_r_validation <- function(input_x,
                                       input_y,
                                       title_text = "Comparison r",
-                                      x_text = expression(r[30]),
-                                      y_text = expression(r[450]),
+                                      x_text = "r(30)",
+                                      y_text = "r(450)",
                                       text_size = 6
 ) {
 

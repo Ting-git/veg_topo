@@ -42,7 +42,7 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scale_fill_gradientn(
       colors = terrain.colors(255),
-      direction = 1,
+      # direction = 1,
       na.value = NA,
       labels = function(x) {
         if (process_label) {
@@ -50,38 +50,23 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
         } else {
           x
         }
-      },
-      guide = guide_colorbar(barwidth = 0.8, barheight = 6)
-    )
-    guides(fill = guide_colorbar(barwidth = 0.8, barheight = 6)) +
+      }
+    ) +
     ggplot2::labs(
       title = title_text,
       fill = fill_label,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),
-      expand = c(0, 0)
+      expand = c(0, 0),
+      limits = c(xmin, xmax)
     ) +
     ggplot2::scale_y_continuous(
       breaks = seq(from = ymin, to = ymax, by = y_step),
-      expand = c(0, 0)
+      expand = c(0, 0),
+      limits = c(ymin, ymax)
     ) +
-    ggplot2::coord_sf(
-      xlim = c(xmin, xmax),
-      ylim = c(ymin, ymax),
-      expand = FALSE,
-      clip = "off"
-    ) +
-    ggplot2::theme_bw(base_size = text_size) +
-    ggplot2::theme(
-      legend.position = "right",
-      legend.text = ggplot2::element_text(size = text_size * 0.9),
-      legend.title = ggplot2::element_text(size = text_size),
-      axis.title = ggplot2::element_text(size = text_size),
-      axis.text = ggplot2::element_text(size = text_size  * 0.9),
-      plot.title = ggplot2::element_text(size = text_size * 1.2, face = "bold"),
-      plot.title.position = "panel"
-    )
+    ggplot2::theme_bw(base_size = text_size)
 
   return(p)
 }

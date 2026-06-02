@@ -1,6 +1,5 @@
-# ============================================================================
-# 1. LIBRARIES AND SOURCES
-# ============================================================================
+
+# =============== Setup and configuration ======================================
 library(terra)
 library(dplyr)
 library(tidyr)
@@ -10,140 +9,41 @@ library(parallel)
 library(future)
 library(furrr)
 library(meteoland)
+
 source(here::here("R/config.R"))
 source(here::here("R/raster_preprocess_save.R"))
-source(here::here("R/aggregate_topography.R"))
 source(here::here("R/df_to_raster.R"))
 source(here::here("R/create_aligned_template.R"))
 source(here::here("R/cacl_meteoland_sw_in.R"))
+source(here::here("R/convert_lat.R"))
+source(here::here("R/convert_lon.R"))
+source(here::here("R/merge_dem_neighbors.R"))
 
-
-# ============================================================================
-# 2. PARALLEL CONFIGURATION (by hostname)
-# ============================================================================
+# --- PARALLEL CONFIGURATION (by hostname) ---
 if (hostname == "dash") workers <- 10 else workers <- 100
 message("→ using ", workers, " workers")
 
-
-# ============================================================================
-# 3. TILE PROCESSING CONFIGURATION
-# ============================================================================
-# Total tiles: 19426
-
+# --- Total tiles: 19429 ---
 # Test mode (recommended for first run)
-start_idx <- 11
-end_idx   <- 20
+start_idx <- 1001
+end_idx   <- 19429
 
 # Full run (uncomment when ready)
 # start_idx <- 1
-# end_idx   <- 19426
+# end_idx   <- 19429
 
-message(sprintf("Processing tiles %d to %d out of 19426 total", start_idx, end_idx))
-
-
-# ============================================================================
-# 4. DIRECTORY CONFIGURATION
-# ============================================================================
+# --- Input and output directory ---
 if (!dir.exists(COP30_dir)) stop(paste("Input directory does not exist:", COP30_dir))
 
 if (!dir.exists(rin_450m_tiles_dir)) dir.create(rin_450m_tiles_dir, recursive = TRUE)
 if (!dir.exists(dem_450m_tiles_dir)) dir.create(dem_450m_tiles_dir, recursive = TRUE)
 
 
-# ============================================================================
-# 5. HELPER FUNCTIONS
-# ============================================================================
+# =============== Single tile processing function ==============================
 
-# 5.1 Coordinate conversion
-convert_lat <- function(x) {
-  if (is.numeric(x)) {
-    return(paste0(ifelse(x < 0, "S", "N"), sprintf("%02d", abs(x))))
-  } else {
-    return(ifelse(substr(x, 1, 1) == "S", -1, 1) * as.numeric(substring(x, 2)))
-  }
-}
-
-convert_lon <- function(x) {
-  if (is.numeric(x)) {
-    return(paste0(ifelse(x < 0, "W", "E"), sprintf("%03d", abs(x))))
-  } else {
-    return(ifelse(substr(x, 1, 1) == "W", -1, 1) * as.numeric(substring(x, 2)))
-  }
-}
-
-# 5.2 DEM file path
-get_dem_path <- function(lat, lon, file_dir = "") {
-  file.path(COP30_dir, sprintf("Copernicus_DSM_10_%s_00_%s_00_DEM.tif",
-                               convert_lat(lat), convert_lon(lon)))
-}
-
-# 5.3 Merge 3x3 neighboring DEM tiles
-merge_dem_neighbors <- function(lat, lon, file_dir = "") {
-  dem_file <- get_dem_path(lat, lon, file_dir)
-
-  if(!file.exists(dem_file)) return(NULL)
-  dem <- rast(dem_file)
-
-  n_rows <- nrow(dem)
-  n_cols <- ncol(dem)
-
-  # Latitudes where neighbor tiles have different longitude resolution!!!!!!
-  no_south <- c(-50, -60, -70, -75, -80, -85, 50, 60, 70, 75, 80, 85)
-  no_north <- c(-51, -61, -71, -76, -81, -86, 49, 59, 69, 74, 79, 84)
-
-  get_neighbor <- function(dlat, dlon, rows, cols, nrow, ncol) {
-    if((dlat == -1 && lat %in% no_south) || (dlat == 1 && lat %in% no_north)) {
-      return(matrix(NA_real_, nrow, ncol))
-    }
-    dem_file <- get_dem_path(lat + dlat, lon + dlon, file_dir)
-    if(file.exists(dem_file)) {
-      subset <- rast(dem_file)[rows, cols]
-      subset <- as.matrix(subset)
-      return(matrix(as.numeric(subset), nrow, ncol, byrow=TRUE))
-    } else {
-      return(matrix(NA_real_, nrow, ncol))
-    }
-  }
-
-  # Center DEM
-  c_matrix <- as.matrix(dem, wide=TRUE)
-
-  # Read all 8 neighbors
-  nw <- get_neighbor(1, -1, (n_rows-2):n_rows, (n_cols-2):n_cols, 3, 3)
-  n  <- get_neighbor(1, 0,  (n_rows-2):n_rows, 1:n_cols, 3, n_cols)
-  ne <- get_neighbor(1, 1,  (n_rows-2):n_rows, 1:3, 3, 3)
-  w  <- get_neighbor(0, -1, 1:n_rows, (n_cols-2):n_cols, n_rows, 3)
-  e  <- get_neighbor(0, 1,  1:n_rows, 1:3, n_rows, 3)
-  sw <- get_neighbor(-1, -1, 1:3, (n_cols-2):n_cols, 3, 3)
-  s  <- get_neighbor(-1, 0,  1:3, 1:n_cols, 3, n_cols)
-  se <- get_neighbor(-1, 1,  1:3, 1:3, 3, 3)
-
-  # Combine into 3x3 block
-  full_matrix <- rbind(
-    cbind(nw, n, ne),
-    cbind(w,  c_matrix, e),
-    cbind(sw, s, se)
-  )
-
-  full_raster <- rast(full_matrix)
-  ext(full_raster) <- c(
-    ext(dem)$xmin - 3 * xres(dem),
-    ext(dem)$xmax + 3 * xres(dem),
-    ext(dem)$ymin - 3 * yres(dem),
-    ext(dem)$ymax + 3 * yres(dem)
-  )
-  crs(full_raster) <- crs(dem)
-
-  return(full_raster)
-}
-
-
-# ============================================================================
-# 6. MAIN PROCESSING FUNCTION (per tile)
-# ============================================================================
 cal_rin_by_tile <- function(lat, lon) {
 
-  # Output file paths
+  # Output file paths per tile
   rin_out_file <- file.path(rin_450m_tiles_dir,
                             paste0("radiation_index_", convert_lat(lat), "_", convert_lon(lon), "_15_arcscd.tif"))
   dem_out_file <- file.path(dem_450m_tiles_dir,
@@ -151,6 +51,7 @@ cal_rin_by_tile <- function(lat, lon) {
 
   # Skip if already processed
   if (file.exists(rin_out_file) && file.exists(dem_out_file)) return(TRUE)
+
   tryCatch({
 
     # 6.1 Create alignment grid (30m resolution)
@@ -214,10 +115,7 @@ cal_rin_by_tile <- function(lat, lon) {
   })
 }
 
-
-# ============================================================================
-# 7. LOAD DEM FILE INDEX
-# ============================================================================
+# =============== Load raw data (dem) ==========================================
 dem_files_all <- fs::dir_ls(
   path = COP30_dir,
   glob = "*_DEM.tif",
@@ -232,17 +130,18 @@ lats <- unname(sapply(lat_str, convert_lat))
 lons <- unname(sapply(lon_str, convert_lon))
 
 # Filter high-latitude tiles
-keep_idx <- lats >= -56 & lats <= 86
+keep_idx <- lats >= -57 & lats <= 87
 dem_files_all <- dem_files_all[keep_idx]
 lats <- lats[keep_idx]
 lons <- lons[keep_idx]
 
-message(sprintf("After filter, found %d DEM tiles", length(dem_files_all)))
+message(sprintf("After filtering high-Lat tiles,\n  Found %d DEM tiles", length(dem_files_all)))
 
+# --- Start process ---
+message(sprintf("⭐️⭐️⭐️ Processing tiles %d to %d out of %d total ⭐️⭐️⭐️", start_idx, end_idx, length(dem_files_all)))
 
-# ============================================================================
-# 8. PARALLEL EXECUTION
-# ============================================================================
+# =============== Parallel execution ===========================================
+
 plan(cluster, workers = workers)
 
 # Get tile indices
@@ -264,9 +163,7 @@ results <- future_map(tile_indices, function(idx) {
 plan(sequential)
 tictoc::toc()
 
-# ============================================================================
-# 9. RESULTS SUMMARY
-# ============================================================================
+# --- summary message ---
 all_results <- unlist(results)
 success_count <- sum(all_results, na.rm = TRUE)
 fail_count <- length(all_results) - success_count
@@ -276,8 +173,7 @@ message(sprintf("✅ %d succeeded, ❌ %d failed (%.1f%%)",
                 success_count, fail_count, success_count / n_tiles * 100))
 message("========================================")
 
-
-# # ---------- 选择一个测试瓦片 ----------------
+# # =============== One tile for step by step test =============================
 # id_test <- 22
 # lat <- lats[[id_test]]
 # lon <- lons[[id_test]]
@@ -349,7 +245,7 @@ message("========================================")
 #
 # rin_450m <- df_to_raster(df_calc, "lon", "lat", "rin", slope_450m, output_file = rin_out_file)
 #
-# # ------PLOT AND CHECK ---------------------------------------------------------
+# # ------PLOT AND CHECK -------------------------------------------------------
 # # DEM, Slope and Aspect range
 # dem_range <- round(range(values(dem_450m), na.rm = TRUE), 2)
 # slope_range <- round(range(values(slope_450m), na.rm = TRUE), 2)

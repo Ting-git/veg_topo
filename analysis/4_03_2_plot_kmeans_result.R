@@ -174,8 +174,7 @@ p_8c <- plot_kmeans_map(
   kmeans_8c_r,
   text_size  = text_size,
   extent     = ext_global,
-  title_text = "K-means Cluster Map (K=8)",
-  land_color = "white"
+  title_text = "K-means Cluster Map (K=8)"
 ) +
   geom_sf(data = coast, colour = "black", linewidth = 0.1) +
   coord_sf(

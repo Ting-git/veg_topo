@@ -1,8 +1,6 @@
 plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster map (k=8)",
                             highlight_cluster = NULL,
-                            text_size = 12, x_step = 30, y_step = 30, land_color = NA) {
-
-  land <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
+                            text_size = 12, x_step = 30, y_step = 30) {
 
   # Reorder cluster_value and cluster_labels with an defined order
   # load(here::here("data/cluster_data.RData")) # cluster_values, cluster_labels
@@ -177,10 +175,6 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
 
   # ---- Create ggplot ----
   p <- ggplot() +
-    geom_sf(data = land,
-            fill = land_color,        # 填充黑色
-            colour = NA,           # 移除边框线
-            linewidth = 0) +
     geom_tile(
       data = raster_df,
       aes(x = x, y = y, fill = value_factor, alpha = alpha)

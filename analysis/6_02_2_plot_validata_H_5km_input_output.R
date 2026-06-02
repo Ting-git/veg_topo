@@ -56,7 +56,7 @@ plot_validation_results <- function(file_base) {
     if (!file.exists(lidar_path)) return(message("❌ LiDAR file not found"))
 
     # ----- Region info for ploting -----
-    reg_extent <- ext(create_aligned_template(lidar_path, res_out = res_out))
+    reg_extent <- ext(create_aligned_template(lidar_path, res_out = res_out, trim_input = TRUE))
     message("Extent:",reg_extent[1], ", ", reg_extent[2],", ",reg_extent[3],", ",reg_extent[4], " (xmin,xmax,ymin,ymax)")
 
     aspect_ratio <- (reg_extent[4] - reg_extent[3]) / (reg_extent[2] - reg_extent[1])

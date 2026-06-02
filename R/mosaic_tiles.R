@@ -12,6 +12,7 @@
 #
 # Returns:
 #   SpatRaster (invisible)
+source(here::here("R/save_raster.R"))
 mosaic_tiles <- function(input_dir,
                          output_file = NULL,
                          target_grid = NULL,
@@ -20,7 +21,8 @@ mosaic_tiles <- function(input_dir,
                          pattern = "*.nc",
                          overwrite = TRUE,
                          crs = NULL,
-                         varname = "band") {
+                         varname = "band",
+                         if_crop = FALSE) {
 
   # ===========================================================================
   # 1) Input check & file listing
@@ -63,30 +65,14 @@ mosaic_tiles <- function(input_dir,
     r_out <- terra::mask(r_out, r_tar)
     }
 
+  if (if_crop && !is.null(target_grid)) {
+    message("Cropping...")
+    r_out <- terra::crop(r_out, r_tar)
+  }
   # ===========================================================================
   # 5) Write output (optional)
   # ===========================================================================
-  if (!is.null(output_file)) {
-    message("Saving...")
-    ext <- tolower(tools::file_ext(output_file))
-
-    if (ext == "nc") {
-      terra::writeCDF(r_out, output_file, overwrite = TRUE, varname = varname)
-    } else if (ext %in% c("tif", "tiff")) {
-      terra::writeRaster(
-        r_out,
-        output_file,
-        filetype  = "GTiff",
-        gdal      = c("COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256"),
-        overwrite = overwrite,
-        datatype  = "FLT4S",
-        NAflag    = -9999
-      )
-    } else {
-      stop("Only .nc or .tif files supported")
-    }
-    if (file.exists(output_file)) message("✅ Saved: ", output_file)
-  }
+  save_raster(r_out, output_file, varname)
 
   # ===========================================================================
   # 6) Clean up & return

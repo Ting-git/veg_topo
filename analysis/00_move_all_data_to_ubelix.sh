@@ -13,7 +13,7 @@ rsync --human-readable -i --info=progress2 -avhP \
 
 # DEM 30m
 rsync --human-readable -i --info=progress2 -avhP --no-owner --no-group \
-  /data_2/scratch/ting/veg_topo_data/data_raw/copernicus_dem_30m \
+  /data_2/scratch/ting/veg_topo_data/data_raw/COP30_OpenTopography \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data_raw/
 
 # TWI 30m -- Ho et al. 2025
@@ -113,7 +113,7 @@ rsync -avhP --info=progress2 --no-perms --no-owner --no-group \
 
 # VEGH 450m
 rsync --human-readable -i --info=progress2 -avhP --no-perms --no-owner --no-group \
-  /data_2/scratch/ting/veg_topo_data/data/global_vegh_450m \
+  /data_2/scratch/ting/veg_topo_data/data/global_vegh_fveg_450m \
   tt22k003@submit04.unibe.ch:/storage/scratch/giub_geco/tting/data/
 
 # reg_sample

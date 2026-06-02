@@ -86,24 +86,24 @@ if (hostname == "dash") {
 
   # --- UBELIX: Raw data paths ---
   # Topographic Wetness Index (TWI)
-  twi_450m_path <- file.path(veg_topo_extr_dir, "/data_raw/gti_marthews_2015/data/ga2.nc")   # ~450 m
-  twi_30m_path  <- file.path(veg_topo_extr_dir, "/data_raw/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")  # 30 m
+  twi_450m_path <- file.path(veg_topo_extr_dir, "data_raw/gti_marthews_2015/data/ga2.nc")   # ~450 m
+  twi_30m_path  <- file.path(veg_topo_extr_dir, "data_raw/twi_ho_2025/data/twi_edtm_m_30m_v20241230.tif")  # 30 m
 
   # Vegetation canopy height (10 m tiles)
-  vegh_10m_tiles_dir <- file.path(veg_topo_extr_dir, "/data_raw/vegheight_lang_2023/data/3deg_cogs")
+  vegh_10m_tiles_dir <- file.path(veg_topo_extr_dir, "data_raw/vegheight_lang_2023/data/3deg_cogs")
 
   # Elevation (Copernicus DEM, ~30 m)
   dem_30m_copernicus_dir <- file.path(veg_topo_extr_dir, "data_raw/copernicus_dem_30m/copernicus_dem_30m")
   COP30_dir <- file.path(veg_topo_extr_dir, "data_raw/COP30_OpenTopography/COP30_hh")
 
   # Aridity / Moisture Index
-  mi_950m_file <- file.path(veg_topo_extr_dir, "/data_raw/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
+  mi_950m_file <- file.path(veg_topo_extr_dir, "data_raw/aridityindex_zomer_2022/data/Global-AI_ET0_v3_annual/ai_v3_yr.tif")
 
   # WorldClim 2
-  worldclim_1km_dir <- file.path(veg_topo_extr_dir, "/data_raw/worldclim_fick_2017/data/")
+  worldclim_1km_dir <- file.path(veg_topo_extr_dir, "data_raw/worldclim_fick_2017/data/")
 
   # ESA CCI Land Cover (300 m, 2020)
-  cci_landcover_path <- file.path(veg_topo_extr_dir, "/data_raw/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
+  cci_landcover_path <- file.path(veg_topo_extr_dir, "data_raw/landcover_defourny_2023/data/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
 
   # Ecoregions (biomes)
   ecoregion_path <- file.path(veg_topo_extr_dir, "data_raw/ecoregion2017/Ecoregions2017/Ecoregions2017.shp")
@@ -114,9 +114,9 @@ if (hostname == "dash") {
   pa_shp2 <- file.path(veg_topo_extr_dir, "data_raw/wdpa_2025/WDPA_WDOECM_Jul2025_Public_all_shp/WDPA_WDOECM_Jul2025_Public_all_shp_2/WDPA_WDOECM_Jul2025_Public_all_shp-polygons.shp")
 
   # Köppen–Geiger climate classification
-  kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")  # ~1 km
-  kg_present_0p083_file  <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
-  kg_legend_file         <- file.path(veg_topo_extr_dir, "/data_raw/koeppengeiger_beck_2018/data/legend.txt")
+  kg_present_0p0083_file <- file.path(veg_topo_extr_dir, "data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p0083.tif")  # ~1 km
+  kg_present_0p083_file  <- file.path(veg_topo_extr_dir, "data_raw/koeppengeiger_beck_2018/data/Beck_KG_V1_present_0p083.tif")   # ~10 km
+  kg_legend_file         <- file.path(veg_topo_extr_dir, "data_raw/koeppengeiger_beck_2018/data/legend.txt")
 
   # Airborne Lidar ALS and LVIS
   lidar_asl_dir <- file.path(veg_topo_extr_dir, "data_raw/airborne_lidar_lang_2023/airborne_lidar/ALS_MaxGEDIFootprint_GSD10m")
@@ -151,7 +151,7 @@ aspect_450m_mosaic_path <- file.path(veg_topo_extr_dir,"data/global_dem_slope_as
 # sw_in_flat_450m_path             <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_flat_450m.tif")     # flat
 # sw_in_terrain_effect_450m_path   <- file.path(veg_topo_extr_dir,"data/global_sw_in_450m/sw_in_terrain_effect_450m.tif")  # ratio
 rin_450m_tiles_dir <- file.path(veg_topo_extr_dir,"data/global_rin_450m/1_1_deg")  # ratio
-rin_450m_path   <- file.path(veg_topo_extr_dir,"data/global_rin_450m/radiation_index_450m.tif")  # ratio
+rin_450m_mosaic_path   <- file.path(veg_topo_extr_dir,"data/global_rin_450m/radiation_index_450m.tif")  # ratio
 
 # Elevation variability (~55 km)
 dem_sd_55km_path            <- file.path(veg_topo_extr_dir,"data/global_dem_55km/dem_sd_55km.nc")
