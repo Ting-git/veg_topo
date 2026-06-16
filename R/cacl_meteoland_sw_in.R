@@ -11,13 +11,17 @@ cacl_meteoland_sw_in <- function(lat_deg, slope_deg, aspect_deg, year = 2020) {
   dates <- seq(as.Date(paste0(year, "-01-01")),
                as.Date(paste0(year, "-12-31")),
                by = "day")
-  J <- as.numeric(format(dates, "%j"))
+
+  date_strings <- format(dates, "%Y-%m-%d")
+
+  # Convert all dates to Julian days at once (vectorized)
+  J <- meteoland::radiation_dateStringToJulianDays(date_strings)
 
   # Pre-compute declination for all days
   delta_values <- sapply(J, meteoland::radiation_solarDeclination)
 
-  # Solar constant (MJ/m²/day)
-  Sc <- 1.361
+  # Solar constant (in kW·m-2) - varies daily due to orbital eccentricity
+  Sc_values <- sapply(J, meteoland::radiation_solarConstant)
 
   # Use cumulative summation to avoid storing 365 intermediate values
   n_points <- length(lat_rad)
@@ -29,18 +33,22 @@ cacl_meteoland_sw_in <- function(lat_deg, slope_deg, aspect_deg, year = 2020) {
     # Accumulate daily radiation for the entire year
     for (j in seq_along(delta_values)) {
       daily_sum <- daily_sum + meteoland::radiation_potentialRadiation(
-        solarConstant = Sc,
+        solarConstant = Sc_values[j],
         latrad = lat_rad[i],
         slorad = slope_rad[i],
         asprad = aspect_rad[i],
         delta = delta_values[j]
       )
     }
+    # annual potential solar radiation in MJ·m⁻²·year⁻¹
     potentialRad[i] <- daily_sum
   }
 
   # Project slope-surface irradiance to horizontal-equivalent
-  potentialRad_proj <- potentialRad / cos(slope_rad)
+  # Avoid division by zero when slope approaches 90°
+  cos_slope <- cos(slope_rad)
+  cos_slope_safe <- ifelse(abs(cos_slope) < 1e-10, 1e-10, cos_slope)
+  potentialRad_proj <- potentialRad / cos_slope_safe
 
   return(potentialRad_proj)
 }

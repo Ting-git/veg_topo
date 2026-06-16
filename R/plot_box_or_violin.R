@@ -47,8 +47,8 @@ plot_box_or_violin <- function(data, xvar, yvar, type = "boxplot", ylab = NULL, 
   ggplot(data, aes(x = .data[[xvar]], y = .data[[yvar]], fill = .data[[xvar]])) +
     geom_fun +  # Add the chosen geom
     list(if (yvar == "cor") geom_hline(yintercept = 0, linetype = "dashed", color = "red")) +  # Optional reference line for correlation
-    scale_fill_manual(values = fill_colors, name = "Cluster", guide = if (show_legend) "legend" else "none") +  # Conditional legend
-    labs(title = title_text, y = ylab, x = "Cluster") +  # Labels
+    scale_fill_manual(values = fill_colors, name = "Group", guide = if (show_legend) "legend" else "none") +  # Conditional legend
+    labs(title = title_text, y = ylab, x = "Group") +  # Labels
     scale_x_discrete(drop = TRUE, expand = c(0, 0)) +  # Adjust x-axis spacing
     scale_y_continuous() +
     theme_bw(base_size = text_size) +

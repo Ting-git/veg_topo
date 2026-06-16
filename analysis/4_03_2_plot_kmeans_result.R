@@ -247,8 +247,8 @@ p_bar <- ggplot(
     axis.text.x     = element_blank()
   ) +
   labs(
-    x = "Cluster",
-    y   = "Percentage (%)",
+    x = "Group",
+    y   = "Frequency (%)",
     tag = "e)"
   )
 
