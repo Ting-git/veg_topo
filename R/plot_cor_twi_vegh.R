@@ -61,12 +61,12 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H
       fill = "",
     ) +
     ggplot2::scale_x_continuous(
-      breaks = seq(from = xmin, to = xmax, by = x_step),
-      expand = c(0, 0)
+      breaks = x_breaks,
+      expand = expansion(mult = 0.00001)
     ) +
     ggplot2::scale_y_continuous(
-      breaks = seq(from = ymin, to = ymax, by = y_step),
-      expand = c(0, 0)
+      breaks = y_breaks,
+      expand = expansion(mult = 0.00001)
     ) +
     ggplot2::theme_bw(base_size = text_size)
 

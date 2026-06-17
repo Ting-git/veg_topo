@@ -94,15 +94,15 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir, text_size =
   aspect_file <- file.path(output_dir, paste0(reg_id, "_aspect_30m.tif"))
   rin_file <- file.path(output_dir, paste0(reg_id, "_rin_30m.tif"))
 
-  r_h_twi_file <- file.path(h_validation_dir, paste0(reg_id, "_r_h_twi_30m_500m.tif"))
-  p_h_twi_file <- file.path(h_validation_dir, paste0(reg_id, "_p_h_twi_30m_500m.tif"))
-  r_h_rin_file <- file.path(h_validation_dir, paste0(reg_id, "_r_h_rin_30m_500m.tif"))
-  p_h_rin_file <- file.path(h_validation_dir, paste0(reg_id, "_p_h_rin_30m_500m.tif"))
+  r_h_twi_file <- file.path(output_dir, paste0(reg_id, "_r_h_twi_30m_500m.tif"))
+  p_h_twi_file <- file.path(output_dir, paste0(reg_id, "_p_h_twi_30m_500m.tif"))
+  r_h_rin_file <- file.path(output_dir, paste0(reg_id, "_r_h_rin_30m_500m.tif"))
+  p_h_rin_file <- file.path(output_dir, paste0(reg_id, "_p_h_rin_30m_500m.tif"))
 
-  r_h_twi_30_5000_file <- file.path(h_validation_dir, paste0(reg_id, "_r_h_twi_30_5000.tif"))
-  p_h_twi_30_5000_file <- file.path(h_validation_dir, paste0(reg_id, "_p_h_twi_30_5000.tif"))
-  r_h_rin_30_5000_file <- file.path(h_validation_dir, paste0(reg_id, "_r_h_rin_30_5000.tif"))
-  p_h_rin_30_5000_file <- file.path(h_validation_dir, paste0(reg_id, "_p_h_rin_30_5000.tif"))
+  r_h_twi_30_5000_file <- file.path(output_dir, paste0(reg_id, "_r_h_twi_30_5000.tif"))
+  p_h_twi_30_5000_file <- file.path(output_dir, paste0(reg_id, "_p_h_twi_30_5000.tif"))
+  r_h_rin_30_5000_file <- file.path(output_dir, paste0(reg_id, "_r_h_rin_30_5000.tif"))
+  p_h_rin_30_5000_file <- file.path(output_dir, paste0(reg_id, "_p_h_rin_30_5000.tif"))
 
   # ----- Plot config -----
   x_step <- reg_extent[2] - reg_extent[1]

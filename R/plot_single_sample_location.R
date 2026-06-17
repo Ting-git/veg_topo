@@ -11,7 +11,7 @@
 # library(ggplot2)
 # library(rnaturalearth)
 
-plot_single_sample_location <- function(lon, lat,  title_text = "Location", text_size = 12, point_color = "red", point_size = 3) {
+plot_single_sample_location <- function(lon, lat,  title_text = "Location", text_size = 12, point_color = "darkred", point_size = 1) {
 
   # Define custom window centers
   centers_df <- data.frame(
@@ -54,17 +54,17 @@ plot_single_sample_location <- function(lon, lat,  title_text = "Location", text
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
       axis.text.x = ggplot2::element_text(
-        size = text_size * 0.8,
+        size = text_size,
         vjust = 1
       ),
       axis.text.y = ggplot2::element_text(
-        size = text_size * 0.8,
+        size = text_size,
         angle = 90,
         hjust = 0.5,
         vjust = 0.5,
         margin = margin(r = 2, l = 0)
       ),
-      plot.title = ggplot2::element_text(size = text_size*1.2, face = "plain",
+      plot.title = ggplot2::element_text(size = text_size, face = "plain",
                                          margin = margin(b = 3)),
       plot.title.position = "panel",
       panel.grid.major = ggplot2::element_line(color = "gray80", linewidth = 0.5),

@@ -10,7 +10,7 @@
 #' @return A ggplot2 object
 #' @export
 plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Index (TWI)",
-                     text_size = 12, x_step = 10, y_step = 10) {
+                     limits = NULL, text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -40,19 +40,19 @@ plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Ind
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # Fixed color scale range (TWI can vary, adjust if needed)
-  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
-  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
-
-  process_label <- vmax > 100
-  fill_label <- ""
+  # Compute value range for color scale (if limits not provided)
+  if (is.null(limits)) {
+    vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
+    vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
+    limits <- c(vmin, vmax)
+  }
 
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "oslo",
       direction = -1,
-      limits = c(vmin, vmax),
+      limits = limits,
       na.value = NA) +
     ggplot2::labs(
       title = title_text,

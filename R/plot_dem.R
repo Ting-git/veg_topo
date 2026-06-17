@@ -1,6 +1,6 @@
 
-plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
-                     text_size = 12, x_step = 10, y_step = 10) {
+plot_dem <- function(input, extent = NULL, title_text = "Elevation (km)",
+                     limits = NULL, text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -30,12 +30,12 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # Fixed color scale range (DEM can vary, adjust if needed)
-  vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
-  vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
-
-  process_label <- vmax > 100
-  fill_label <- ifelse(process_label, "km", "m")
+  # Compute value range for color scale (if limits not provided)
+  if (is.null(limits)) {
+    vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
+    vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
+    limits <- c(vmin, vmax)
+  }
 
   # ---- Plot ----
   p <- ggplot2::ggplot() +
@@ -44,17 +44,12 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (m)",
       colors = terrain.colors(255),
       # direction = 1,
       na.value = NA,
-      labels = function(x) {
-        if (process_label) {
-          format(x / 1000, nsmall = 1)
-        } else {
-          x
-        }
-      }
+      limits = limits,
+      labels = function(x) x / 1000
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = fill_label,
+      fill = "km",
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

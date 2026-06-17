@@ -10,7 +10,7 @@
 #' @return A ggplot2 object
 #' @export
 plot_rin <- function(input, extent = NULL, title_text = "Radiation index",
-                     text_size = 12, x_step = 10, y_step = 10) {
+                     limits = NULL, text_size = 12, x_step = 10, y_step = 10) {
 
 
   # ---- Load raster ----
@@ -41,13 +41,20 @@ plot_rin <- function(input, extent = NULL, title_text = "Radiation index",
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
+  # Compute value range for color scale (if limits not provided)
+  if (is.null(limits)) {
+    vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
+    vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
+    limits <- c(vmin, vmax)
+  }
+
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
     scico::scale_fill_scico(
       palette = "vik",
       direction = 1,
-      # limits = c(-1, 1),
+      limits = limits,
       # breaks = seq(-1, 1, by = 0.5),
       midpoint = 1,
       na.value = NA

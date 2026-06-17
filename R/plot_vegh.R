@@ -8,7 +8,7 @@
 #' @param text_size Font size
 #' @param x_step Number of x-axis breaks
 #' @param y_step Number of y-axis breaks
-#' @param color_limits Numeric vector of length 2 specifying color scale limits (optional)
+#' @param limits Numeric vector of length 2 specifying color scale limits (optional)
 #' @param color_palette Color palette to use (default "batlow")
 #' @param color_direction Direction of color palette (1 = normal, -1 = reversed, default -1)
 #' @param fill_label Label for the colorbar (default "m")
@@ -17,7 +17,7 @@
 #' @export
 plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)",
                       text_size = 12, x_step = 10, y_step = 10,
-                      color_limits = NULL,
+                      limits = NULL,
                       color_palette = "batlow",
                       color_direction = -1,
                       fill_label = "m") {
@@ -51,10 +51,10 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
   ymax <- terra::ymax(extent)
 
   # Compute value range for color scale (if limits not provided)
-  if (is.null(color_limits)) {
+  if (is.null(limits)) {
     vmin <- terra::global(input, "min", na.rm = TRUE)[1, 1] |> as.numeric()
     vmax <- terra::global(input, "max", na.rm = TRUE)[1, 1] |> as.numeric()
-    color_limits <- c(vmin, vmax)
+    limits <- c(vmin, vmax)
   }
 
   p <- ggplot2::ggplot() +
@@ -62,7 +62,7 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
     scico::scale_fill_scico(
       palette = color_palette,
       direction = color_direction,
-      limits = color_limits,
+      limits = limits,
       na.value = NA,
       oob = scales::squish  # Squish out-of-bounds values to limits
     ) +
