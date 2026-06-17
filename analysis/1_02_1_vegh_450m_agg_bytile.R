@@ -26,9 +26,7 @@ if (!dir.exists(vegh_450m_tiles_dir)) {
 }
 
 # target layer
-twi_450m_r <- terra::rast(twi_450m_mosaic_clean_path)
-res_tar <- res(twi_450m_r)
-rm(twi_450m_r ); gc()
+res_tar <- c(15/3600, 15/3600)
 
 # -----Aggregation: 10m -> 450m ------------------------------------------------
 
@@ -81,23 +79,23 @@ agg_vegh_fveg <- function(vegh_10m_file) {
     # Compute the fraction of pixels with vegetation (height > 0)
     # while treating 0 and NA as non-vegetated.
     # Aggregation is done at the target resolution defined by TWI data (Marthews et al., 2015).
-    r_out <- suppressMessages(
+    agg_fveg <- suppressMessages(
       raster_preprocess_save(
-      input        = vegh_10m_file,
-      output       = fveg_450m_file,
-      res_tar      = res_tar,
-      varname      = "fveg",
-      if_aggregate = TRUE,
-      fun = function(x, na.rm) {
-        total <- length(x)                  # total number of pixels INCLUDING NA
-        if (all(is.na(x))) return(NA)       # if all NA return NA
-        veg_count <- sum(!is.na(x) & x > 0)  # count of vegetated pixels
-        return(veg_count / total)            # fraction over TOTAL pixels, including NA
-      },
-      if_round_fact = TRUE,
-      if_resample = FALSE,
-      if_mask = FALSE,
-      if_return_raster = FALSE
+        input        = vegh_10m_file,
+        output       = fveg_450m_file,
+        res_tar      = res_tar,
+        varname      = "fveg",
+        if_aggregate = TRUE,
+        fun = function(x, na.rm) {
+          total <- length(x)                  # total number of pixels INCLUDING NA
+          if (all(is.na(x))) return(NA)       # if all NA return NA
+          veg_count <- sum(!is.na(x) & x > 0)  # count of vegetated pixels
+          return(veg_count / total)            # fraction over TOTAL pixels, including NA
+        },
+        if_round_fact = TRUE,
+        if_resample = FALSE,
+        if_mask = FALSE,
+        if_return_raster = FALSE
       ))
 
     # --- Print proccess time ---
@@ -137,8 +135,8 @@ fail_count <- length(results) - success_count
 message(sprintf("✅ Completed: %d succeeded, ❌ %d failed.", success_count, fail_count))
 
 # ------ Single tile check (optional) ---------------------------------------
-# r0 <- rast(file.path(vegh_10m_tiles_dir,"ETH_GlobalCanopyHeight_10m_2020_N00E006_Map.tif"))
-# r1 <- rast("/data_2/scratch/ting/veg_topo_data/data/global_vegh_450m/..._to450m.nc")
+# r0 <- rast(file.path(vegh_10m_tiles_dir,"ETH_GlobalCanopyHeight_10m_2020_N00E033_Map.tif"))
+# r1 <- rast("/storage/scratch/giub_geco/tting/data/global_vegh_fveg_450m/3_3_deg/ETH_GlobalCanopyHeight_10m_2020_N00E033_Map_to450m.nc")
 # r2 <- rast("/data_2/scratch/ting/veg_topo_data/data/global_vegh_450m/..._to450m_fveg.nc")
 # plot(r0, xlim=c(6.6,6.7), ylim=c(0.1,0.2))
 # plot(r1, xlim=c(6.6,6.7), ylim=c(0.1,0.2))

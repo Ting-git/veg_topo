@@ -1,4 +1,4 @@
-
+# ~ 15.5 h: 50 cores, 300 G memory on UBELIX
 # =============== Setup and configuration ======================================
 library(terra)
 library(dplyr)
@@ -20,12 +20,12 @@ source(here::here("R/convert_lon.R"))
 source(here::here("R/merge_dem_neighbors.R"))
 
 # --- PARALLEL CONFIGURATION (by hostname) ---
-if (hostname == "dash") workers <- 10 else workers <- 100
+if (hostname == "dash") workers <- 10 else workers <- 50
 message("→ using ", workers, " workers")
 
 # --- Total tiles: 19429 ---
 # Test mode (recommended for first run)
-start_idx <- 1001
+start_idx <- 201
 end_idx   <- 19429
 
 # Full run (uncomment when ready)

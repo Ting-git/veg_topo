@@ -31,6 +31,12 @@ p_r <- plot_r_H_R(
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1) +
+  coord_sf(
+    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
+    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
+    expand = FALSE,
+    clip = "on"
+  ) +
   ggplot2::theme(
     legend.margin = margin(0, 0, 0, 0),
     legend.box.margin = margin(0, 0, 0, -10),

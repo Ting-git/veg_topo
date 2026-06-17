@@ -229,12 +229,12 @@ sampled_all <- df_filt |>
 
 # Step 2: Manually select 6 labels meeting constraints
 selected_labels <- c(
-  "1_hyper_arid_2_15_30_lat_high_relief",   # first = 1, second = 2
-  "2_arid_1_00_15_lat_high_relief",         # first = 2, second = 1
-  "3_semiarid_5_60_90_lat_high_relief",     # first = 3, second = 5
-  "4_dry_subhumid_3_30_45_lat_high_relief", # first = 4, second = 3
-  "5_humid_2_15_30_lat_high_relief",        # first = 5, second = 2
-  "6_perhumid_4_45_60_lat_high_relief"      # first = 6, second = 4
+  "1_hyper_arid_2_15_30_lat_high_relief",  
+  "2_arid_1_00_15_lat_high_relief",         
+  "3_semiarid_2_15_30_lat_high_relief",    
+  "4_dry_subhumid_3_30_45_lat_high_relief",
+  "5_humid_4_45_60_lat_high_relief",     
+  "6_perhumid_3_30_45_lat_high_relief"     
 )
 
 # Step 3: Add selection indicator column

@@ -60,7 +60,8 @@ raster_preprocess_save <- function(input,
 
   # --- Get target raster and resolution ---
   if (!is.null(target)) r_tar <- if (is.character(target)) terra::rast(target)[[1]] else target[[1]]
-  if (!is.null(res_tar)) res_tar <- c(terra::xres(r_tar), terra::yres(r_tar))
+  if (!is.null(target) && is.null(res_tar)) res_tar <- c(terra::xres(r_tar), terra::yres(r_tar))
+  if (is.null(res_tar))  warning("Both target and res_tar are NULL!")
 
   # ========== Aggregation method selection (mutually exclusive, zonal priority) ==========
   # --- Parameter validation ---
@@ -117,8 +118,8 @@ raster_preprocess_save <- function(input,
     message("Using TRADITIONAL aggregate")
 
     # Calculate aggregation factors (input resolution -> target resolution)
-    fact_x <- res_tar[1] / terra::xres(r_in)
-    fact_y <- res_tar[2] / terra::yres(r_in)
+    fact_x <- res_tar[1] / res(r_in)[1]
+    fact_y <- res_tar[2] / res(r_in)[2]
 
     # Check if rounding is needed
     if (if_round_fact) {
@@ -147,8 +148,8 @@ raster_preprocess_save <- function(input,
     } else if (fact_x <= 1 && fact_y <= 1) {
       # Upsampling: use disaggregate
       # Calculate disaggregation factors (target resolution -> input resolution)
-      disagg_x <- terra::xres(r_in) / res_tar[1]
-      disagg_y <- terra::yres(r_in) / res_tar[2]
+      disagg_x <- res(r_in)[1] / res_tar[1]
+      disagg_y <- res(r_in)[2]  / res_tar[2]
 
       if (if_round_fact) {
         disagg_x_rounded <- round(disagg_x)
