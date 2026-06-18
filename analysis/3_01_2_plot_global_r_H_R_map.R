@@ -15,28 +15,26 @@ source(here::here("R/plot_cor_pval.R"))
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
+r_H_Rin <- rast(r_H_R_5km_path) |>
+  aggregate(fact = c(2,2))
+
 p_r <- plot_r_H_R(
-  input = r_H_R_5km_path,
+  input = r_H_Rin,
   extent = ext_global,
-  title_text = bquote("5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]),
-  text_size = 14,
+  # title_text = bquote("5-km Pearson's " * r[.("H")*","*.("Rᵢₙ")]),
+  title_text = "",
+  text_size = 7,
   x_step = 30,
   y_step = 30
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
-    barwidth = grid::unit(0.2, "in"),
-    barheight = grid::unit(5.3, "in")
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(2.7, "in")
   )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1) +
-  coord_sf(
-    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-    expand = FALSE,
-    clip = "on"
-  ) +
   ggplot2::theme(
     legend.margin = margin(0, 0, 0, 0),
     legend.box.margin = margin(0, 0, 0, -10),
@@ -50,60 +48,33 @@ p_r <- plot_r_H_R(
     legend.box.background = element_blank()
   )
 
-#
-# # 读取数据
-# r <- rast(r_H_R_5km_path)
-#
-# # 直接绘制
-# p_r <- ggplot() +
-#   tidyterra::geom_spatraster(data = r, maxcell = Inf, interpolate = TRUE) +
-#   scale_fill_gradient2(
-#     low = "blue",
-#     mid = "white",
-#     high = "red",
-#     midpoint = 0,
-#     limits = c(-1, 1),
-#     na.value = "transparent",
-#     name = bquote("Pearson's " * r[.("H")*","*.("Rᵢₙ")])
-#   ) +
-#   geom_sf(data = coast, colour = 'black', linewidth = 0.1) +
-#   coord_sf(
-#     xlim = c(-180, 180),
-#     ylim = c(-60, 85),  # 限制在数据有效范围
-#     expand = FALSE
-#   ) +
-#   theme_minimal() +
-#   theme(
-#     legend.position = "right",
-#     panel.background = element_rect(fill = "white", color = NA),
-#     plot.background = element_blank()
-#   )
-#
-
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_map.png"),
+  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_map_0.1d.png"),
   plot = p_r,
-  width = 14,
-  height = 6,
+  width = 7,
+  height = 3,
   dpi = 600,
   units = "in",
   limitsize = FALSE)  # 允许超大文件
 
 # --------- plot P value ----------------------------
+p_H_Rin <- rast(pval_r_H_R_5km_path) |>
+  aggregate(fact = c(2,2))
 
 p_pval <-  plot_cor_pval(
-  input = pval_r_H_R_5km_path,
+  input = p_H_Rin,
   extent = ext_global,
-  title_text = "Pearson's p-value (H～Rᵢₙ)",
-  text_size = 14,
+  title_text = "",
+  # title_text = "Pearson's p-value (H～Rᵢₙ)",
+  text_size = 7,
   x_step = 30,
   y_step = 30
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
-    barwidth = grid::unit(0.2, "in"),
-    barheight = grid::unit(5.3, "in")
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(2.7, "in")
   )) +
   geom_sf(data = coast,
           colour = 'black',
@@ -123,10 +94,10 @@ p_pval <-  plot_cor_pval(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_pval.png"),
+  filename = file.path(project_root, "data/figures/3_01_r_H_R_5km_pval_0.1d.png"),
   plot = p_pval,
-  width = 14,
-  height = 5.8,
+  width = 7,
+  height = 3,
   dpi = 600,
   units = "in"
 )

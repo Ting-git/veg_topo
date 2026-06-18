@@ -163,7 +163,7 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
 
     if (!is.null(highlight_label)) {
       # Create alpha column based on highlight
-      raster_df$alpha <- ifelse(as.character(raster_df$value_factor) == highlight_label, 1, 0.2)
+      raster_df$alpha <- ifelse(as.character(raster_df$value_factor) == highlight_label, 1, 0)
       message("Alpha values: ", paste(table(raster_df$alpha), collapse = ", "))
     } else {
       warning("Highlight cluster not found in data. No highlighting applied.")
@@ -181,11 +181,13 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
     ) +
     scale_fill_manual(
       values = present_colors,
-      name = "Cluster",
+      name = "Group",
       na.value = NA,
       na.translate = FALSE,
       guide = guide_legend(
-        keywidth = 0.2,
+        keywidth = unit(0.7, "in"),
+        keyheight = unit(0.1, "in"),
+        # override.aes = list(size = 5),
         title.position = "left",
         label.position = "bottom",
         nrow = 1
@@ -213,6 +215,8 @@ plot_kmeans_map <- function(input, extent = NULL, title_text = "K-means cluster 
       legend.box = "horizontal",
       legend.text = element_text(size = text_size * 0.9),
       legend.title = element_text(size = text_size),
+      legend.background = element_blank(),  # 图例整体背景透明
+      legend.box.background = element_blank(),  # 图例框背景透明
       axis.title = element_text(size = text_size),
       axis.text = element_text(size = text_size * 0.9),
       plot.title = element_text(size = text_size * 1.2, face = "bold"),

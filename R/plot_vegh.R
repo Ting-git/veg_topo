@@ -11,7 +11,7 @@
 #' @param limits Numeric vector of length 2 specifying color scale limits (optional)
 #' @param color_palette Color palette to use (default "batlow")
 #' @param color_direction Direction of color palette (1 = normal, -1 = reversed, default -1)
-#' @param fill_label Label for the colorbar (default "m")
+#' @param fill Label for the colorbar (default "m")
 #'
 #' @return A ggplot2 object
 #' @export
@@ -20,7 +20,7 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
                       limits = NULL,
                       color_palette = "batlow",
                       color_direction = -1,
-                      fill_label = "m") {
+                      fill = "m") {
 
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -68,7 +68,7 @@ plot_vegh <- function(input, extent = NULL, title_text = "Vegetation Height (m)"
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = "m",
+      fill = fill,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

@@ -9,7 +9,7 @@
 #' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Index (TWI)",
+plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Index (TWI)", fill = "",
                      limits = NULL, text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
@@ -56,7 +56,7 @@ plot_twi <- function(input, extent = NULL, title_text = "Topographic Wetness Ind
       na.value = NA) +
     ggplot2::labs(
       title = title_text,
-      fill = "",
+      fill = fill,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

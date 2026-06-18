@@ -9,7 +9,7 @@
 #' @param y_step Number of y-axis breaks
 #' @return A ggplot2 object
 #' @export
-plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H~TWI)",
+plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H~TWI)", fill = "",
                               text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
@@ -41,10 +41,6 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # Generate breaks using pretty()
-  x_breaks <- pretty(c(xmin, xmax), n = x_step)
-  y_breaks <- pretty(c(ymin, ymax), n = y_step)
-
   # Plot
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
@@ -58,17 +54,20 @@ plot_cor_twi_vegh <- function(input, extent = NULL, title_text = "Pearson's r (H
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = "",
+      fill = fill,
     ) +
     ggplot2::scale_x_continuous(
-      breaks = x_breaks,
-      expand = expansion(mult = 0.00001)
+      breaks = seq(from = xmin, to = xmax, by = x_step),
+      limits = c(xmin, xmax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::scale_y_continuous(
-      breaks = y_breaks,
-      expand = expansion(mult = 0.00001)
+      breaks = seq(from = ymin, to = ymax, by = y_step),
+      limits = c(ymin, ymax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::theme_bw(base_size = text_size)
+
 
   return(p)
 }

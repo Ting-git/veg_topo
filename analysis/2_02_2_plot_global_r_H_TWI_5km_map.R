@@ -15,29 +15,26 @@ source(here::here("R/plot_cor_pval.R"))
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
 # ------- Plot global correlation analysis of TWI and VEGH ---------------------
+r_H_TWI <- rast(cor_twi_vegh_mosaic_file) |>
+  aggregate(fact = c(2,2))
 
 p_cor <- plot_cor_twi_vegh(
-  input = cor_twi_vegh_mosaic_file,
+  input = r_H_TWI,
   extent = ext_global,
-  title_text = bquote("5-km Pearson's " * r[.("H")*","*.("TWI")]),
-  text_size = 14,
+  # title_text = bquote("5-km Pearson's " * r[.("H")*","*.("TWI")]),
+  title_text = "",
+  text_size = 7,
   x_step = 30,
   y_step = 30
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
-    barwidth = grid::unit(0.2, "in"),
-    barheight = grid::unit(5.3, "in")
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(2.7, "in")
   )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1) +
-  coord_sf(
-    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-    expand = FALSE,
-    clip = "on"
-  ) +
   ggplot2::theme(
     legend.margin = margin(0, 0, 0, 0),
     legend.box.margin = margin(0, 0, 0, -10),
@@ -52,39 +49,35 @@ p_cor <- plot_cor_twi_vegh(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_map.png"),
+  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_map_0.1d.png"),
   plot = p_cor,
-  width = 14,
-  height = 6,
+  width = 7,
+  height = 3,
   dpi = 600,
   units = "in"
 )
 
 
 # --------- plot P value ----------------------------
+p_H_TWI <- rast(pval_cor_twi_vegh_mosaic_file) |>
+  aggregate(fact = c(2,2))
 
 p_pval <- plot_cor_pval(
-  input = pval_cor_twi_vegh_mosaic_file,
+  input = p_H_TWI,
   extent = ext_global,
-  title_text = "5-km Pearson's p-value (H~TWI)",
-  text_size = 14,
+  title_text = "",
+  text_size = 7,
   x_step = 30,
   y_step = 30
 ) +
   guides(fill = guide_colorbar(
     title.position = "left",
-    barwidth = grid::unit(0.2, "in"),
-    barheight = grid::unit(5.3, "in")
+    barwidth = grid::unit(0.1, "in"),
+    barheight = grid::unit(2.7, "in")
   )) +
   geom_sf(data = coast,
           colour = 'black',
           linewidth = 0.1) +
-  coord_sf(
-    xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-    ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-    expand = FALSE,
-    clip = "on"
-  ) +
   ggplot2::theme(
     legend.margin = margin(0, 0, 0, 0),
     legend.box.margin = margin(0, 0, 0, -10),
@@ -99,10 +92,10 @@ p_pval <- plot_cor_pval(
 
 # save
 ggsave(
-  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_pval.png"),
+  filename = file.path(project_root, "data/figures/2_02_r_H_TWI_5km_pval_0.1d.png"),
   plot = p_pval,
-  width = 14,
-  height = 5.8,
+  width = 7,
+  height = 3,
   dpi = 600,
   units = "in"
 )

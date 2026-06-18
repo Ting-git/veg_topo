@@ -20,7 +20,7 @@ library(rnaturalearth)# coastline data
 library(sf)           # vector data handling
 
 source(here::here("R/config.R"))
-source(here::here("R/plot_box_or_violin.R"))
+source(here::here("R/plot_boxplot.R"))
 source(here::here("R/plot_kmeans_map.R"))
 
 # ========================================================
@@ -161,7 +161,7 @@ df_summary <- df_summary |>
 # 7. Global K-means cluster map
 # ========================================================
 
-text_size <- 14
+text_size <- 7
 
 # Load global coastline for map context
 coast <- rnaturalearth::ne_coastline(
@@ -174,7 +174,7 @@ p_8c <- plot_kmeans_map(
   kmeans_8c_r,
   text_size  = text_size,
   extent     = ext_global,
-  title_text = "K-means Cluster Map (K=8)"
+  title_text = ""
 ) +
   geom_sf(data = coast, colour = "black", linewidth = 0.1) +
   coord_sf(
@@ -184,7 +184,7 @@ p_8c <- plot_kmeans_map(
     clip   = "on"
   ) +
   theme(
-    legend.position  = "bottom",
+    legend.position  = "none",
     axis.title       = element_blank(),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background  = element_blank()
@@ -192,7 +192,8 @@ p_8c <- plot_kmeans_map(
   labs(tag = "a)") +
   theme(
     plot.tag = element_text(size = text_size, face = "bold"),
-    plot.tag.position = c(0.01, 1)
+    plot.tag.position = c(0.01, 1),
+    plot.title = element_blank()
   )
 
 # ========================================================
@@ -200,29 +201,44 @@ p_8c <- plot_kmeans_map(
 # ========================================================
 
 # MI distribution
-pbox_mi <- plot_box_or_violin(
-  df, "cluster8c", "mi", "boxplot",
+
+pbox_mi <- plot_boxplot(
+  df, "cluster8c", "mi",
   expression(MI),
   text_size = text_size,
-  show_legend = FALSE
-) + labs(tag = "b)")
+  show_legend = FALSE,
+  ylim = c(0,3.5)
+) +
+  labs(tag = "b)") +
+  theme(
+    plot.tag = element_text(size = text_size, face = "bold"),
+    plot.tag.position = c(0.03, 1)
+  )
 
 # Fused index distribution
-pbox_fused <- plot_box_or_violin(
-  df, "cluster8c", "fused", "boxplot",
+pbox_fused <- plot_boxplot(
+  df, "cluster8c", "fused",
   bquote(f[.("used")]),
   text_size = text_size,
   show_legend = FALSE
-) + labs(tag = "c)")
+) + labs(tag = "c)") +
+  theme(
+    plot.tag = element_text(size = text_size, face = "bold"),
+    plot.tag.position =  c(0.03, 1)
+  )
 
 # Correlation distribution
-pbox_cor <- plot_box_or_violin(
-  df, "cluster8c", "cor", "boxplot",
+pbox_cor <- plot_boxplot(
+  df, "cluster8c", "cor",
   bquote(r[.("H, TWI")]),
   text_size = text_size,
-  show_legend = FALSE
-) + labs(tag = "d)")
-
+  show_legend = FALSE,
+  ylim = c(-0.75,0.75)
+) + labs(tag = "d)") +
+  theme(
+    plot.tag = element_text(size = text_size, face = "bold"),
+    plot.tag.position =  c(0.03, 1)
+  )
 
 # ========================================================
 # 9. Cluster area percentage
@@ -237,19 +253,24 @@ p_bar <- ggplot(
   geom_text(
     aes(label = sprintf("%.1f", percentage)),
     vjust = -0.5,
-    size = 3
+    size = 1.5
   ) +
   scale_fill_manual(values = fill_colors) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0))) +
+  scale_x_discrete(drop = TRUE, expand = c(0.1, 0.1)) +
   theme_bw(base_size = text_size) +
   theme(
     legend.position = "none",
     axis.text.x     = element_blank()
   ) +
   labs(
-    x = "Group",
+    x = "",
     y   = "Frequency (%)",
     tag = "e)"
+  ) +
+  theme(
+    plot.tag = element_text(size = text_size, face = "bold"),
+    plot.tag.position = c(0.03, 1)
   )
 
 
@@ -266,15 +287,19 @@ p_8c_stat <- wrap_plots(
   wrap_plots(pbox_mi, pbox_fused, pbox_cor, p_bar, nrow = 1),
   wrap_elements(cowplot::get_legend(p_8c_legend)),
   nrow = 3,
-  heights = c(6.5, 2.7, 0.8)
-)
+  heights = c(3.2, 1.3, 0.5)
+) &
+  theme(
+    plot.margin = margin(1, 0, 0, 1, "pt"),  # 移除所有子图边距
+    plot.background = element_blank()
+  )
 
 # Save high-resolution figure
 ggsave(
   filename = here::here("data/figures/4_03_kmeans_gl_map_8c_stat.png"),
   plot     = p_8c_stat,
-  width    = 14,
-  height   = 12,
+  width    = 7,
+  height   = 5,
   dpi      = 600,
   units    = "in"
 )
@@ -294,7 +319,7 @@ for (i in seq_along(cluster_labels)) {
     kmeans_8c_r,
     text_size = text_size,
     extent = ext_global,
-    title_text = paste0(cluster, " cluster"),
+    title_text = paste0(cluster),
     highlight_cluster = cluster_values[i]
   ) +
     geom_sf(data = coast, colour = "black", linewidth = 0.1) +
@@ -317,13 +342,13 @@ p_legend <- plot_list[[1]] + theme(legend.position = "bottom")
 
 p_1_to_8c <- wrap_plots(plot_list, ncol = 2) /
   wrap_elements(cowplot::get_legend(p_legend)) +
-  plot_layout(heights = c(10, 0.6))
+  plot_layout(heights = c(5, 0.3))
 
 ggsave(
   filename = here::here("data/figures/4_03_kmeans_gl_map_1_to_8.png"),
   plot     = p_1_to_8c,
-  width    = 14,
-  height   = 14,
+  width    = 7,
+  height   = 7,
   dpi      = 600,
   units    = "in"
 )
@@ -385,7 +410,7 @@ p_8c_biome_counts <- ggplot(
 ggsave(
   filename = here::here("data/figures/4_03_kmeans_8c_biome_counts.png"),
   plot     = p_8c_biome_counts,
-  width    = 14,
-  height   = 14,
+  width    = 7,
+  height   = 7,
   dpi      = 300
 )

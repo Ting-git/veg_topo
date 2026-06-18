@@ -72,13 +72,13 @@ plot_cor_pval <- function(input, extent = NULL,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),
-      expand = c(0, 0),
-      limits = c(xmin, xmax)
+      limits = c(xmin, xmax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::scale_y_continuous(
       breaks = seq(from = ymin, to = ymax, by = y_step),
-      expand = c(0, 0),
-      limits = c(ymin, ymax)
+      limits = c(ymin, ymax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::theme_bw(base_size = text_size)
 

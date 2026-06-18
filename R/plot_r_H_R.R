@@ -9,7 +9,7 @@
 #' @param y_step Number of y-axis step
 #' @return A ggplot2 object
 #' @export
-plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢₙ)",
+plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢₙ)",fill = "",
                        text_size = 12, x_step = 10, y_step = 10) {
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -39,10 +39,6 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢ
   ymin <- terra::ymin(extent)
   ymax <- terra::ymax(extent)
 
-  # Generate breaks using pretty()
-  x_breaks <- pretty(c(xmin, xmax), n = x_step)
-  y_breaks <- pretty(c(ymin, ymax), n = y_step)
-
   # ---- Plot ----
   p <- ggplot2::ggplot() +
     tidyterra::geom_spatraster(data = input, maxcell = Inf) +
@@ -57,15 +53,17 @@ plot_r_H_R <- function(input, extent = NULL, title_text = "Pearson's r (H～Rᵢ
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = "",
+      fill = fill,
     ) +
     ggplot2::scale_x_continuous(
-      breaks = x_breaks,
-      expand = expansion(mult = 0.00001)
+      breaks = seq(from = xmin, to = xmax, by = x_step),
+      limits = c(xmin, xmax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::scale_y_continuous(
-      breaks = y_breaks,
-      expand = expansion(mult = 0.00001)
+      breaks = seq(from = ymin, to = ymax, by = y_step),
+      limits = c(ymin, ymax),
+      expand = expansion(mult = 0.0001)
     ) +
     ggplot2::theme_bw(base_size = text_size)
 

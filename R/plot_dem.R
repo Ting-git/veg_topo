@@ -1,5 +1,5 @@
 
-plot_dem <- function(input, extent = NULL, title_text = "Elevation (km)",
+plot_dem <- function(input, extent = NULL, title_text = "Elevation (km)", fill = "km",
                      limits = NULL, text_size = 12, x_step = 10, y_step = 10) {
 
   # ---- Load raster ----
@@ -49,7 +49,7 @@ plot_dem <- function(input, extent = NULL, title_text = "Elevation (km)",
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = "km",
+      fill = fill,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),

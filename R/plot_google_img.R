@@ -51,17 +51,17 @@ plot_google_img <- function(extent = NULL, title_text = "Google Satellite Map",
     theme_bw() +
     theme(
       axis.title = element_text(size = text_size),
-      axis.text = element_text(size = text_size * 0.8),
-      plot.title = element_text(size = text_size * 1.2, face = "plain",
+      axis.text = element_text(size = text_size),
+      plot.title = element_text(size = text_size, face = "plain",
                                 margin = margin(b = 3)),
       axis.text.x = element_text(
-        size = text_size * 0.8,
+        size = text_size,
         hjust = 0,
         vjust = 1,
         margin = margin(t = 2, b = 2)
       ),
       axis.text.y = element_text(
-        size = text_size * 0.8,
+        size = text_size,
         hjust = 0.5,
         vjust = 0.5,
         angle = 90,
