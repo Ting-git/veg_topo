@@ -139,7 +139,7 @@ df_binned <- df |>
     relief_bin = cut(relief, breaks = quantile(relief, probs = seq(0, 1, 1/2), na.rm = TRUE), include.lowest = TRUE),
     # Latitude bins
     abs_lat = abs(lat),
-    abs_lat_bin = cut(abs_lat, breaks = c(0, 15, 30, 45, 60, Inf), include.lowest = TRUE)
+    abs_lat_bin = cut(abs_lat, breaks = c(0, 10, 20, 30, 40, 50, 60), include.lowest = TRUE)
   ) |>
   mutate(
     # MI labels (1–6)
@@ -158,11 +158,12 @@ df_binned <- df |>
     ),
     # Latitude labels (1–5)
     lat_label = case_when(
-      abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_00_15_lat",
-      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_15_30_lat",
-      abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_30_45_lat",
-      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_45_60_lat",
-      abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_60_90_lat"
+      abs_lat_bin == levels(abs_lat_bin)[1] ~ "1_00_10_lat",
+      abs_lat_bin == levels(abs_lat_bin)[2] ~ "2_10_20_lat",
+      abs_lat_bin == levels(abs_lat_bin)[3] ~ "3_20_30_lat",
+      abs_lat_bin == levels(abs_lat_bin)[4] ~ "4_30_40_lat",
+      abs_lat_bin == levels(abs_lat_bin)[5] ~ "5_40_50_lat",
+      abs_lat_bin == levels(abs_lat_bin)[6] ~ "6_50_60_lat"
     )
   ) |>
   mutate(
@@ -205,7 +206,7 @@ table(df_filt$strata_label)
 ## Sampling Representative Locations
 
 ```{r Sampling}
-set.seed(2026)
+set.seed(1)
 
 # Function: Select 6 samples with the following constraints:
 # - First number (MI bin): 1–6 each exactly once
@@ -229,18 +230,19 @@ sampled_all <- df_filt |>
 
 # Step 2: Manually select 6 labels meeting constraints
 selected_labels <- c(
-  "1_hyper_arid_2_15_30_lat_high_relief",  
-  "2_arid_1_00_15_lat_high_relief",         
-  "3_semiarid_2_15_30_lat_high_relief",    
-  "4_dry_subhumid_3_30_45_lat_high_relief",
-  "5_humid_4_45_60_lat_high_relief",     
-  "6_perhumid_3_30_45_lat_high_relief"     
+  "1_hyper_arid_3_20_30_lat_high_relief",  
+  "2_arid_1_00_10_lat_high_relief",         
+  "3_semiarid_2_10_20_lat_high_relief",    
+  "4_dry_subhumid_4_30_40_lat_high_relief",
+  "5_humid_6_50_60_lat_high_relief",     
+  "6_perhumid_5_40_50_lat_high_relief"
 )
 
 # Step 3: Add selection indicator column
 sampled_all <- sampled_all |>
   mutate(is_selected = strata_label %in% selected_labels)
 
+sampled_all |> filter(is_selected)
 # Step 4: Save full dataset with selection indicator
 saveRDS(sampled_all, reg_sample_info_path)
 ```

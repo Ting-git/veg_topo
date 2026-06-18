@@ -476,9 +476,9 @@ for (i in seq_len(nrow(reg_info_all_samples))) {
   process_reg_500m(reg_info_all_samples[i, ]) # ~ 8h 43 min
 }
 
-# for (i in seq_len(nrow(reg_info2))) {
-#   process_reg_500m(reg_info2[i, ]) # ~ 8h 43 min
-# }
+for (i in seq_len(nrow(reg_info2))) {
+  process_reg_500m(reg_info2[i, ]) # ~ 8h 43 min
+}
 
 # # ----------- Test on smaller regions -----------------------------
 # output_dir = reg_validate_dir
