@@ -11,6 +11,7 @@
 
 plot_cor_pval <- function(input, extent = NULL,
                           title_text = "Pearson's p-value (H~TWI)",
+                          fill_text = "",
                           text_size = 12, x_step = 10, y_step = 10) {
   # ---- Load raster ----
   if (is.character(input)) input <- terra::rast(input)
@@ -68,7 +69,7 @@ plot_cor_pval <- function(input, extent = NULL,
     ) +
     ggplot2::labs(
       title = title_text,
-      fill = NULL,
+      fill = fill_text,
     ) +
     ggplot2::scale_x_continuous(
       breaks = seq(from = xmin, to = xmax, by = x_step),
