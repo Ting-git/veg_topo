@@ -29,7 +29,7 @@ source(here::here("R/create_aligned_template.R"))
 # source(here::here("R/raster_preprocess_save.R"))
 # source(here::here("R/df_to_raster.R"))
 # source(here::here("R/extent_to_tile_ids.R"))
-source(here::here("R/plot_raster.R"))
+# source(here::here("R/plot_raster.R"))
 
 source(here::here("R/plot_dem.R"))
 source(here::here("R/plot_vegh.R"))
@@ -687,7 +687,7 @@ p_rin_sens <- ggplot(df_sens_all, aes(x = r_rin_30, y = r_rin_450, color = reg_i
 # p_twi_sens
 # p_rin_sens
 # 合并并添加共享图例
-combined_plot <- (p_twi_sens | p_rin_sens) +
+final_plot <- (p_twi_sens | p_rin_sens) +
   plot_layout(guides = "collect") &
   theme(
     legend.position = "right",
@@ -697,14 +697,14 @@ combined_plot <- (p_twi_sens | p_rin_sens) +
   ) &
   guides(color = guide_legend(nrow = 6, ncol = 1, byrow = TRUE)) &
   plot_annotation(
-    tag_levels = list(c("(a)", "(b)")),  # 自定义标签
+    tag_levels = list(c("a)", "b)")),  # 自定义标签
     # 或者
     # tag_levels = c("A", "B"),
     # tag_prefix = "(",
     # tag_suffix = ")"
   )
 
-print(combined_plot)
+print(final_plot)
 
 ggsave(
   filename = here::here("data/figures/5_02_res_sensitivity_regions.png"),

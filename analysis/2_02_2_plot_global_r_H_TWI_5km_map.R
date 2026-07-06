@@ -45,9 +45,9 @@ percent_negative <- sum(r_H_TWI_clean$correlation < 0) / nrow(r_H_TWI_clean) * 1
 bin_count <- max(table(cut(r_H_TWI_clean$correlation, breaks = seq(-1, 1, by = 0.1))))
 
 # 1.7 Extract colors from bam palette (red for positive, green for negative)
-palette_colors <- scico::color("bam")
-positive_color <- palette_colors(256)[50]   # Reddish (positive)
-negative_color <- palette_colors(256)[200]  # Greenish (negative)
+palette_colors <- scico(256, palette = "bam")
+positive_color <- palette_colors[50]   # Reddish (positive)
+negative_color <- palette_colors[200]  # Greenish (negative)
 
 
 # =============================================================================
@@ -94,12 +94,12 @@ p1 <- ggplot(r_H_TWI_clean, aes(x = correlation, fill = group)) +
   # Percentage annotations
   annotate("text", x = 0.5, y = 280000,
            label = sprintf("%.1f%%", percent_positive),
-           color = palette_colors(256)[200], size = 2.5,
+           color = palette_colors[50], size = 2.5,
            fontface = "bold",
            vjust = -0.5) +
   annotate("text", x = -0.5, y = 280000,
            label = sprintf("%.1f%%", percent_negative),
-           color = palette_colors(256)[50], size = 2.5,
+           color = palette_colors[200], size = 2.5,
            fontface = "bold",
            vjust = -0.5)
 

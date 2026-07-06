@@ -1,5 +1,5 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="regSelect"
+#SBATCH --job-name="plot6regions"
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
@@ -37,8 +37,8 @@ Rscript -e '.libPaths(c(
   "/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",
   "/storage/software/epyc2.9/software/R/4.4.2-gfbf-2024a/lib64/R/library"
 ));
-cat("Running script: 5_01_re1_regions_selection.Rmd\n");
-rmarkdown::render("5_01_re1_regions_selection.Rmd")'
+cat("Running script: 5_02_re1_replot_6_regions.Rmd\n");
+rmarkdown::render("5_02_re1_replot_6_regions.Rmd")'
 
 # Capture the exit status
 EXIT_STATUS=$?

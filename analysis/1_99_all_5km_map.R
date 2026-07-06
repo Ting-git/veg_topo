@@ -31,40 +31,55 @@ land  <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
 land_vect <- vect(land)
 
 # ------------------------- 3. Plot & Save --------------------------------------
-plot_map <- function(input, title_text, output_file) {
-  r_layer <- rast(input)
+plot_map <- function(input, label, output_file) {
+  r_layer <- rast(input) |>
+    aggregate(c(2,2))
+
+  r_layer <- mask(crop(r_layer, land_vect), land_vect)
+
   #  r_layer <- mask(crop(r_layer, land_vect), land_vect)
-  p <- plot_var(
-    input     = r_layer,
-    title_text = title_text,
-    extent    = ext_global,
-    text_size = 12,
-    x_step    = 30,
-    y_step    = 30
-  ) +
+  p <- ggplot2::ggplot() +
+    tidyterra::geom_spatraster(data = r_layer, maxcell = Inf) +
+    scale_fill_gradientn(
+      colours = rev(brewer.pal(7, "Spectral")),
+      na.value = NA) +
+    ggplot2::labs(
+      title = NULL,
+      fill = label,
+    ) +
+    ggplot2::scale_x_continuous(
+      breaks = seq(from = -180, to = 180, by = 30),
+      limits = c(-180, 180),
+      expand = expansion(mult = 0.0001)
+    ) +
+    ggplot2::scale_y_continuous(
+      breaks = seq(from = -60, to = 90, by = 30),
+      limits = c(-60, 90),
+      expand = expansion(mult = 0.0001)
+    ) +
+    ggplot2::theme_bw(base_size = 7) +
     guides(fill = guide_colorbar(
-      title.position = "left",
-      barwidth = grid::unit(0.2, "in"),
-      barheight = grid::unit(5.3, "in")
+      title.position = "top",
+      title.hjust = 0.5,
+      barwidth = grid::unit(0.1, "in"),
+      barheight = grid::unit(2.6, "in")
     )) +
     geom_sf(data = coast,
             colour = 'black',
             linewidth = 0.1) +
-    coord_sf(
-      xlim = c(terra::xmin(ext_global), terra::xmax(ext_global)),
-      ylim = c(terra::ymin(ext_global), terra::ymax(ext_global)),
-      expand = FALSE,
-      clip = "on"
-    ) +
     ggplot2::theme(
       legend.margin = margin(0, 0, 0, 0),
-      legend.box.margin = margin(0, 0, 0, -10),
+      legend.box.margin = margin(0, 0, 0, -6),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      axis.text.y = element_text(size = 7, angle = 90, hjust = 0.5, vjust = 0.5),
+      axis.text.x = element_text(size = 7, angle = 0, hjust = 0.5, vjust = 0.5),
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
       panel.spacing = unit(0, "pt"),
       plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-      panel.background = element_rect(fill = "white", color = NA),  # panel 内部白色
-      plot.background  = element_blank(),                            # plot 外部透明
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_blank(),
       legend.background = element_blank(),
       legend.box.background = element_blank()
     )
@@ -72,8 +87,8 @@ plot_map <- function(input, title_text, output_file) {
   ggsave(
     filename = output_file,
     plot     = p,
-    width    = 14,
-    height   = 6,
+    width    = 7,
+    height   = 3,
     dpi      = 600,
     units    = "in"
   )
@@ -82,11 +97,11 @@ plot_map <- function(input, title_text, output_file) {
 }
 
 # Plot maps
-plot_map(fused_5km_file, "Fraction of used land", here::here("data/figures/1_99_fused_5km_map.png"))
-plot_map(fbare_5km_file, "Bare land fraction", here::here("data/figures/1_99_fbare_5km_map.png"))
-plot_map(fwater_5km_file, "Water body fraction", here::here("data/figures/1_99_fwater_5km_map.png"))
-plot_map(fsnow_5km_file, "Permanent snow and ice fraction", here::here("data/figures/1_99_fsnow_5km_map.png"))
-plot_map(mat_5km_file, "Annual mean surface temperature (℃)", here::here("data/figures/1_99_mat_5km_map.png"))
-plot_map(map_5km_file, "Annual mean precipitation (mm)", here::here("data/figures/1_99_map_5km_map.png"))
-plot_map(srad_5km_file, "Incident solar radiation (kJ m⁻² day⁻¹)", here::here("data/figures/1_99_srad_5km_map.png"))
-plot_map(ecoregion_5km_path, "Biomes distribution", here::here("data/figures/1_99_biome_5km_map.png"))
+plot_map(fused_5km_file, expression(f[used]), here::here("data/figures/1_99_fused_5km_map_0p1d.png"))
+plot_map(fbare_5km_file, expression(f[bare]), here::here("data/figures/1_99_fbare_5km_map_0p1d.png"))
+plot_map(fwater_5km_file, expression(f[waetr]), here::here("data/figures/1_99_fwater_5km_map_0p1d.png"))
+plot_map(fsnow_5km_file, expression(f[snow]), here::here("data/figures/1_99_fsnow_5km_map_0p1d.png"))
+# plot_map(mat_1km_file, "Annual mean surface temperature (℃)", here::here("data/figures/1_99_mat_5km_map_0p1d.png"))
+# plot_map(map_1km_file, "Annual mean precipitation (mm)", here::here("data/figures/1_99_map_5km_map_0p1d.png"))
+# plot_map(srad_1km_file, "Incident solar radiation (kJ m⁻² day⁻¹)", here::here("data/figures/1_99_srad_5km_map_0p1d.png"))
+# plot_map(ecoregion_5km_path, "Biomes distribution", here::here("data/figures/1_99_biome_5km_map_0p1d.png"))

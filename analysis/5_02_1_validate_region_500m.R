@@ -357,9 +357,9 @@ process_reg_500m <- function(reg_row, output_dir = reg_validate_dir, text_size =
     return(TRUE)
 
   }, error = function(e) {
-    reg_id <- paste0(reg_row$strata_label, "_", reg_row$sample_id)
+    reg_id <- paste0(reg_row$strata_label, "_", reg_row$strata_label)
     elapsed_mins <- difftime(Sys.time(), t0, units = "mins")
-    message(sprintf("❌ Tile %s failed after %.1f mins: %s", reg_id, elapsed_mins, e$message))
+    message(sprintf("❌ Tile %s failed after %.1f mins: %s", reg_row$strata_label, elapsed_mins, e$message))
     return(FALSE)
   })
 }
@@ -377,19 +377,27 @@ print(reg_info_all_samples )
 
 reg_info2 <- tribble(
   ~strata_label,                        ~ymin,   ~ymax,   ~xmin,     ~xmax,
-  "hyper_arid_low_lat_rugged_relief", -9,  -8.5,      38,      38.5,
-  "b1_Loetschental",                    46.4,    46.5,      7.8,       7.9,
-  "b3_equatorial_rainforest_CongoBasin",-1.0,    -0.5,     17.0,      17.5,
-  "a1_waterlogged_pantanal",            -17.5,   -16.5,   -57.5,     -56.5,
-  "b25_Finland",                        67.5,    68.5,     25,        26,
-  "b26_Monte_Alen_Guiana",          1.2,       1.7,      9.8,        10.3,
-  "a19_arctic_tundra_alaska",           68.5,    69,   -146,    -145.5,
+
+  "b29_Amazonia_NE",                     -0.5,     0.5,     -55.5,       -54.5,
+  "b27_Argentine",                        -36.5,  -35.5,     -60.5,      -59.5,
+  "b30_Andes",                            -1,         0,     -78,      -77,
+
+  "b28_Amazonia_NW",                         0,     1,     -62.5,       -61.5,
+  "3d_waterlogged_pantanal",            -17.5,    -16.5,   -57.5,     -56.5,
+
+  "hyper_arid_low_lat_rugged_relief",      -9,  -8.5,      38,      38.5,
+  "b1_Loetschental",                      46.4,    46.5,      7.8,       7.9,
+  "b3_equatorial_rainforest_CongoBasin",  -1.0,    -0.5,     17.0,      17.5,
+  "a1_waterlogged_pantanal",              -17.5,   -16.5,-57.5,     -56.5,
+  "b25_Finland",                          67.5,    68.5,     25,        26,
+  "b26_Monte_Alen_Guiana",                 1.2,       1.7,      9.8,        10.3,
+  "a19_arctic_tundra_alaska",              68.5,    69,   -146,    -145.5,
 
   # ------------------ Subsurface flow validation (Fan et al., 2019) -----------
   "3a_desert_riparian",                 31,       32,      -110.5,   -109.5,
   "3b_mediterranean_california",        37,       38,      -122.5,   -121.5,
   "3c_forest_savanah_east_congo",       -5.5,     -4.5,     28,        29,
-  "3d_waterlogged_pantanal",            -17.8,    -16.8,   -58,       -57,
+
   "3e_white_sand_amazon",               3,         4,      -67.7,     -66.7,
   "3f_cool_wet_denmark",                56.7,     57.0,     10.0,      10.5,
 
@@ -472,14 +480,17 @@ reg_info2 <- tribble(
 #   process_reg_500m(reg_info[i, ])
 # }
 #
-for (i in seq_len(nrow(reg_info_all_samples))) {
-  process_reg_500m(reg_info_all_samples[i, ]) # ~ 8h 43 min
-}
+# for (i in seq_len(nrow(reg_info_all_samples))) {
+#   process_reg_500m(reg_info_all_samples[i, ]) # ~ 8h 43 min
+# }
+#
+# for (i in seq_len(nrow(reg_info2))) {
+#   process_reg_500m(reg_info2[i, ]) # ~ 8h 43 min
+# }
 
-for (i in seq_len(nrow(reg_info2))) {
+for (i in 1:4) {
   process_reg_500m(reg_info2[i, ]) # ~ 8h 43 min
 }
-
 # # ----------- Test on smaller regions -----------------------------
 # output_dir = reg_validate_dir
 # text_size = 14

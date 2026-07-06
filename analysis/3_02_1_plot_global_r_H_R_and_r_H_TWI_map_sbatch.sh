@@ -1,10 +1,10 @@
 #! /usr/bin/bash -l
-#SBATCH --job-name="EvalbyGroup"
-#SBATCH --time=12:00:00 #
+#SBATCH --job-name="mapComb_r_5km"
+#SBATCH --time=2:00:00 # ~ 2.5 min
+#SBATCH --ntasks=1
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=400G
@@ -41,8 +41,8 @@ Rscript -e '.libPaths(c(
 ));
 cat("Session info:\n");
 sessionInfo();
-cat("\nRunning script: 7_02_2_evaluate_by_vegh_group.R\n");
-source("7_02_2_evaluate_by_vegh_group.R")'
+cat("\nRunning script: 3_02_1_plot_global_r_H_R_and_r_H_TWI_map.R\n");
+source("3_02_1_plot_global_r_H_R_and_r_H_TWI_map.R")'
 
 # Capture the exit status
 EXIT_STATUS=$?
@@ -56,3 +56,4 @@ echo "=================================================="
 # Exit with the same status as the R script
 exit $EXIT_STATUS
 
+#

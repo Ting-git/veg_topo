@@ -167,7 +167,7 @@ process_r_H_R_5km <- function(tile_row, output_dir = r_H_R_tiles_dir,
 
     p_rin <- plot_rin(rin_rc, extent = tile_extent, title_text = "450 m: Radiation index",  text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
     p_rA <- plot_cor_twi_vegh(cor_twi_vegh_mosaic_file, extent = tile_extent,  title_text <- bquote("5 km: Pearson's " * r[.("H")*","*.("TWI")]), text_size = text_size, x_step = x_step, y_step = y_step)  + re_theme + re_theme_left
-    p_rB <- plot_r_H_R(r_H_R_5km_path, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
+    p_rB <- plot_r_H_R(cor_nc_path, extent = tile_extent, title_text = bquote("5 km: Pearson's " * r[.("H")*","*.("Rᵢₙ")]), text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
 
     p_fused <- plot_fused(fused_5km_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + re_theme
     p_kg <- plot_kg_class(kg_present_0p083_file, kg_legend_file, extent = tile_extent, text_size = text_size, x_step = x_step, y_step = y_step) + ggplot2::theme(aspect.ratio = 1)
