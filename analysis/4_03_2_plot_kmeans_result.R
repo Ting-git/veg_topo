@@ -256,7 +256,7 @@ p_bar <- ggplot(
     size = 1.5
   ) +
   scale_fill_manual(values = fill_colors) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
   scale_x_discrete(drop = TRUE, expand = c(0.1, 0.1)) +
   theme_bw(base_size = text_size) +
   theme(
@@ -348,7 +348,7 @@ ggsave(
   filename = here::here("data/figures/4_03_kmeans_gl_map_1_to_8.png"),
   plot     = p_1_to_8c,
   width    = 7,
-  height   = 7,
+  height   = 7.5,
   dpi      = 600,
   units    = "in"
 )
