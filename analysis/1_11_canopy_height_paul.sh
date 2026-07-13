@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=300G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -21,12 +21,16 @@ module load PROJ/9.4.1-GCCcore-13.3.0
 module load GDAL/3.10.0-foss-2024a
 module load R/4.4.2-gfbf-2024a
 
+# Set multi-threading environment variables
+export OMP_NUM_THREADS=8
+export GDAL_NUM_THREADS=8
+
 echo "Job started on: $(date)"
 BASE_URL="https://echosat.uni-muenster.de/"
 OUTDIR="/storage/scratch/giub_geco/tting/data_raw/canopy_height_paul_2026"
 mkdir -p "$OUTDIR"
 
-# 错误日志
+# Error log file
 ERROR_LOG="${OUTDIR}/errors.log"
 > "$ERROR_LOG"
 
@@ -52,22 +56,34 @@ echo "$FILES" | while read -r file; do
     raw="$OUTDIR/$fname"
     out="$OUTDIR/${fname%.tif}_2020.tif"
 
-    # 如果输出文件已存在则跳过
-    [ -f "$out" ] && continue
+    # If output file already exists, remove any residual raw file and skip
+    if [ -f "$out" ]; then
+        [ -f "$raw" ] && rm -f "$raw"
+        continue
+    fi
 
-    # 下载（支持断点续传）
+    # Download with resume support
     if ! wget -c -q -O "$raw" "$url" 2>/dev/null; then
         echo "[$COUNT/$TOTAL] Download failed: $fname" >> "$ERROR_LOG"
         continue
     fi
 
-    # 提取 Band 3
-    if ! gdal_translate -q -b 3 -co COMPRESS=LZW "$raw" "$out" 2>/dev/null; then
+    # Extract Band 3
+    # Note: GDAL default cache is only 5% of physical memory (~15GB), far from sufficient
+    # for processing large files (60-300GB). Use GDAL_CACHEMAX to increase cache to 200GB,
+    # fully utilizing the requested memory. Reserve 100GB for system and GDAL internal overhead
+    # to avoid memory overflow.
+    if ! gdal_translate -q -b 3 \
+        -co COMPRESS=LZW \
+        -co NUM_THREADS=8 \
+        --config GDAL_CACHEMAX 210000000 \
+        --config GDAL_SWATH_SIZE 1000000 \
+        "$raw" "$out" 2>/dev/null; then
         echo "[$COUNT/$TOTAL] GDAL failed: $fname" >> "$ERROR_LOG"
         continue
     fi
 
-    # 处理成功，删除原始文件
+    # Remove raw file after successful processing
     rm -f "$raw"
 done
 
