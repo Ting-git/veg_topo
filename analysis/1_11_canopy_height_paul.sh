@@ -1,13 +1,13 @@
 #!/bin/bash -l
 #SBATCH --job-name="PaulH"
-#SBATCH --time=72:00:00
+#SBATCH --time=96:00:00
 #SBATCH --account=invest
 #SBATCH --qos=job_icpu-stocker
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=icpu-stocker
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=300G
+#SBATCH --mem=40G
 #SBATCH --mail-user=ting.tan@students.unibe.ch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --chdir=/storage/homefs/tt22k003/veg_topo/analysis
@@ -69,15 +69,13 @@ echo "$FILES" | while read -r file; do
     fi
 
     # Extract Band 3
-    # Note: GDAL default cache is only 5% of physical memory (~15GB), far from sufficient
-    # for processing large files (60-300GB). Use GDAL_CACHEMAX to increase cache to 200GB,
-    # fully utilizing the requested memory. Reserve 100GB for system and GDAL internal overhead
-    # to avoid memory overflow.
+    # GDAL_CACHEMAX: 2 GB = 2147483648 bytes
+    # GDAL_SWATH_SIZE: 100 MB = 104857600 bytes
     if ! gdal_translate -q -b 3 \
         -co COMPRESS=LZW \
         -co NUM_THREADS=8 \
-        --config GDAL_CACHEMAX 210000000 \
-        --config GDAL_SWATH_SIZE 1000000 \
+        --config GDAL_CACHEMAX 2147483648 \
+        --config GDAL_SWATH_SIZE 104857600 \
         "$raw" "$out" 2>/dev/null; then
         echo "[$COUNT/$TOTAL] GDAL failed: $fname" >> "$ERROR_LOG"
         continue
