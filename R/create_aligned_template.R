@@ -32,20 +32,13 @@ create_aligned_template <- function(input, res_out = 0.05, crs_out = "EPSG:4326"
   # ---- Set alignment step and rounding precision ----
   if(is.null(snap_step)) snap_step <- res_out
 
-  # Automatically determine rounding precision from grid_resolution
-  res_decimals <- get_decimal_places(snap_step)
-  round_digits <- res_decimals + 1
+  # ---- Avoid floating-point errors using integer arithmetic ----
+  scale_factor <- 1 / snap_step  # 0.00025 -> 4000
 
-  xmin <- round(e$xmin, round_digits)
-  xmax <- round(e$xmax, round_digits)
-  ymin <- round(e$ymin, round_digits)
-  ymax <- round(e$ymax, round_digits)
-
-  # Align the extent to the grid defined by res_out (floor/ceiling)
-  xmin_aligned <- floor(xmin / snap_step) * snap_step
-  xmax_aligned <- ceiling(xmax / snap_step) * snap_step
-  ymin_aligned <- floor(ymin / snap_step) * snap_step
-  ymax_aligned <- ceiling(ymax / snap_step) * snap_step
+  xmin_aligned <- floor(round(e$xmin * scale_factor, 0)) / scale_factor
+  xmax_aligned <- ceiling(round(e$xmax * scale_factor, 0)) / scale_factor
+  ymin_aligned <- floor(round(e$ymin * scale_factor, 0)) / scale_factor
+  ymax_aligned <- ceiling(round(e$ymax * scale_factor, 0)) / scale_factor
 
   # Compute number of rows and columns to cover the aligned extent
   ncols <- round((xmax_aligned - xmin_aligned) / res_out)
