@@ -50,7 +50,7 @@ cacl_meteoland_sw_in <- function(lat_deg, slope_deg, aspect_deg, year = 2020) {
   cos_slope_safe <- ifelse(abs(cos_slope) < 1e-10, 1e-10, cos_slope)
   potentialRad_proj <- potentialRad / cos_slope_safe
 
-  # return(potentialRad_proj)
-  return(potentialRad)
+  return(potentialRad_proj)
+  # return(potentialRad)
 
 }
